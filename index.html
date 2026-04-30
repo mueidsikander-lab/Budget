@@ -63,7 +63,7 @@ h1{font-size:20px;font-weight:700;margin-bottom:4px;letter-spacing:-0.5px}
 .badge{font-size:11px;font-weight:600;padding:2px 8px;border-radius:6px;font-variant-numeric:tabular-nums}
 .bg{color:#2ea043;background:#2ea04318}.by{color:#d29922;background:#d2992218}.br{color:#f85149;background:#f8514918}
 .progbar{height:5px;border-radius:3px;background:#21262d;margin-bottom:8px;overflow:hidden}
-.progfill{height:100%;border-radius:3px}
+.progfill{height:100%;border-radius:3px;transition:width 0.3s}
 .pfg{background:#2ea043}.pfy{background:#d29922}.pfr{background:#f85149}
 .nums{display:flex;gap:4px}
 .num{flex:1}
@@ -71,7 +71,7 @@ h1{font-size:20px;font-weight:700;margin-bottom:4px;letter-spacing:-0.5px}
 .nv{font-size:13px;font-weight:500;margin-top:1px;font-variant-numeric:tabular-nums}
 .nvw{color:#fff;font-weight:600}.nvg{color:#2ea043;font-weight:600}.nvr{color:#f85149;font-weight:600}.nvd{color:#484f58}
 .spent-tap{cursor:pointer}
-.edit-input{width:90px;background:#0d1117;border:1px solid #388bfd;border-radius:6px;color:#fff;font-size:14px;padding:6px 8px;outline:none;font-variant-numeric:tabular-nums}
+.edit-input{width:100px;background:#0d1117;border:1px solid #388bfd;border-radius:6px;color:#fff;font-size:14px;padding:6px 8px;outline:none;font-variant-numeric:tabular-nums}
 .edit-input:focus{box-shadow:0 0 0 2px #388bfd40}
 .sav-card{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:14px;margin-top:16px}
 .sav-card.pos{background:#2ea04310;border-color:#2ea04340}
@@ -89,6 +89,7 @@ h1{font-size:20px;font-weight:700;margin-bottom:4px;letter-spacing:-0.5px}
 .btn-blue{background:#388bfd;color:#fff}.btn-blue:disabled{opacity:0.3;cursor:default}
 .btn-outline{background:none;border:1px solid #30363d;color:#8b949e}
 .btn-red{background:#f8514930;color:#f85149;border:1px solid #f8514940}
+.btn-done{background:#2ea043;color:#fff}
 .txn{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:10px 12px;margin-bottom:6px;display:flex;align-items:center;gap:10px}
 .txn-info{flex:1}.txn-desc{font-size:13px;font-weight:500}.txn-date{font-size:11px;color:#8b949e}
 .txn-amt{font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -115,10 +116,14 @@ h1{font-size:20px;font-weight:700;margin-bottom:4px;letter-spacing:-0.5px}
 .setup-input:focus{border-color:#388bfd}
 .share-box{background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:10px;margin-top:12px;word-break:break-all;font-size:11px;color:#58a6ff;cursor:pointer}
 .copied-toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#2ea043;color:#fff;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;z-index:300;display:none}
+/* Done floating button when editing */
+.done-fab{position:fixed;bottom:90px;right:16px;background:#2ea043;color:#fff;border:none;border-radius:24px;padding:12px 20px;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.4);z-index:50;display:none}
+.done-fab.show{display:block}
 </style>
 </head>
 <body>
 <div class="copied-toast" id="copied-toast">Link copied!</div>
+<button class="done-fab" id="done-fab" onclick="doneEditing()">✓ Done</button>
 
 <div class="setup-overlay" id="setup-overlay" style="display:none">
   <div class="setup-box">
@@ -158,7 +163,7 @@ h1{font-size:20px;font-weight:700;margin-bottom:4px;letter-spacing:-0.5px}
 <div class="page" id="pg-settings">
   <h1>Settings</h1>
   <div class="section-title">Share with Family</div>
-  <p style="font-size:12px;color:#8b949e;margin-bottom:4px">Send this link to Madiha. Works instantly — no setup on her end.</p>
+  <p style="font-size:12px;color:#8b949e;margin-bottom:4px">Send this link via WhatsApp. Madiha taps it → opens in Safari → Add to Home Screen. No setup needed.</p>
   <div class="share-box" id="share-link" onclick="copyShareLink()">Loading...</div>
   <div class="section-title">Sync Status</div>
   <div id="fb-status-settings"></div>
@@ -167,7 +172,7 @@ h1{font-size:20px;font-weight:700;margin-bottom:4px;letter-spacing:-0.5px}
   <div class="section-title" style="margin-top:24px">Data</div>
   <button class="btn btn-outline" onclick="exportData()" style="margin-right:8px;margin-bottom:8px">Export</button>
   <button class="btn btn-red" onclick="resetData()">Reset All</button>
-  <p class="foot">Budget Tracker v3.1</p>
+  <p class="foot">Budget Tracker v3.2</p>
 </div>
 
 <div class="nav">
@@ -177,11 +182,10 @@ h1{font-size:20px;font-weight:700;margin-bottom:4px;letter-spacing:-0.5px}
 </div>
 
 <script>
-var CACHE_KEY = "bgt_cache_v3";
+var CACHE_KEY = "bgt_v4";
 var INFLOW = 42150;
 var CATS = ["Rent","Car Payments","Telephone+Internet+TV","Electric+Water","Chiller","Gas","Fuel","Tuition","Money to Pakistan","Groceries","Dining / Entertainment","Mueid / Madiha / House","Incidental"];
 
-// ===== URL CONFIG =====
 function parseHash() {
   var h = window.location.hash.substring(1); if (!h) return null;
   var p = {}; var pairs = h.split("&");
@@ -198,7 +202,6 @@ function copyShareLink() {
   var toast = document.getElementById("copied-toast"); toast.style.display = "block"; setTimeout(function() { toast.style.display = "none"; }, 2000);
 }
 
-// ===== DEFAULT DATA =====
 function defaultData() {
   return {
     budget:[
@@ -238,17 +241,8 @@ function defaultData() {
   };
 }
 
-// ===== STORAGE: localStorage = cache, Firebase = source of truth =====
-// On load: show cached data immediately. Firebase overwrites when it connects.
-// On edit: update APP -> save to cache -> push to Firebase -> redraw.
-
-function loadCache() {
-  try { var r = localStorage.getItem(CACHE_KEY); if (r) return JSON.parse(r); } catch(e) {}
-  return null;
-}
-function saveCache() {
-  try { localStorage.setItem(CACHE_KEY, JSON.stringify(APP)); } catch(e) {}
-}
+function loadCache() { try { var r = localStorage.getItem(CACHE_KEY); if (r) return JSON.parse(r); } catch(e) {} return null; }
+function saveCache() { try { localStorage.setItem(CACHE_KEY, JSON.stringify(APP)); } catch(e) {} }
 function fixApp() {
   if (!APP.collapsed) APP.collapsed = {fixed:false,variable:false};
   if (!APP.mappings) APP.mappings = {};
@@ -256,7 +250,6 @@ function fixApp() {
   if (!APP.budget) APP = defaultData();
 }
 
-// Load cached data first (instant, survives refresh)
 var APP = loadCache() || defaultData();
 fixApp();
 
@@ -271,35 +264,26 @@ function initFirebase() {
   try {
     if (!firebase.apps.length) firebase.initializeApp({apiKey:cfg.apiKey, databaseURL:cfg.databaseURL});
     fbRef = firebase.database().ref("budget");
-
     fbRef.on("value", function(snap) {
-      // Skip if user just edited (prevent overwrite bounce)
       if (Date.now() - localEditTs < 3000) return;
+      // Don't overwrite while user is actively editing
+      if (editing !== -1) return;
       var d = snap.val();
       if (d && d.budget) {
-        APP = d;
-        fixApp();
-        saveCache();
-        drawBudget();
+        APP = d; fixApp(); saveCache(); drawBudget();
       }
-      fbReady = true;
-      updateSyncUI();
+      fbReady = true; updateSyncUI();
     });
-
     firebase.database().ref(".info/connected").on("value", function(snap) {
-      fbReady = snap.val() === true;
-      updateSyncUI();
+      fbReady = snap.val() === true; updateSyncUI();
     });
   } catch(e) { console.error("FB:", e); }
   document.getElementById("share-link").textContent = buildShareURL();
 }
 
 function saveData() {
-  // 1. Mark local edit timestamp
   localEditTs = Date.now();
-  // 2. Cache locally (survives refresh)
   saveCache();
-  // 3. Push to Firebase (syncs to other devices)
   if (fbRef) fbRef.set(APP);
 }
 
@@ -324,7 +308,7 @@ function updateSyncUI() {
     if (se) se.innerHTML = '<div style="font-size:13px;color:#f85149">Not configured</div>';
   } else if (fbReady) {
     el.innerHTML = '<span class="sync-dot on"></span>Synced · ';
-    if (se) se.innerHTML = '<div style="font-size:13px;color:#2ea043">✓ Connected</div>';
+    if (se) se.innerHTML = '<div style="font-size:13px;color:#2ea043">✓ Connected and syncing live</div>';
   } else {
     el.innerHTML = '<span class="sync-dot pending"></span>Connecting · ';
     if (se) se.innerHTML = '<div style="font-size:13px;color:#d29922">Connecting...</div>';
@@ -354,6 +338,92 @@ function getSpent(r){if(r.p)return r.b;if(r.cs!==undefined&&r.cs!==null)return r
 function pctCls(p){return p>=75?"g":(p>=40?"y":"r")}
 function conCls(p){return p>=80?"high":(p>=50?"mid":"low")}
 
+// Recalculate just the totals (top summary + group headers + savings) without re-rendering cards
+// This runs on every keystroke so user sees live updates without losing input focus
+function recalcLiveTotals() {
+  var data = APP.budget; if (!data) return;
+  var fixB=0,fixS=0,varB=0,varS=0,totalS=0;
+  for(var i=0;i<data.length;i++){
+    var sp = getSpent(data[i]);
+    totalS += sp;
+    if(data[i].g==="fixed"){fixB+=data[i].b;fixS+=sp}
+    else{varB+=data[i].b;varS+=sp}
+  }
+  var savBudget=INFLOW-fixB-varB,savActual=INFLOW-totalS;
+  var fixPct=fixB>0?fixS/fixB*100:0,varPct=varB>0?varS/varB*100:0;
+  var fixRem=fixB-fixS,varRem=varB-varS;
+
+  // Top summary
+  var ts = document.getElementById("top-summary");
+  if (ts) {
+    ts.innerHTML =
+      '<div class="ts-box"><div class="ts-label">Inflow</div><div class="ts-val">'+fm(INFLOW)+'</div></div>'+
+      '<div class="ts-box"><div class="ts-label">Spent</div><div class="ts-val">'+fm(totalS)+'</div></div>'+
+      '<div class="ts-box '+(savActual>=0?'green':'red')+'"><div class="ts-label">Savings</div><div class="ts-val '+(savActual>=0?'g':'r')+'">'+fm(savActual)+'</div></div>';
+  }
+
+  // Update fixed group header
+  updateGroupHeader("fixed", fixB, fixS, fixRem, fixPct);
+  updateGroupHeader("variable", varB, varS, varRem, varPct);
+
+  // Update savings card
+  var savCard = document.querySelector(".sav-card");
+  if (savCard) {
+    var savNeg = savActual < 0;
+    savCard.className = "sav-card " + (savNeg ? "neg" : "pos");
+    savCard.innerHTML = '<div class="sav-title '+(savNeg?'r':'g')+'">💰 Savings</div><div class="sav-big '+(savNeg?'r':'g')+'">AED '+fm(savActual)+'</div>'+
+      '<div class="nums"><div class="num"><div class="nl">Target</div><div class="nv">'+fm(savBudget)+'</div></div><div class="num"><div class="nl">vs Target</div><div class="nv '+(savActual>=savBudget?'nvg':'nvr')+'">'+(savActual>=savBudget?'+':'')+fm(savActual-savBudget)+'</div></div><div class="num"><div class="nl">% Inflow</div><div class="nv">'+Math.round(savActual/INFLOW*100)+'%</div></div></div>';
+  }
+
+  // Update individual card "Left" and "Used" and badges for the current edit
+  if (editing !== -1) {
+    var r = APP.budget[editing];
+    var sp = getSpent(r);
+    var rem = r.b - sp;
+    var pct = r.b > 0 ? rem/r.b*100 : 100;
+    var used = r.b > 0 ? Math.min(sp/r.b*100, 100) : 0;
+    var card = document.querySelector('.card .edit-input[data-i="'+editing+'"]');
+    if (card) {
+      var cardEl = card.closest(".card");
+      var nums = cardEl.querySelectorAll(".nums .num");
+      // nums[0]=Budget, [1]=Spent (input), [2]=Left, [3]=Used
+      if (nums[2]) {
+        var rc = "nvd", rv = "–";
+        if (r.b > 0) {
+          if (rem === 0 && sp > 0) {} else if (rem < 0) { rc="nvr"; rv = fd(rem); } else if (sp > 0) { rc="nvg"; rv = fm(rem); } else { rv = fm(rem); }
+        }
+        nums[2].innerHTML = '<div class="nl">Left</div><div class="nv '+rc+'">'+rv+'</div>';
+      }
+      if (nums[3]) {
+        nums[3].innerHTML = '<div class="nl">Used</div><div class="nv '+(sp>0?'':'nvd')+'">'+(r.b>0?Math.round(100-pct)+'%':'–')+'</div>';
+      }
+      // Badge
+      var badge = cardEl.querySelector(".badge");
+      if (badge && r.b > 0) {
+        badge.className = "badge b" + pctCls(pct);
+        badge.textContent = Math.round(pct) + "% left";
+      }
+      // Progress bar
+      var pf = cardEl.querySelector(".progfill");
+      if (pf) {
+        pf.className = "progfill pf" + pctCls(pct);
+        pf.style.width = used.toFixed(1) + "%";
+      }
+    }
+  }
+}
+
+function updateGroupHeader(group, budget, spent, remaining, pct) {
+  var gh = document.querySelector('.group-header[data-group="'+group+'"]');
+  if (!gh) return;
+  var fCol = APP.collapsed[group];
+  var color = group === "fixed" ? "blue" : "yellow";
+  var label = group === "fixed" ? "Fixed Costs" : "Variable Costs";
+  gh.innerHTML = '<div class="gh-row1"><span class="gh-toggle '+(fCol?'':'open')+'">▶</span><span class="gh-title">'+label+'</span><span class="gh-consumed-badge '+conCls(pct)+'">'+Math.round(pct)+'% used</span></div>'+
+    '<div class="gh-amounts"><div class="gh-amt-box"><div class="gh-amt-label">Budget</div><div class="gh-amt-val dim">'+fm(budget)+'</div></div><div class="gh-amt-box"><div class="gh-amt-label">Spent</div><div class="gh-amt-val">'+fm(spent)+'</div></div><div class="gh-amt-box"><div class="gh-amt-label">Remaining</div><div class="gh-amt-val big '+(remaining>=0?'g':'r')+'">'+fm(remaining)+'</div></div></div>'+
+    '<div class="gprog"><div class="gprog-fill gpf-'+color+'" style="width:'+Math.min(pct,100).toFixed(1)+'%"></div></div>';
+}
+
 function drawBudget() {
   var data = APP.budget; if (!data) return;
   var fixB=0,fixS=0,varB=0,varS=0,totalS=0,fixedIdx=[],varIdx=[];
@@ -372,8 +442,6 @@ function drawBudget() {
     '<div class="ts-box '+(savActual>=0?'green':'red')+'"><div class="ts-label">Savings</div><div class="ts-val '+(savActual>=0?'g':'r')+'">'+fm(savActual)+'</div></div>';
 
   var html="";
-
-  // FIXED
   var fCol=APP.collapsed.fixed;
   html+='<div class="group-header fixed" data-group="fixed"><div class="gh-row1"><span class="gh-toggle '+(fCol?'':'open')+'">▶</span><span class="gh-title">Fixed Costs</span><span class="gh-consumed-badge '+conCls(fixPct)+'">'+Math.round(fixPct)+'% used</span></div>';
   html+='<div class="gh-amounts"><div class="gh-amt-box"><div class="gh-amt-label">Budget</div><div class="gh-amt-val dim">'+fm(fixB)+'</div></div><div class="gh-amt-box"><div class="gh-amt-label">Spent</div><div class="gh-amt-val">'+fm(fixS)+'</div></div><div class="gh-amt-box"><div class="gh-amt-label">Remaining</div><div class="gh-amt-val big '+(fixRem>=0?'g':'r')+'">'+fm(fixRem)+'</div></div></div>';
@@ -382,7 +450,6 @@ function drawBudget() {
   for(var fi=0;fi<fixedIdx.length;fi++)html+=renderCard(fixedIdx[fi]);
   html+='</div>';
 
-  // VARIABLE
   var vCol=APP.collapsed.variable;
   html+='<div class="group-header variable" data-group="variable"><div class="gh-row1"><span class="gh-toggle '+(vCol?'':'open')+'">▶</span><span class="gh-title">Variable Costs</span><span class="gh-consumed-badge '+conCls(varPct)+'">'+Math.round(varPct)+'% used</span></div>';
   html+='<div class="gh-amounts"><div class="gh-amt-box"><div class="gh-amt-label">Budget</div><div class="gh-amt-val dim">'+fm(varB)+'</div></div><div class="gh-amt-box"><div class="gh-amt-label">Spent</div><div class="gh-amt-val">'+fm(varS)+'</div></div><div class="gh-amt-box"><div class="gh-amt-label">Remaining</div><div class="gh-amt-val big '+(varRem>=0?'g':'r')+'">'+fm(varRem)+'</div></div></div>';
@@ -391,7 +458,6 @@ function drawBudget() {
   for(var vi=0;vi<varIdx.length;vi++)html+=renderCard(varIdx[vi]);
   html+='</div>';
 
-  // SAVINGS
   var savNeg=savActual<0;
   html+='<div class="sav-card '+(savNeg?'neg':'pos')+'"><div class="sav-title '+(savNeg?'r':'g')+'">💰 Savings</div><div class="sav-big '+(savNeg?'r':'g')+'">AED '+fm(savActual)+'</div>';
   html+='<div class="nums"><div class="num"><div class="nl">Target</div><div class="nv">'+fm(savBudget)+'</div></div><div class="num"><div class="nl">vs Target</div><div class="nv '+(savActual>=savBudget?'nvg':'nvr')+'">'+(savActual>=savBudget?'+':'')+fm(savActual-savBudget)+'</div></div><div class="num"><div class="nl">% Inflow</div><div class="nv">'+Math.round(savActual/INFLOW*100)+'%</div></div></div></div>';
@@ -399,6 +465,18 @@ function drawBudget() {
   document.getElementById("budget-content").innerHTML=html;
   if(APP.lastImport)document.getElementById("last-import").textContent="Last CSV: "+APP.lastImport;
   bindEvents();
+
+  // Auto-focus the editing input if there is one
+  if (editing !== -1) {
+    var inp = document.querySelector('.edit-input[data-i="'+editing+'"]');
+    if (inp) {
+      inp.focus();
+      // Move cursor to end
+      var v = inp.value;
+      inp.value = "";
+      inp.value = v;
+    }
+  }
 }
 
 function renderCard(i){
@@ -426,19 +504,37 @@ function renderCard(i){
   return h;
 }
 
+function doneEditing() {
+  var inp = document.querySelector('.edit-input[data-i="'+editing+'"]');
+  if (inp) {
+    var v = parseFloat(inp.value);
+    if (!isNaN(v) && v >= 0) {
+      APP.budget[editing].cs = v;
+      APP.budget[editing].p = (v === APP.budget[editing].b);
+    } else if (inp.value.trim() === "") {
+      APP.budget[editing].cs = null;
+      APP.budget[editing].p = false;
+    }
+  }
+  editing = -1;
+  document.getElementById("done-fab").classList.remove("show");
+  saveData();
+  drawBudget();
+}
+
 function bindEvents(){
-  // Collapse/expand
+  // Group headers
   var ghs=document.querySelectorAll(".group-header");
   for(var g=0;g<ghs.length;g++){
     ghs[g].addEventListener("click",function(e){
       if(e.target.tagName==="INPUT")return;
       APP.collapsed[this.getAttribute("data-group")]=!APP.collapsed[this.getAttribute("data-group")];
-      saveCache(); // UI-only, no firebase push
+      saveCache();
       drawBudget();
     });
   }
 
-  // Checkboxes
+  // Checkboxes — instant update
   var cbs=document.querySelectorAll("#budget-content .cb");
   for(var j=0;j<cbs.length;j++){
     (function(cb){
@@ -449,36 +545,33 @@ function bindEvents(){
         if(cb.checked)APP.budget[idx].cs=null;
         editing=-1;
         saveData();
-        drawBudget();
+        drawBudget(); // immediate full redraw
       });
     })(cbs[j]);
   }
 
-  // Spent tap
+  // Spent tap to enter edit mode
   var taps=document.querySelectorAll("#budget-content .spent-tap");
   for(var j=0;j<taps.length;j++){
     (function(tap){
       tap.addEventListener("click",function(e){
         e.stopPropagation();
         editing=parseInt(tap.getAttribute("data-i"));
+        document.getElementById("done-fab").classList.add("show");
         drawBudget();
-        setTimeout(function(){
-          var inp=document.querySelector('.edit-input[data-i="'+editing+'"]');
-          if(inp)inp.focus();
-        },100);
       });
     })(taps[j]);
   }
 
-  // Edit inputs — THE FIX: single clean commit path
+  // Edit inputs — LIVE updates on every keystroke
   var inps=document.querySelectorAll("#budget-content .edit-input");
   for(var j=0;j<inps.length;j++){
     (function(inp){
       inp.addEventListener("click",function(e){e.stopPropagation()});
 
-      function doCommit(){
+      // LIVE update as user types - no focus loss
+      inp.addEventListener("input",function(){
         var idx=parseInt(inp.getAttribute("data-i"));
-        if(editing!==idx)return; // already committed
         var v=parseFloat(inp.value);
         if(!isNaN(v)&&v>=0){
           APP.budget[idx].cs=v;
@@ -487,21 +580,37 @@ function bindEvents(){
           APP.budget[idx].cs=null;
           APP.budget[idx].p=false;
         }
-        editing=-1;
-        saveData();
-        drawBudget();
-      }
-
-      inp.addEventListener("blur",function(){
-        // Delay to allow tap on another element to register first
-        setTimeout(doCommit,200);
+        recalcLiveTotals(); // updates totals/headers/savings without rebuilding cards
+        saveCache(); // save locally on every keystroke
+        // Throttled firebase push — push every keystroke is too much
+        scheduleFBPush();
       });
+
       inp.addEventListener("keydown",function(e){
-        if(e.key==="Enter"){e.preventDefault();inp.blur()}
-        if(e.key==="Escape"){e.preventDefault();editing=-1;drawBudget()}
+        if(e.key==="Enter"){e.preventDefault();doneEditing()}
+        if(e.key==="Escape"){e.preventDefault();editing=-1;document.getElementById("done-fab").classList.remove("show");drawBudget()}
+      });
+
+      // If user taps elsewhere (outside the input), commit
+      inp.addEventListener("blur",function(e){
+        // Use small delay so taps on Done button work
+        setTimeout(function(){
+          // Only auto-commit if we're not in editing mode anymore (Done was tapped)
+          // If still editing, the user may just have dismissed keyboard
+          // Keep editing state alive
+        },200);
       });
     })(inps[j]);
   }
+}
+
+// Throttled Firebase push during typing
+var fbPushTimeout = null;
+function scheduleFBPush() {
+  if (fbPushTimeout) clearTimeout(fbPushTimeout);
+  fbPushTimeout = setTimeout(function() {
+    saveData();
+  }, 600); // push 600ms after last keystroke
 }
 
 // ===== CSV =====
@@ -601,7 +710,6 @@ document.getElementById("btn-apply").addEventListener("click",function(){
 
 function cancelImport(){pendingTxns=[];document.getElementById("import-preview").style.display="none";document.getElementById("txn-list").style.display="";document.getElementById("import-summary").style.display="none";document.getElementById("btn-cancel").textContent="Cancel";document.getElementById("csv-input").value=""}
 
-// ===== SETTINGS =====
 function drawMappings(){
   var keys=Object.keys(APP.mappings).sort();
   if(!keys.length){document.getElementById("mappings-list").innerHTML='<div class="empty-state">No mappings.</div>';return}
@@ -614,7 +722,6 @@ function drawMappings(){
 function exportData(){var b=new Blob([JSON.stringify(APP,null,2)],{type:"application/json"});var u=URL.createObjectURL(b);var a=document.createElement("a");a.href=u;a.download="budget_"+new Date().toISOString().slice(0,10)+".json";a.click();URL.revokeObjectURL(u)}
 function resetData(){if(confirm("Delete all data?")){APP=defaultData();saveData();drawBudget();alert("Done.")}}
 
-// ===== INIT =====
 drawBudget();
 initFirebase();
 </script>
