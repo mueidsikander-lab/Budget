@@ -113,32 +113,25 @@ h1{font-size:20px;font-weight:700;margin-bottom:4px;letter-spacing:-0.5px}
 .setup-box label{font-size:12px;color:#8b949e;display:block;margin-bottom:4px}
 .setup-input{width:100%;background:#0d1117;border:1px solid #30363d;border-radius:8px;color:#fff;font-size:14px;padding:10px 12px;outline:none;margin-bottom:12px;font-family:inherit}
 .setup-input:focus{border-color:#388bfd}
-.setup-input::placeholder{color:#484f58}
 .share-box{background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:10px;margin-top:12px;word-break:break-all;font-size:11px;color:#58a6ff;cursor:pointer}
-.share-box:active{background:#161b22}
 .copied-toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#2ea043;color:#fff;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;z-index:300;display:none}
 </style>
 </head>
 <body>
-
 <div class="copied-toast" id="copied-toast">Link copied!</div>
 
-<!-- Setup overlay - only shows if no config in URL -->
 <div class="setup-overlay" id="setup-overlay" style="display:none">
   <div class="setup-box">
     <h2>🔗 Connect Firebase</h2>
-    <p>One-time setup. After connecting, you'll get a share link that works on any device — no setup needed again.</p>
+    <p>One-time setup. After this you get a share link for Madiha — no setup needed on her phone.</p>
     <label>Firebase Database URL</label>
     <input class="setup-input" id="fb-url" placeholder="https://your-project-default-rtdb.firebaseio.com" type="url">
     <label>API Key</label>
     <input class="setup-input" id="fb-key" placeholder="AIzaSy...">
-    <div style="display:flex;gap:8px;margin-top:4px">
-      <button class="btn btn-blue" style="flex:1" onclick="saveConfig()">Connect</button>
-    </div>
+    <button class="btn btn-blue" style="width:100%;margin-top:4px" onclick="saveConfig()">Connect</button>
   </div>
 </div>
 
-<!-- BUDGET PAGE -->
 <div class="page active" id="pg-budget">
   <h1>April 2026 Budget</h1>
   <p class="sub"><span id="sync-status"></span>Inflow: AED 42,150</p>
@@ -147,7 +140,6 @@ h1{font-size:20px;font-weight:700;margin-bottom:4px;letter-spacing:-0.5px}
   <p class="foot" id="last-import"></p>
 </div>
 
-<!-- UPLOAD PAGE -->
 <div class="page" id="pg-upload">
   <h1>Import CC Statement</h1>
   <p class="sub">Upload weekly CSV. Past 7 days auto-detected.</p>
@@ -163,13 +155,11 @@ h1{font-size:20px;font-weight:700;margin-bottom:4px;letter-spacing:-0.5px}
   </div>
 </div>
 
-<!-- SETTINGS PAGE -->
 <div class="page" id="pg-settings">
   <h1>Settings</h1>
-  <p class="sub">Sync, mappings, and data</p>
   <div class="section-title">Share with Family</div>
-  <p style="font-size:12px;color:#8b949e;margin-bottom:8px">Send this link to Madiha. It has Firebase credentials built in — she just opens it and adds to Home Screen. No setup needed.</p>
-  <div class="share-box" id="share-link" onclick="copyShareLink()">Tap to copy share link</div>
+  <p style="font-size:12px;color:#8b949e;margin-bottom:4px">Send this link to Madiha. Works instantly — no setup on her end.</p>
+  <div class="share-box" id="share-link" onclick="copyShareLink()">Loading...</div>
   <div class="section-title">Sync Status</div>
   <div id="fb-status-settings"></div>
   <div class="section-title">Merchant Mappings</div>
@@ -177,10 +167,9 @@ h1{font-size:20px;font-weight:700;margin-bottom:4px;letter-spacing:-0.5px}
   <div class="section-title" style="margin-top:24px">Data</div>
   <button class="btn btn-outline" onclick="exportData()" style="margin-right:8px;margin-bottom:8px">Export</button>
   <button class="btn btn-red" onclick="resetData()">Reset All</button>
-  <p class="foot">Budget Tracker v3.0</p>
+  <p class="foot">Budget Tracker v3.1</p>
 </div>
 
-<!-- NAV -->
 <div class="nav">
   <button class="nav-btn act" data-pg="pg-budget"><span class="nav-icon">💰</span>Budget</button>
   <button class="nav-btn" data-pg="pg-upload"><span class="nav-icon">📤</span>Import</button>
@@ -188,55 +177,31 @@ h1{font-size:20px;font-weight:700;margin-bottom:4px;letter-spacing:-0.5px}
 </div>
 
 <script>
-// ===== CONFIG FROM URL HASH =====
-// URL format: https://site.com/Budget/#db=URL&key=APIKEY
-// This is the KEY FIX: credentials live in the URL, not localStorage.
-// Same link works on every device, every home screen shortcut, forever.
-
+var CACHE_KEY = "bgt_cache_v3";
 var INFLOW = 42150;
 var CATS = ["Rent","Car Payments","Telephone+Internet+TV","Electric+Water","Chiller","Gas","Fuel","Tuition","Money to Pakistan","Groceries","Dining / Entertainment","Mueid / Madiha / House","Incidental"];
 
+// ===== URL CONFIG =====
 function parseHash() {
-  var h = window.location.hash.substring(1);
-  if (!h) return null;
-  var params = {};
-  var pairs = h.split("&");
-  for (var i = 0; i < pairs.length; i++) {
-    var kv = pairs[i].split("=");
-    if (kv.length === 2) params[decodeURIComponent(kv[0])] = decodeURIComponent(kv[1]);
-  }
-  if (params.db && params.key) return {databaseURL: params.db, apiKey: params.key};
-  return null;
+  var h = window.location.hash.substring(1); if (!h) return null;
+  var p = {}; var pairs = h.split("&");
+  for (var i = 0; i < pairs.length; i++) { var kv = pairs[i].split("="); if (kv.length === 2) p[decodeURIComponent(kv[0])] = decodeURIComponent(kv[1]); }
+  return (p.db && p.key) ? {databaseURL:p.db, apiKey:p.key} : null;
 }
-
 function buildShareURL() {
-  var cfg = parseHash();
-  if (!cfg) return "";
-  var base = window.location.href.split("#")[0];
-  return base + "#db=" + encodeURIComponent(cfg.databaseURL) + "&key=" + encodeURIComponent(cfg.apiKey);
+  var c = parseHash(); if (!c) return "";
+  return window.location.href.split("#")[0] + "#db=" + encodeURIComponent(c.databaseURL) + "&key=" + encodeURIComponent(c.apiKey);
 }
-
 function copyShareLink() {
-  var url = buildShareURL();
-  if (!url) return;
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(url);
-  } else {
-    var ta = document.createElement("textarea");
-    ta.value = url;
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand("copy");
-    document.body.removeChild(ta);
-  }
-  var toast = document.getElementById("copied-toast");
-  toast.style.display = "block";
-  setTimeout(function() { toast.style.display = "none"; }, 2000);
+  var u = buildShareURL(); if (!u) return;
+  try { navigator.clipboard.writeText(u); } catch(e) { var t = document.createElement("textarea"); t.value = u; document.body.appendChild(t); t.select(); document.execCommand("copy"); document.body.removeChild(t); }
+  var toast = document.getElementById("copied-toast"); toast.style.display = "block"; setTimeout(function() { toast.style.display = "none"; }, 2000);
 }
 
+// ===== DEFAULT DATA =====
 function defaultData() {
   return {
-    budget: [
+    budget:[
       {c:"Rent",b:10937,s:0,p:false,g:"fixed"},
       {c:"Car Payments",b:2268,s:0,p:false,g:"fixed"},
       {c:"Telephone+Internet+TV",b:752,s:0,p:false,g:"fixed"},
@@ -251,7 +216,7 @@ function defaultData() {
       {c:"Mueid / Madiha / House",b:2500,s:510.45,p:false,g:"variable"},
       {c:"Incidental",b:1500,s:0,p:false,g:"variable"}
     ],
-    mappings: {
+    mappings:{
       "amazon grocery":"Groceries","amazon now":"Groceries","carrefour":"Groceries","grandiose":"Groceries",
       "lulu":"Groceries","waitrose":"Groceries","viva raha beach":"Groceries",
       "vox cinemas":"Dining / Entertainment","teamlab":"Dining / Entertainment","playstation":"Dining / Entertainment",
@@ -269,63 +234,72 @@ function defaultData() {
       "egolf":"Dining / Entertainment","smart dubai":"Incidental",
       "abu dhabi airports":"Incidental","dpsc etihad":"Incidental"
     },
-    imported: [],
-    lastImport: null,
-    collapsed: {fixed:false,variable:false}
+    imported:[],lastImport:null,collapsed:{fixed:false,variable:false}
   };
 }
 
-// ===== FIREBASE (single source of truth) =====
+// ===== STORAGE: localStorage = cache, Firebase = source of truth =====
+// On load: show cached data immediately. Firebase overwrites when it connects.
+// On edit: update APP -> save to cache -> push to Firebase -> redraw.
+
+function loadCache() {
+  try { var r = localStorage.getItem(CACHE_KEY); if (r) return JSON.parse(r); } catch(e) {}
+  return null;
+}
+function saveCache() {
+  try { localStorage.setItem(CACHE_KEY, JSON.stringify(APP)); } catch(e) {}
+}
+function fixApp() {
+  if (!APP.collapsed) APP.collapsed = {fixed:false,variable:false};
+  if (!APP.mappings) APP.mappings = {};
+  if (!APP.imported) APP.imported = [];
+  if (!APP.budget) APP = defaultData();
+}
+
+// Load cached data first (instant, survives refresh)
+var APP = loadCache() || defaultData();
+fixApp();
+
+// ===== FIREBASE =====
 var fbRef = null;
-var fbConnected = false;
-var localEditTime = 0;
-var FB_COOLDOWN = 2000;
-var APP = defaultData();
+var fbReady = false;
+var localEditTs = 0;
 
 function initFirebase() {
   var cfg = parseHash();
-  if (!cfg) {
-    document.getElementById("setup-overlay").style.display = "flex";
-    updateSyncUI();
-    return;
-  }
-
+  if (!cfg) { document.getElementById("setup-overlay").style.display = "flex"; updateSyncUI(); return; }
   try {
-    if (!firebase.apps.length) {
-      firebase.initializeApp({apiKey: cfg.apiKey, databaseURL: cfg.databaseURL});
-    }
+    if (!firebase.apps.length) firebase.initializeApp({apiKey:cfg.apiKey, databaseURL:cfg.databaseURL});
     fbRef = firebase.database().ref("budget");
 
-    // Listen for data
     fbRef.on("value", function(snap) {
-      if (Date.now() - localEditTime < FB_COOLDOWN) return;
-      var data = snap.val();
-      if (data && data.budget) {
-        APP = data;
-        if (!APP.collapsed) APP.collapsed = {fixed:false,variable:false};
-        if (!APP.mappings) APP.mappings = {};
-        if (!APP.imported) APP.imported = [];
+      // Skip if user just edited (prevent overwrite bounce)
+      if (Date.now() - localEditTs < 3000) return;
+      var d = snap.val();
+      if (d && d.budget) {
+        APP = d;
+        fixApp();
+        saveCache();
         drawBudget();
       }
-      fbConnected = true;
+      fbReady = true;
       updateSyncUI();
     });
 
     firebase.database().ref(".info/connected").on("value", function(snap) {
-      fbConnected = snap.val() === true;
+      fbReady = snap.val() === true;
       updateSyncUI();
     });
-
-    // Update share link
-    document.getElementById("share-link").textContent = buildShareURL();
-  } catch(e) {
-    console.error("FB:", e);
-    updateSyncUI();
-  }
+  } catch(e) { console.error("FB:", e); }
+  document.getElementById("share-link").textContent = buildShareURL();
 }
 
 function saveData() {
-  localEditTime = Date.now();
+  // 1. Mark local edit timestamp
+  localEditTs = Date.now();
+  // 2. Cache locally (survives refresh)
+  saveCache();
+  // 3. Push to Firebase (syncs to other devices)
   if (fbRef) fbRef.set(APP);
 }
 
@@ -333,21 +307,11 @@ function saveConfig() {
   var url = document.getElementById("fb-url").value.trim();
   var key = document.getElementById("fb-key").value.trim();
   if (!url || !key) { alert("Both fields required"); return; }
-
-  // Put config in URL hash
   window.location.hash = "db=" + encodeURIComponent(url) + "&key=" + encodeURIComponent(key);
   document.getElementById("setup-overlay").style.display = "none";
-
   initFirebase();
-  // Push default data on first setup
   setTimeout(function() {
-    if (fbRef) {
-      fbRef.once("value", function(snap) {
-        if (!snap.val()) {
-          fbRef.set(APP);
-        }
-      });
-    }
+    if (fbRef) fbRef.once("value", function(snap) { if (!snap.val()) fbRef.set(APP); });
   }, 1500);
 }
 
@@ -356,11 +320,11 @@ function updateSyncUI() {
   var el = document.getElementById("sync-status");
   var se = document.getElementById("fb-status-settings");
   if (!cfg) {
-    el.innerHTML = '<span class="sync-dot off"></span>Not connected · ';
-    if (se) se.innerHTML = '<div style="font-size:13px;color:#f85149">Not configured. Use setup.</div>';
-  } else if (fbConnected) {
+    el.innerHTML = '<span class="sync-dot off"></span>Offline · ';
+    if (se) se.innerHTML = '<div style="font-size:13px;color:#f85149">Not configured</div>';
+  } else if (fbReady) {
     el.innerHTML = '<span class="sync-dot on"></span>Synced · ';
-    if (se) se.innerHTML = '<div style="font-size:13px;color:#2ea043">✓ Connected and syncing</div>';
+    if (se) se.innerHTML = '<div style="font-size:13px;color:#2ea043">✓ Connected</div>';
   } else {
     el.innerHTML = '<span class="sync-dot pending"></span>Connecting · ';
     if (se) se.innerHTML = '<div style="font-size:13px;color:#d29922">Connecting...</div>';
@@ -377,266 +341,282 @@ for (var i = 0; i < navBtns.length; i++) {
     document.getElementById(pg).classList.add("active");
     for (var j = 0; j < navBtns.length; j++) navBtns[j].classList.remove("act");
     this.classList.add("act");
-    if (pg === "pg-settings") { drawMappings(); updateSyncUI(); document.getElementById("share-link").textContent = buildShareURL() || "Configure Firebase first"; }
+    if (pg === "pg-settings") { drawMappings(); updateSyncUI(); document.getElementById("share-link").textContent = buildShareURL() || "Set up Firebase first"; }
     if (pg === "pg-budget") drawBudget();
   });
 }
 
 // ===== BUDGET =====
 var editing = -1;
-function fm(n) { return Math.round(n).toLocaleString("en"); }
-function fd(n) { return n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
-function getSpent(r) { if (r.p) return r.b; if (r.cs !== undefined && r.cs !== null) return r.cs; return r.s; }
-function pctCls(p) { return p >= 75 ? "g" : (p >= 40 ? "y" : "r"); }
-function conCls(p) { return p >= 80 ? "high" : (p >= 50 ? "mid" : "low"); }
+function fm(n){return Math.round(n).toLocaleString("en")}
+function fd(n){return n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,",")}
+function getSpent(r){if(r.p)return r.b;if(r.cs!==undefined&&r.cs!==null)return r.cs;return r.s}
+function pctCls(p){return p>=75?"g":(p>=40?"y":"r")}
+function conCls(p){return p>=80?"high":(p>=50?"mid":"low")}
 
 function drawBudget() {
-  var data = APP.budget;
-  if (!data) return;
+  var data = APP.budget; if (!data) return;
   var fixB=0,fixS=0,varB=0,varS=0,totalS=0,fixedIdx=[],varIdx=[];
-  for (var i = 0; i < data.length; i++) {
-    var sp = getSpent(data[i]);
-    totalS += sp;
-    if (data[i].g === "fixed") { fixedIdx.push(i); fixB += data[i].b; fixS += sp; }
-    else { varIdx.push(i); varB += data[i].b; varS += sp; }
+  for(var i=0;i<data.length;i++){
+    var sp=getSpent(data[i]);totalS+=sp;
+    if(data[i].g==="fixed"){fixedIdx.push(i);fixB+=data[i].b;fixS+=sp}
+    else{varIdx.push(i);varB+=data[i].b;varS+=sp}
   }
-  var savBudget = INFLOW - fixB - varB;
-  var savActual = INFLOW - totalS;
-  var fixPct = fixB > 0 ? fixS/fixB*100 : 0;
-  var varPct = varB > 0 ? varS/varB*100 : 0;
-  var fixRem = fixB - fixS;
-  var varRem = varB - varS;
+  var savBudget=INFLOW-fixB-varB,savActual=INFLOW-totalS;
+  var fixPct=fixB>0?fixS/fixB*100:0,varPct=varB>0?varS/varB*100:0;
+  var fixRem=fixB-fixS,varRem=varB-varS;
 
-  document.getElementById("top-summary").innerHTML =
-    '<div class="ts-box"><div class="ts-label">Inflow</div><div class="ts-val">' + fm(INFLOW) + '</div></div>' +
-    '<div class="ts-box"><div class="ts-label">Spent</div><div class="ts-val">' + fm(totalS) + '</div></div>' +
-    '<div class="ts-box ' + (savActual >= 0 ? 'green' : 'red') + '"><div class="ts-label">Savings</div><div class="ts-val ' + (savActual >= 0 ? 'g' : 'r') + '">' + fm(savActual) + '</div></div>';
+  document.getElementById("top-summary").innerHTML=
+    '<div class="ts-box"><div class="ts-label">Inflow</div><div class="ts-val">'+fm(INFLOW)+'</div></div>'+
+    '<div class="ts-box"><div class="ts-label">Spent</div><div class="ts-val">'+fm(totalS)+'</div></div>'+
+    '<div class="ts-box '+(savActual>=0?'green':'red')+'"><div class="ts-label">Savings</div><div class="ts-val '+(savActual>=0?'g':'r')+'">'+fm(savActual)+'</div></div>';
 
-  var html = "";
+  var html="";
 
   // FIXED
-  var fCol = APP.collapsed.fixed;
-  html += '<div class="group-header fixed" data-group="fixed"><div class="gh-row1"><span class="gh-toggle ' + (fCol ? '' : 'open') + '">▶</span><span class="gh-title">Fixed Costs</span><span class="gh-consumed-badge ' + conCls(fixPct) + '">' + Math.round(fixPct) + '% used</span></div>';
-  html += '<div class="gh-amounts"><div class="gh-amt-box"><div class="gh-amt-label">Budget</div><div class="gh-amt-val dim">' + fm(fixB) + '</div></div><div class="gh-amt-box"><div class="gh-amt-label">Spent</div><div class="gh-amt-val">' + fm(fixS) + '</div></div><div class="gh-amt-box"><div class="gh-amt-label">Remaining</div><div class="gh-amt-val big ' + (fixRem >= 0 ? 'g' : 'r') + '">' + fm(fixRem) + '</div></div></div>';
-  html += '<div class="gprog"><div class="gprog-fill gpf-blue" style="width:' + Math.min(fixPct,100).toFixed(1) + '%"></div></div></div>';
-  html += '<div class="cards-group" id="grp-fixed" style="' + (fCol ? 'max-height:0;overflow:hidden' : '') + '">';
-  for (var fi = 0; fi < fixedIdx.length; fi++) html += renderCard(fixedIdx[fi]);
-  html += '</div>';
+  var fCol=APP.collapsed.fixed;
+  html+='<div class="group-header fixed" data-group="fixed"><div class="gh-row1"><span class="gh-toggle '+(fCol?'':'open')+'">▶</span><span class="gh-title">Fixed Costs</span><span class="gh-consumed-badge '+conCls(fixPct)+'">'+Math.round(fixPct)+'% used</span></div>';
+  html+='<div class="gh-amounts"><div class="gh-amt-box"><div class="gh-amt-label">Budget</div><div class="gh-amt-val dim">'+fm(fixB)+'</div></div><div class="gh-amt-box"><div class="gh-amt-label">Spent</div><div class="gh-amt-val">'+fm(fixS)+'</div></div><div class="gh-amt-box"><div class="gh-amt-label">Remaining</div><div class="gh-amt-val big '+(fixRem>=0?'g':'r')+'">'+fm(fixRem)+'</div></div></div>';
+  html+='<div class="gprog"><div class="gprog-fill gpf-blue" style="width:'+Math.min(fixPct,100).toFixed(1)+'%"></div></div></div>';
+  html+='<div class="cards-group" style="'+(fCol?'max-height:0;overflow:hidden':'')+'">';
+  for(var fi=0;fi<fixedIdx.length;fi++)html+=renderCard(fixedIdx[fi]);
+  html+='</div>';
 
   // VARIABLE
-  var vCol = APP.collapsed.variable;
-  html += '<div class="group-header variable" data-group="variable"><div class="gh-row1"><span class="gh-toggle ' + (vCol ? '' : 'open') + '">▶</span><span class="gh-title">Variable Costs</span><span class="gh-consumed-badge ' + conCls(varPct) + '">' + Math.round(varPct) + '% used</span></div>';
-  html += '<div class="gh-amounts"><div class="gh-amt-box"><div class="gh-amt-label">Budget</div><div class="gh-amt-val dim">' + fm(varB) + '</div></div><div class="gh-amt-box"><div class="gh-amt-label">Spent</div><div class="gh-amt-val">' + fm(varS) + '</div></div><div class="gh-amt-box"><div class="gh-amt-label">Remaining</div><div class="gh-amt-val big ' + (varRem >= 0 ? 'g' : 'r') + '">' + fm(varRem) + '</div></div></div>';
-  html += '<div class="gprog"><div class="gprog-fill gpf-yellow" style="width:' + Math.min(varPct,100).toFixed(1) + '%"></div></div></div>';
-  html += '<div class="cards-group" id="grp-variable" style="' + (vCol ? 'max-height:0;overflow:hidden' : '') + '">';
-  for (var vi = 0; vi < varIdx.length; vi++) html += renderCard(varIdx[vi]);
-  html += '</div>';
+  var vCol=APP.collapsed.variable;
+  html+='<div class="group-header variable" data-group="variable"><div class="gh-row1"><span class="gh-toggle '+(vCol?'':'open')+'">▶</span><span class="gh-title">Variable Costs</span><span class="gh-consumed-badge '+conCls(varPct)+'">'+Math.round(varPct)+'% used</span></div>';
+  html+='<div class="gh-amounts"><div class="gh-amt-box"><div class="gh-amt-label">Budget</div><div class="gh-amt-val dim">'+fm(varB)+'</div></div><div class="gh-amt-box"><div class="gh-amt-label">Spent</div><div class="gh-amt-val">'+fm(varS)+'</div></div><div class="gh-amt-box"><div class="gh-amt-label">Remaining</div><div class="gh-amt-val big '+(varRem>=0?'g':'r')+'">'+fm(varRem)+'</div></div></div>';
+  html+='<div class="gprog"><div class="gprog-fill gpf-yellow" style="width:'+Math.min(varPct,100).toFixed(1)+'%"></div></div></div>';
+  html+='<div class="cards-group" style="'+(vCol?'max-height:0;overflow:hidden':'')+'">';
+  for(var vi=0;vi<varIdx.length;vi++)html+=renderCard(varIdx[vi]);
+  html+='</div>';
 
   // SAVINGS
-  var savNeg = savActual < 0;
-  html += '<div class="sav-card ' + (savNeg ? 'neg' : 'pos') + '"><div class="sav-title ' + (savNeg ? 'r' : 'g') + '">💰 Savings</div><div class="sav-big ' + (savNeg ? 'r' : 'g') + '">AED ' + fm(savActual) + '</div>';
-  html += '<div class="nums"><div class="num"><div class="nl">Target</div><div class="nv">' + fm(savBudget) + '</div></div><div class="num"><div class="nl">vs Target</div><div class="nv ' + (savActual >= savBudget ? 'nvg' : 'nvr') + '">' + (savActual >= savBudget ? '+' : '') + fm(savActual - savBudget) + '</div></div><div class="num"><div class="nl">% Inflow</div><div class="nv">' + Math.round(savActual/INFLOW*100) + '%</div></div></div></div>';
+  var savNeg=savActual<0;
+  html+='<div class="sav-card '+(savNeg?'neg':'pos')+'"><div class="sav-title '+(savNeg?'r':'g')+'">💰 Savings</div><div class="sav-big '+(savNeg?'r':'g')+'">AED '+fm(savActual)+'</div>';
+  html+='<div class="nums"><div class="num"><div class="nl">Target</div><div class="nv">'+fm(savBudget)+'</div></div><div class="num"><div class="nl">vs Target</div><div class="nv '+(savActual>=savBudget?'nvg':'nvr')+'">'+(savActual>=savBudget?'+':'')+fm(savActual-savBudget)+'</div></div><div class="num"><div class="nl">% Inflow</div><div class="nv">'+Math.round(savActual/INFLOW*100)+'%</div></div></div></div>';
 
-  document.getElementById("budget-content").innerHTML = html;
-  if (APP.lastImport) document.getElementById("last-import").textContent = "Last CSV: " + APP.lastImport;
-  bindBudgetEvents();
+  document.getElementById("budget-content").innerHTML=html;
+  if(APP.lastImport)document.getElementById("last-import").textContent="Last CSV: "+APP.lastImport;
+  bindEvents();
 }
 
-function renderCard(i) {
-  var r = APP.budget[i]; var sp = getSpent(r); var rem = r.b - sp;
-  var pct = r.b > 0 ? rem/r.b*100 : 100;
-  var used = r.b > 0 ? Math.min(sp/r.b*100,100) : 0;
-  var hs = sp > 0; var pc = pctCls(pct);
-  var h = '<div class="card' + (r.p ? ' paid' : '') + '"><div class="row1">';
-  h += '<input type="checkbox" class="cb" data-i="' + i + '"' + (r.p ? ' checked' : '') + '>';
-  h += '<span class="catname' + (r.p ? ' struck' : '') + '">' + r.c + '</span>';
-  if (r.b > 0) h += '<span class="badge b' + pc + '">' + Math.round(pct) + '% left</span>';
-  h += '</div>';
-  if (r.b > 0) h += '<div class="progbar"><div class="progfill pf' + pc + '" style="width:' + used.toFixed(1) + '%"></div></div>';
-  h += '<div class="nums"><div class="num"><div class="nl">Budget</div><div class="nv">' + fm(r.b) + '</div></div>';
-  h += '<div class="num"><div class="nl">Spent</div>';
-  if (editing === i) {
-    h += '<div><input type="number" inputmode="decimal" class="edit-input" data-i="' + i + '" value="' + (sp > 0 ? sp : '') + '" placeholder="0.00" step="0.01" min="0"></div>';
-  } else {
-    h += '<div class="nv spent-tap ' + (hs ? 'nvw' : 'nvd') + '" data-i="' + i + '">' + (hs ? fd(sp) + ' <span style="font-size:10px;color:#484f58">✎</span>' : 'tap') + '</div>';
+function renderCard(i){
+  var r=APP.budget[i],sp=getSpent(r),rem=r.b-sp;
+  var pct=r.b>0?rem/r.b*100:100,used=r.b>0?Math.min(sp/r.b*100,100):0;
+  var hs=sp>0,pc=pctCls(pct);
+  var h='<div class="card'+(r.p?' paid':'')+'"><div class="row1">';
+  h+='<input type="checkbox" class="cb" data-i="'+i+'"'+(r.p?' checked':'')+'>';
+  h+='<span class="catname'+(r.p?' struck':'')+'">'+r.c+'</span>';
+  if(r.b>0)h+='<span class="badge b'+pc+'">'+Math.round(pct)+'% left</span>';
+  h+='</div>';
+  if(r.b>0)h+='<div class="progbar"><div class="progfill pf'+pc+'" style="width:'+used.toFixed(1)+'%"></div></div>';
+  h+='<div class="nums"><div class="num"><div class="nl">Budget</div><div class="nv">'+fm(r.b)+'</div></div>';
+  h+='<div class="num"><div class="nl">Spent</div>';
+  if(editing===i){
+    h+='<div><input type="number" inputmode="decimal" class="edit-input" data-i="'+i+'" value="'+(sp>0?sp:'')+'" placeholder="0.00" step="0.01" min="0"></div>';
+  }else{
+    h+='<div class="nv spent-tap '+(hs?'nvw':'nvd')+'" data-i="'+i+'">'+(hs?fd(sp)+' <span style="font-size:10px;color:#484f58">✎</span>':'tap')+'</div>';
   }
-  h += '</div>';
-  var rc = 'nvd', rv = '–';
-  if (r.b > 0) { if (rem === 0 && hs) {} else if (rem < 0) { rc = 'nvr'; rv = fd(rem); } else if (hs) { rc = 'nvg'; rv = fm(rem); } else { rv = fm(rem); } }
-  h += '<div class="num"><div class="nl">Left</div><div class="nv ' + rc + '">' + rv + '</div></div>';
-  h += '<div class="num"><div class="nl">Used</div><div class="nv ' + (hs ? '' : 'nvd') + '">' + (r.b > 0 ? Math.round(100-pct) + '%' : '–') + '</div></div></div></div>';
+  h+='</div>';
+  var rc='nvd',rv='–';
+  if(r.b>0){if(rem===0&&hs){}else if(rem<0){rc='nvr';rv=fd(rem)}else if(hs){rc='nvg';rv=fm(rem)}else{rv=fm(rem)}}
+  h+='<div class="num"><div class="nl">Left</div><div class="nv '+rc+'">'+rv+'</div></div>';
+  h+='<div class="num"><div class="nl">Used</div><div class="nv '+(hs?'':'nvd')+'">'+(r.b>0?Math.round(100-pct)+'%':'–')+'</div></div></div></div>';
   return h;
 }
 
-function bindBudgetEvents() {
-  var ghs = document.querySelectorAll(".group-header");
-  for (var g = 0; g < ghs.length; g++) {
-    ghs[g].addEventListener("click", function(e) {
-      if (e.target.tagName === "INPUT") return;
-      var grp = this.getAttribute("data-group");
-      APP.collapsed[grp] = !APP.collapsed[grp];
-      drawBudget(); // no firebase push for UI-only state
+function bindEvents(){
+  // Collapse/expand
+  var ghs=document.querySelectorAll(".group-header");
+  for(var g=0;g<ghs.length;g++){
+    ghs[g].addEventListener("click",function(e){
+      if(e.target.tagName==="INPUT")return;
+      APP.collapsed[this.getAttribute("data-group")]=!APP.collapsed[this.getAttribute("data-group")];
+      saveCache(); // UI-only, no firebase push
+      drawBudget();
     });
   }
-  var cbs = document.querySelectorAll("#budget-content .cb");
-  for (var j = 0; j < cbs.length; j++) {
-    (function(cb) {
-      cb.addEventListener("click", function(e) { e.stopPropagation(); });
-      cb.addEventListener("change", function() {
-        var idx = parseInt(cb.getAttribute("data-i"));
-        APP.budget[idx].p = cb.checked;
-        if (cb.checked) APP.budget[idx].cs = null;
-        editing = -1; saveData(); drawBudget();
+
+  // Checkboxes
+  var cbs=document.querySelectorAll("#budget-content .cb");
+  for(var j=0;j<cbs.length;j++){
+    (function(cb){
+      cb.addEventListener("click",function(e){e.stopPropagation()});
+      cb.addEventListener("change",function(){
+        var idx=parseInt(cb.getAttribute("data-i"));
+        APP.budget[idx].p=cb.checked;
+        if(cb.checked)APP.budget[idx].cs=null;
+        editing=-1;
+        saveData();
+        drawBudget();
       });
     })(cbs[j]);
   }
-  var taps = document.querySelectorAll("#budget-content .spent-tap");
-  for (var j = 0; j < taps.length; j++) {
-    (function(tap) {
-      tap.addEventListener("click", function(e) {
+
+  // Spent tap
+  var taps=document.querySelectorAll("#budget-content .spent-tap");
+  for(var j=0;j<taps.length;j++){
+    (function(tap){
+      tap.addEventListener("click",function(e){
         e.stopPropagation();
-        editing = parseInt(tap.getAttribute("data-i"));
+        editing=parseInt(tap.getAttribute("data-i"));
         drawBudget();
-        var inp = document.querySelector('#budget-content .edit-input[data-i="' + editing + '"]');
-        if (inp) setTimeout(function() { inp.focus(); }, 80);
+        setTimeout(function(){
+          var inp=document.querySelector('.edit-input[data-i="'+editing+'"]');
+          if(inp)inp.focus();
+        },100);
       });
     })(taps[j]);
   }
-  var inps = document.querySelectorAll("#budget-content .edit-input");
-  for (var j = 0; j < inps.length; j++) {
-    (function(inp) {
-      inp.addEventListener("click", function(e) { e.stopPropagation(); });
-      var committed = false;
-      var commit = function() {
-        if (committed) return; committed = true;
-        var idx = parseInt(inp.getAttribute("data-i"));
-        var v = parseFloat(inp.value);
-        if (!isNaN(v) && v >= 0) { APP.budget[idx].cs = v; APP.budget[idx].p = (v === APP.budget[idx].b); }
-        else if (inp.value.trim() === "") { APP.budget[idx].cs = null; APP.budget[idx].p = false; }
-        editing = -1; saveData(); drawBudget();
-      };
-      inp.addEventListener("blur", function() { setTimeout(commit, 150); });
-      inp.addEventListener("keydown", function(e) {
-        if (e.key === "Enter") { e.preventDefault(); commit(); }
-        if (e.key === "Escape") { e.preventDefault(); editing = -1; drawBudget(); }
+
+  // Edit inputs — THE FIX: single clean commit path
+  var inps=document.querySelectorAll("#budget-content .edit-input");
+  for(var j=0;j<inps.length;j++){
+    (function(inp){
+      inp.addEventListener("click",function(e){e.stopPropagation()});
+
+      function doCommit(){
+        var idx=parseInt(inp.getAttribute("data-i"));
+        if(editing!==idx)return; // already committed
+        var v=parseFloat(inp.value);
+        if(!isNaN(v)&&v>=0){
+          APP.budget[idx].cs=v;
+          APP.budget[idx].p=(v===APP.budget[idx].b);
+        }else if(inp.value.trim()===""){
+          APP.budget[idx].cs=null;
+          APP.budget[idx].p=false;
+        }
+        editing=-1;
+        saveData();
+        drawBudget();
+      }
+
+      inp.addEventListener("blur",function(){
+        // Delay to allow tap on another element to register first
+        setTimeout(doCommit,200);
+      });
+      inp.addEventListener("keydown",function(e){
+        if(e.key==="Enter"){e.preventDefault();inp.blur()}
+        if(e.key==="Escape"){e.preventDefault();editing=-1;drawBudget()}
       });
     })(inps[j]);
   }
 }
 
 // ===== CSV =====
-function parseCSV(text) {
-  var lines = text.split("\n"); var txns = []; var cc = "Primary";
-  for (var i = 0; i < lines.length; i++) {
-    var line = lines[i].trim(); if (!line) continue;
-    if (line.indexOf("Primary Card") > -1) { cc = "Primary"; continue; }
-    if (line.indexOf("Supplementary Card") > -1) { cc = "Supplementary"; continue; }
-    if (line.indexOf("Transaction Date,") > -1 || line.indexOf("Statement Period") > -1 || line.indexOf("Current Balance") > -1 || line.indexOf("Minimum Amount") > -1 || line.indexOf("Credit Limit") > -1 || line.indexOf("Available Credit") > -1 || line.indexOf("Authorised Trans") > -1 || line.indexOf("Posted but") > -1) continue;
-    var parts = [], inQ = false, cur = "";
-    for (var k = 0; k < line.length; k++) { var ch = line[k]; if (ch === '"') inQ = !inQ; else if (ch === ',' && !inQ) { parts.push(cur.trim()); cur = ""; } else cur += ch; }
+function parseCSV(text){
+  var lines=text.split("\n"),txns=[],cc="Primary";
+  for(var i=0;i<lines.length;i++){
+    var line=lines[i].trim();if(!line)continue;
+    if(line.indexOf("Primary Card")>-1){cc="Primary";continue}
+    if(line.indexOf("Supplementary Card")>-1){cc="Supplementary";continue}
+    if(line.indexOf("Transaction Date,")>-1||line.indexOf("Statement Period")>-1||line.indexOf("Current Balance")>-1||line.indexOf("Minimum Amount")>-1||line.indexOf("Credit Limit")>-1||line.indexOf("Available Credit")>-1||line.indexOf("Authorised Trans")>-1||line.indexOf("Posted but")>-1)continue;
+    var parts=[],inQ=false,cur="";
+    for(var k=0;k<line.length;k++){var ch=line[k];if(ch==='"')inQ=!inQ;else if(ch===','&&!inQ){parts.push(cur.trim());cur=""}else cur+=ch}
     parts.push(cur.trim());
-    if (parts.length < 4) continue;
-    var ds = parts[0], desc = parts[1], crdr = parts[2], amt = parseFloat(parts[3].replace(/,/g, ""));
-    if (!ds.match(/^\d{2}\/\d{2}\/\d{4}$/) || isNaN(amt)) continue;
-    var dp = ds.split("/");
+    if(parts.length<4)continue;
+    var ds=parts[0],desc=parts[1],crdr=parts[2],amt=parseFloat(parts[3].replace(/,/g,""));
+    if(!ds.match(/^\d{2}\/\d{2}\/\d{4}$/)||isNaN(amt))continue;
+    var dp=ds.split("/");
     txns.push({date:new Date(parseInt(dp[2]),parseInt(dp[1])-1,parseInt(dp[0])),dateStr:ds,desc:desc,crdr:crdr,amount:amt,card:cc});
   }
   return txns;
 }
-function matchCat(d) { var l = d.toLowerCase(); var k = Object.keys(APP.mappings); for (var i = 0; i < k.length; i++) { if (l.indexOf(k[i]) > -1) return APP.mappings[k[i]]; } return null; }
-function cleanDesc(d) { return d.replace(/\s+(DUBAI|ABU DHABI|ABUDHABI|LONDON|ISLAMABAD)\s+(ARE|GBR|PAK|IRL).*$/i,"").replace(/\s+ARE$/,"").replace(/\s+WWW\..+$/,"").trim(); }
+function matchCat(d){var l=d.toLowerCase();var k=Object.keys(APP.mappings);for(var i=0;i<k.length;i++){if(l.indexOf(k[i])>-1)return APP.mappings[k[i]]}return null}
+function cleanDesc(d){return d.replace(/\s+(DUBAI|ABU DHABI|ABUDHABI|LONDON|ISLAMABAD)\s+(ARE|GBR|PAK|IRL).*$/i,"").replace(/\s+ARE$/,"").replace(/\s+WWW\..+$/,"").trim()}
 
-var pendingTxns = [];
-document.getElementById("drop-zone").addEventListener("click", function() { document.getElementById("csv-input").click(); });
-document.getElementById("csv-input").addEventListener("change", function(e) {
-  var f = e.target.files[0]; if (!f) return;
-  var r = new FileReader(); r.onload = function(ev) { processCSV(ev.target.result); }; r.readAsText(f);
+var pendingTxns=[];
+document.getElementById("drop-zone").addEventListener("click",function(){document.getElementById("csv-input").click()});
+document.getElementById("csv-input").addEventListener("change",function(e){
+  var f=e.target.files[0];if(!f)return;
+  var r=new FileReader();r.onload=function(ev){processCSV(ev.target.result)};r.readAsText(f);
 });
 
-function processCSV(text) {
-  var all = parseCSV(text); var now = new Date(); var wa = new Date(now.getTime() - 7*24*60*60*1000);
-  pendingTxns = [];
-  for (var i = 0; i < all.length; i++) {
-    var t = all[i];
-    if (t.crdr !== "DR" || t.date < wa) continue;
-    if (t.desc.indexOf("PAYMENT RECEIVED") > -1 || t.desc.indexOf("FOREIGN TRANSACTION FEE") > -1 || t.desc.indexOf("VAT ON FOREIGN") > -1) continue;
-    var key = t.dateStr + "|" + t.desc + "|" + t.amount;
-    if (APP.imported && APP.imported.indexOf(key) > -1) continue;
-    t.key = key; t.cleanDesc = cleanDesc(t.desc); t.category = matchCat(t.desc);
+function processCSV(text){
+  var all=parseCSV(text),now=new Date(),wa=new Date(now.getTime()-7*24*60*60*1000);
+  pendingTxns=[];
+  for(var i=0;i<all.length;i++){
+    var t=all[i];
+    if(t.crdr!=="DR"||t.date<wa)continue;
+    if(t.desc.indexOf("PAYMENT RECEIVED")>-1||t.desc.indexOf("FOREIGN TRANSACTION FEE")>-1||t.desc.indexOf("VAT ON FOREIGN")>-1)continue;
+    var key=t.dateStr+"|"+t.desc+"|"+t.amount;
+    if(APP.imported&&APP.imported.indexOf(key)>-1)continue;
+    t.key=key;t.cleanDesc=cleanDesc(t.desc);t.category=matchCat(t.desc);
     pendingTxns.push(t);
   }
-  if (!pendingTxns.length) {
-    document.getElementById("preview-title").textContent = "No new transactions";
-    document.getElementById("txn-list").innerHTML = '<div class="empty-state">All imported or none in past 7 days.</div>';
-    document.getElementById("import-preview").style.display = "block";
-    document.getElementById("btn-apply").style.display = "none"; return;
+  if(!pendingTxns.length){
+    document.getElementById("preview-title").textContent="No new transactions";
+    document.getElementById("txn-list").innerHTML='<div class="empty-state">All imported or none in past 7 days.</div>';
+    document.getElementById("import-preview").style.display="block";
+    document.getElementById("btn-apply").style.display="none";return;
   }
-  document.getElementById("btn-apply").style.display = "";
-  document.getElementById("preview-title").textContent = pendingTxns.length + " new transaction" + (pendingTxns.length > 1 ? "s" : "");
+  document.getElementById("btn-apply").style.display="";
+  document.getElementById("preview-title").textContent=pendingTxns.length+" new transaction"+(pendingTxns.length>1?"s":"");
   drawTxnList();
-  document.getElementById("import-preview").style.display = "block";
-  document.getElementById("import-summary").style.display = "none";
+  document.getElementById("import-preview").style.display="block";
+  document.getElementById("import-summary").style.display="none";
 }
 
-function drawTxnList() {
-  var html = ""; var ld = "";
-  for (var i = 0; i < pendingTxns.length; i++) {
-    var t = pendingTxns[i];
-    if (t.dateStr !== ld) { ld = t.dateStr; var dn = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"]; html += '<div class="day-header">' + dn[t.date.getDay()] + ", " + t.dateStr + '</div>'; }
-    html += '<div class="txn"><div class="txn-info"><div class="txn-desc">' + t.cleanDesc + '</div><div class="txn-date">' + t.card + '</div><div class="txn-cat"><select class="cat-select' + (t.category ? '' : ' unset') + '" data-i="' + i + '"><option value="">— Select —</option>';
-    for (var j = 0; j < CATS.length; j++) html += '<option value="' + CATS[j] + '"' + (t.category === CATS[j] ? ' selected' : '') + '>' + CATS[j] + '</option>';
-    html += '</select></div></div><div class="txn-amt">' + fd(t.amount) + '</div></div>';
+function drawTxnList(){
+  var html="",ld="";
+  for(var i=0;i<pendingTxns.length;i++){
+    var t=pendingTxns[i];
+    if(t.dateStr!==ld){ld=t.dateStr;var dn=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];html+='<div class="day-header">'+dn[t.date.getDay()]+", "+t.dateStr+'</div>'}
+    html+='<div class="txn"><div class="txn-info"><div class="txn-desc">'+t.cleanDesc+'</div><div class="txn-date">'+t.card+'</div><div class="txn-cat"><select class="cat-select'+(t.category?'':' unset')+'" data-i="'+i+'"><option value="">— Select —</option>';
+    for(var j=0;j<CATS.length;j++)html+='<option value="'+CATS[j]+'"'+(t.category===CATS[j]?' selected':'')+'>'+CATS[j]+'</option>';
+    html+='</select></div></div><div class="txn-amt">'+fd(t.amount)+'</div></div>';
   }
-  document.getElementById("txn-list").innerHTML = html;
-  var sels = document.querySelectorAll(".cat-select");
-  for (var k = 0; k < sels.length; k++) {
-    sels[k].addEventListener("change", function() {
-      var idx = parseInt(this.getAttribute("data-i")); var val = this.value;
-      pendingTxns[idx].category = val || null;
-      this.className = "cat-select" + (val ? "" : " unset");
-      if (val) { var mK = pendingTxns[idx].cleanDesc.toLowerCase().split(" ").slice(0,2).join(" "); if (mK.length > 2) { APP.mappings[mK] = val; saveData(); } }
+  document.getElementById("txn-list").innerHTML=html;
+  var sels=document.querySelectorAll(".cat-select");
+  for(var k=0;k<sels.length;k++){
+    sels[k].addEventListener("change",function(){
+      var idx=parseInt(this.getAttribute("data-i")),val=this.value;
+      pendingTxns[idx].category=val||null;
+      this.className="cat-select"+(val?"":" unset");
+      if(val){var mK=pendingTxns[idx].cleanDesc.toLowerCase().split(" ").slice(0,2).join(" ");if(mK.length>2){APP.mappings[mK]=val;saveData()}}
       checkApply();
     });
   }
   checkApply();
 }
-function checkApply() { var ok = true; for (var i = 0; i < pendingTxns.length; i++) { if (!pendingTxns[i].category) { ok = false; break; } } document.getElementById("btn-apply").disabled = !ok; }
+function checkApply(){var ok=true;for(var i=0;i<pendingTxns.length;i++){if(!pendingTxns[i].category){ok=false;break}}document.getElementById("btn-apply").disabled=!ok}
 
-document.getElementById("btn-apply").addEventListener("click", function() {
-  var sums = {};
-  for (var i = 0; i < pendingTxns.length; i++) { var t = pendingTxns[i]; if (!t.category) continue; if (!sums[t.category]) sums[t.category] = 0; sums[t.category] += t.amount; }
-  for (var i = 0; i < APP.budget.length; i++) { if (sums[APP.budget[i].c]) { APP.budget[i].s = Math.round((APP.budget[i].s + sums[APP.budget[i].c]) * 100) / 100; APP.budget[i].cs = null; } }
-  if (!APP.imported) APP.imported = [];
-  for (var i = 0; i < pendingTxns.length; i++) APP.imported.push(pendingTxns[i].key);
-  APP.lastImport = new Date().toLocaleDateString("en-GB");
+document.getElementById("btn-apply").addEventListener("click",function(){
+  var sums={};
+  for(var i=0;i<pendingTxns.length;i++){var t=pendingTxns[i];if(!t.category)continue;if(!sums[t.category])sums[t.category]=0;sums[t.category]+=t.amount}
+  for(var i=0;i<APP.budget.length;i++){if(sums[APP.budget[i].c]){APP.budget[i].s=Math.round((APP.budget[i].s+sums[APP.budget[i].c])*100)/100;APP.budget[i].cs=null}}
+  if(!APP.imported)APP.imported=[];
+  for(var i=0;i<pendingTxns.length;i++)APP.imported.push(pendingTxns[i].key);
+  APP.lastImport=new Date().toLocaleDateString("en-GB");
   saveData();
-  var sh = '<div class="summary-card"><div class="section-title" style="margin-top:0">Done</div>'; var tot = 0; var cs = Object.keys(sums);
-  for (var i = 0; i < cs.length; i++) { sh += '<div class="summary-row"><span class="sr-cat">' + cs[i] + '</span><span class="sr-amt">+' + fd(sums[cs[i]]) + '</span></div>'; tot += sums[cs[i]]; }
-  sh += '<div class="summary-row summary-total"><span>Total</span><span class="sr-amt">' + fd(tot) + '</span></div></div>';
-  sh += '<p style="color:#2ea043;font-size:13px;text-align:center;margin-top:10px">✓ Updated</p>';
-  document.getElementById("import-summary").innerHTML = sh; document.getElementById("import-summary").style.display = "block";
-  document.getElementById("txn-list").style.display = "none"; document.getElementById("btn-apply").style.display = "none";
-  document.getElementById("btn-cancel").textContent = "Done"; pendingTxns = [];
+  var sh='<div class="summary-card"><div class="section-title" style="margin-top:0">Done</div>',tot=0,cs=Object.keys(sums);
+  for(var i=0;i<cs.length;i++){sh+='<div class="summary-row"><span class="sr-cat">'+cs[i]+'</span><span class="sr-amt">+'+fd(sums[cs[i]])+'</span></div>';tot+=sums[cs[i]]}
+  sh+='<div class="summary-row summary-total"><span>Total</span><span class="sr-amt">'+fd(tot)+'</span></div></div>';
+  sh+='<p style="color:#2ea043;font-size:13px;text-align:center;margin-top:10px">✓ Updated</p>';
+  document.getElementById("import-summary").innerHTML=sh;document.getElementById("import-summary").style.display="block";
+  document.getElementById("txn-list").style.display="none";document.getElementById("btn-apply").style.display="none";
+  document.getElementById("btn-cancel").textContent="Done";pendingTxns=[];
 });
 
-function cancelImport() { pendingTxns = []; document.getElementById("import-preview").style.display = "none"; document.getElementById("txn-list").style.display = ""; document.getElementById("import-summary").style.display = "none"; document.getElementById("btn-cancel").textContent = "Cancel"; document.getElementById("csv-input").value = ""; }
+function cancelImport(){pendingTxns=[];document.getElementById("import-preview").style.display="none";document.getElementById("txn-list").style.display="";document.getElementById("import-summary").style.display="none";document.getElementById("btn-cancel").textContent="Cancel";document.getElementById("csv-input").value=""}
 
 // ===== SETTINGS =====
-function drawMappings() {
-  var keys = Object.keys(APP.mappings).sort();
-  if (!keys.length) { document.getElementById("mappings-list").innerHTML = '<div class="empty-state">No mappings.</div>'; return; }
-  var h = "";
-  for (var i = 0; i < keys.length; i++) h += '<div class="map-item"><span class="map-merchant">' + keys[i] + '</span><span class="map-cat">' + APP.mappings[keys[i]] + '</span><button class="map-del" data-k="' + keys[i] + '">✕</button></div>';
-  document.getElementById("mappings-list").innerHTML = h;
-  var dels = document.querySelectorAll(".map-del");
-  for (var j = 0; j < dels.length; j++) dels[j].addEventListener("click", function() { delete APP.mappings[this.getAttribute("data-k")]; saveData(); drawMappings(); });
+function drawMappings(){
+  var keys=Object.keys(APP.mappings).sort();
+  if(!keys.length){document.getElementById("mappings-list").innerHTML='<div class="empty-state">No mappings.</div>';return}
+  var h="";
+  for(var i=0;i<keys.length;i++)h+='<div class="map-item"><span class="map-merchant">'+keys[i]+'</span><span class="map-cat">'+APP.mappings[keys[i]]+'</span><button class="map-del" data-k="'+keys[i]+'">✕</button></div>';
+  document.getElementById("mappings-list").innerHTML=h;
+  var dels=document.querySelectorAll(".map-del");
+  for(var j=0;j<dels.length;j++)dels[j].addEventListener("click",function(){delete APP.mappings[this.getAttribute("data-k")];saveData();drawMappings()});
 }
-function exportData() { var b = new Blob([JSON.stringify(APP,null,2)],{type:"application/json"}); var u = URL.createObjectURL(b); var a = document.createElement("a"); a.href = u; a.download = "budget_" + new Date().toISOString().slice(0,10) + ".json"; a.click(); URL.revokeObjectURL(u); }
-function resetData() { if (confirm("Delete all data?")) { APP = defaultData(); saveData(); drawBudget(); alert("Done."); } }
+function exportData(){var b=new Blob([JSON.stringify(APP,null,2)],{type:"application/json"});var u=URL.createObjectURL(b);var a=document.createElement("a");a.href=u;a.download="budget_"+new Date().toISOString().slice(0,10)+".json";a.click();URL.revokeObjectURL(u)}
+function resetData(){if(confirm("Delete all data?")){APP=defaultData();saveData();drawBudget();alert("Done.")}}
 
 // ===== INIT =====
-initFirebase();
 drawBudget();
+initFirebase();
 </script>
 </body>
 </html>
