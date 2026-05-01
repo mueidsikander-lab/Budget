@@ -719,7 +719,21 @@ function drawTxnList(){
   }
   checkApply();
 }
-function checkApply(){var ok=true;for(var i=0;i<pendingTxns.length;i++){if(!pendingTxns[i].category){ok=false;break}}document.getElementById("btn-apply").disabled=!ok}
+function checkApply(){
+  var missing = 0, total = pendingTxns.length;
+  for(var i=0;i<pendingTxns.length;i++){if(!pendingTxns[i].category)missing++}
+  var btn = document.getElementById("btn-apply");
+  if (missing === 0) {
+    btn.disabled = false;
+    btn.textContent = "Apply " + total + " to Budget";
+  } else if (missing === total) {
+    btn.disabled = true;
+    btn.textContent = "Categorize transactions";
+  } else {
+    btn.disabled = false;
+    btn.textContent = "Apply " + (total - missing) + " (skip " + missing + ")";
+  }
+}
 
 document.getElementById("btn-apply").addEventListener("click",function(){
   var sums={};
