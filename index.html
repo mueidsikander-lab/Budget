@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="color-scheme" content="dark">
 <title>Budget</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -13,11 +14,11 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
 input,textarea{user-select:text;-webkit-user-select:text}
+html{color-scheme:dark}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0a0e13;color:#E6EDF3;font-size:14px;-webkit-text-size-adjust:100%;min-height:100vh;padding:0 0 80px}
 .page{display:none;padding:14px}.page.active{display:block}
 .mono{font-variant-numeric:tabular-nums}
 
-/* ===== HEADER ===== */
 .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
 .h-title{font-size:13px;color:#8b949e;font-weight:500}
 .h-sync{font-size:11px;color:#8b949e}
@@ -25,8 +26,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .dot.on{background:#2ea043}.dot.off{background:#f85149}.dot.pending{background:#d29922;animation:pulse 1s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
 
-/* ===== HERO CARD ===== */
-.hero{background:linear-gradient(145deg,#1a2332 0%,#161d29 100%);border:1px solid #30363d;border-radius:18px;padding:18px;margin-bottom:14px;position:relative;overflow:hidden}
+.hero{background:linear-gradient(145deg,#1a2332 0%,#161d29 100%);border:1px solid #30363d;border-radius:18px;padding:18px;margin-bottom:14px}
 .hero-label{font-size:11px;color:#8b949e;text-transform:uppercase;letter-spacing:0.6px;font-weight:500;margin-bottom:4px}
 .hero-amt{font-size:38px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1;margin-bottom:2px;letter-spacing:-1px}
 .hero-amt.g{color:#3fb950}
@@ -37,20 +37,21 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .hb-fixed{background:#58a6ff}
 .hb-variable{background:#d29922}
 .hb-saved{background:#3fb950}
-.hero-legend{display:flex;justify-content:space-between;font-size:11px;color:#8b949e}
+.hb-over{background:#f85149}
+.hero-legend{display:flex;justify-content:space-between;font-size:11px;color:#8b949e;flex-wrap:wrap;gap:6px}
 .hero-legend-item{display:flex;align-items:center;gap:5px}
 .legend-dot{width:8px;height:8px;border-radius:2px}
 
-/* ===== STAT ROW ===== */
 .stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
 .stat{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:12px}
 .stat-label{font-size:10px;color:#8b949e;text-transform:uppercase;letter-spacing:0.4px;font-weight:500;margin-bottom:4px}
 .stat-val{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-0.3px}
+.stat-val.g{color:#3fb950}
+.stat-val.r{color:#f85149}
 .stat-pct{font-size:11px;color:#8b949e;margin-top:2px;font-variant-numeric:tabular-nums}
 .stat.fixed{border-left:3px solid #58a6ff}
 .stat.variable{border-left:3px solid #d29922}
 
-/* ===== GROUPS ===== */
 .group{margin-top:14px}
 .group-toggle{display:flex;align-items:center;justify-content:space-between;padding:10px 4px;cursor:pointer;border-bottom:1px solid #21262d;margin-bottom:6px}
 .gt-left{display:flex;align-items:center;gap:8px}
@@ -60,21 +61,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .gt-count{font-size:11px;color:#8b949e}
 .gt-amt{font-size:13px;color:#8b949e;font-variant-numeric:tabular-nums}
 
-/* ===== ROW (replaces card) ===== */
 .row{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:12px 14px;margin-bottom:6px;cursor:pointer;transition:background 0.15s}
 .row:active{background:#1c2128}
-.row.paid{opacity:0.45}
-.row.editing{border-color:#388bfd;background:#0d2c5a20}
+.row.paid{opacity:0.5}
+.row.editing{border-color:#388bfd;background:#0d2c5a30;cursor:default}
 
 .row-top{display:flex;align-items:center;gap:10px;margin-bottom:6px}
 .row-name{flex:1;font-size:14px;font-weight:600}
 .row-name.struck{text-decoration:line-through;color:#8b949e}
 .cb{width:24px;height:24px;border-radius:6px;border:2px solid #484f58;background:none;appearance:none;-webkit-appearance:none;cursor:pointer;flex-shrink:0;position:relative}
-.cb:checked{border-color:#3fb950;background:#3fb95025}
-.cb:checked::after{content:"";position:absolute;top:3px;left:7px;width:6px;height:11px;border:solid #3fb950;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.cb:checked{border-color:#3fb950;background:#3fb95030}
+.cb:checked::after{content:"";position:absolute;top:2px;left:6px;width:6px;height:11px;border:solid #3fb950;border-width:0 2px 2px 0;transform:rotate(45deg)}
 
-.row-bar{height:4px;border-radius:2px;background:#21262d;overflow:hidden;margin-bottom:8px}
-.row-bar-fill{height:100%;border-radius:2px;transition:width 0.3s}
+.row-bar{height:5px;border-radius:3px;background:#21262d;overflow:hidden;margin-bottom:8px}
+.row-bar-fill{height:100%;border-radius:3px;transition:width 0.3s}
 .bf-g{background:#3fb950}.bf-y{background:#d29922}.bf-r{background:#f85149}
 
 .row-nums{display:flex;justify-content:space-between;align-items:center;font-size:12px;font-variant-numeric:tabular-nums}
@@ -86,30 +86,26 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .rem-amt.g{color:#3fb950}.rem-amt.r{color:#f85149}.rem-amt.dim{color:#484f58}
 .rem-label{font-size:10px;color:#8b949e;text-transform:uppercase;letter-spacing:0.3px}
 
-/* ===== EDIT MODE ===== */
-.edit-input{width:100%;background:#0d1117;border:1px solid #388bfd;border-radius:8px;color:#fff;font-size:18px;font-weight:600;padding:10px 12px;outline:none;font-variant-numeric:tabular-nums;text-align:center}
-.edit-input:focus{box-shadow:0 0 0 3px #388bfd30}
-.edit-row{display:flex;gap:8px;margin-top:8px}
-.edit-btn{flex:1;padding:10px;border-radius:8px;border:none;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer}
-.eb-mark{background:#3fb95020;color:#3fb950;border:1px solid #3fb95040}
-.eb-clear{background:#f8514920;color:#f85149;border:1px solid #f8514940}
-.eb-done{background:#388bfd;color:#fff}
+.edit-input{width:100%;background:#0d1117;border:2px solid #388bfd;border-radius:8px;color:#fff;font-size:20px;font-weight:600;padding:12px;outline:none;font-variant-numeric:tabular-nums;text-align:center;margin-top:2px}
+.edit-input:focus{box-shadow:0 0 0 3px #388bfd40}
+.edit-row{display:flex;gap:6px;margin-top:8px}
+.edit-btn{flex:1;padding:12px 8px;border-radius:8px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;transition:transform 0.1s}
+.edit-btn:active{transform:scale(0.97)}
+.eb-mark{background:#3fb95040;color:#3fb950;border:1px solid #3fb950}
+.eb-clear{background:#f8514940;color:#f85149;border:1px solid #f85149}
+.eb-done{background:#388bfd;color:#fff;border:1px solid #388bfd}
 
-/* ===== SAVINGS ===== */
 .savings{background:linear-gradient(145deg,#0d2818 0%,#0a1f12 100%);border:1px solid #2ea04340;border-radius:14px;padding:16px;margin-top:16px;text-align:center}
 .savings.neg{background:linear-gradient(145deg,#280d0d 0%,#1f0a0a 100%);border-color:#f8514940}
 .sav-label{font-size:11px;color:#8b949e;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px}
 .sav-amt{font-size:32px;font-weight:700;font-variant-numeric:tabular-nums;color:#3fb950;letter-spacing:-0.5px}
 .sav-amt.r{color:#f85149}
-.sav-meta{font-size:11px;color:#8b949e;margin-top:6px}
 
-/* ===== NAV ===== */
 .nav{position:fixed;bottom:0;left:0;right:0;background:rgba(13,17,23,0.95);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid #30363d;display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom)}
 .nav-btn{flex:1;padding:10px 0 8px;text-align:center;background:none;border:none;color:#8b949e;font-size:10px;font-family:inherit;cursor:pointer}
 .nav-btn.act{color:#58a6ff}
 .nav-icon{font-size:22px;display:block;margin-bottom:1px;line-height:1}
 
-/* ===== UPLOAD ===== */
 .upload-zone{background:#161b22;border:2px dashed #30363d;border-radius:14px;padding:30px 20px;text-align:center;margin-bottom:16px;cursor:pointer}
 .upload-zone:active{border-color:#58a6ff}
 .upload-zone .icon{font-size:36px;margin-bottom:8px}
@@ -162,26 +158,17 @@ h1{font-size:22px;font-weight:700;margin-bottom:6px;letter-spacing:-0.5px}
   </div>
 </div>
 
-<!-- BUDGET PAGE -->
 <div class="page active" id="pg-budget">
   <div class="header">
     <span class="h-title">April 2026</span>
     <span class="h-sync" id="sync-status"></span>
   </div>
-
-  <!-- Hero card with main savings figure -->
   <div class="hero" id="hero-card"></div>
-
-  <!-- Fixed and Variable summary stats -->
   <div class="stats" id="stat-row"></div>
-
-  <!-- Groups -->
   <div id="budget-content"></div>
-
   <p class="foot" id="last-import"></p>
 </div>
 
-<!-- UPLOAD PAGE -->
 <div class="page" id="pg-upload">
   <h1>Import Statement</h1>
   <p style="font-size:12px;color:#8b949e;margin-bottom:14px">Upload your weekly CSV. Past 7 days auto-detected.</p>
@@ -197,7 +184,6 @@ h1{font-size:22px;font-weight:700;margin-bottom:6px;letter-spacing:-0.5px}
   </div>
 </div>
 
-<!-- SETTINGS PAGE -->
 <div class="page" id="pg-settings">
   <h1>Settings</h1>
   <div class="section-title">Share with Family</div>
@@ -210,7 +196,7 @@ h1{font-size:22px;font-weight:700;margin-bottom:6px;letter-spacing:-0.5px}
   <div class="section-title">Data</div>
   <button class="btn btn-outline" onclick="exportData()" style="margin-right:8px;margin-bottom:8px">Export</button>
   <button class="btn btn-red" onclick="resetData()">Reset All</button>
-  <p class="foot">Budget v4.0</p>
+  <p class="foot">Budget v4.1</p>
 </div>
 
 <div class="nav">
@@ -224,7 +210,6 @@ var CACHE_KEY = "bgt_v5";
 var INFLOW = 42150;
 var CATS = ["Rent","Car Payments","Telephone+Internet+TV","Electric+Water","Chiller","Gas","Fuel","Tuition","Money to Pakistan","Groceries","Dining / Entertainment","Mueid / Madiha / House","Incidental"];
 
-// ===== URL CONFIG =====
 function parseHash() {
   var h = window.location.hash.substring(1); if (!h) return null;
   var p = {}; var pairs = h.split("&");
@@ -292,10 +277,10 @@ function fixApp() {
 var APP = loadCache() || defaultData();
 fixApp();
 
-// ===== FIREBASE =====
 var fbRef = null;
 var fbReady = false;
-var editing = -1; // index of row being edited
+var editing = -1;
+var justFocusedEdit = false; // tracks if we should reset cursor position
 
 function initFirebase() {
   var cfg = parseHash();
@@ -303,9 +288,7 @@ function initFirebase() {
   try {
     if (!firebase.apps.length) firebase.initializeApp({apiKey:cfg.apiKey, databaseURL:cfg.databaseURL});
     fbRef = firebase.database().ref("budget");
-
     fbRef.on("value", function(snap) {
-      // Only block snapshot overwrites when user is actively editing a value
       if (editing !== -1) return;
       var d = snap.val();
       if (d && d.budget) {
@@ -313,7 +296,6 @@ function initFirebase() {
       }
       fbReady = true; updateSyncUI();
     });
-
     firebase.database().ref(".info/connected").on("value", function(snap) {
       fbReady = snap.val() === true; updateSyncUI();
     });
@@ -354,11 +336,12 @@ function updateSyncUI() {
   }
 }
 
-// ===== NAV =====
 var navBtns = document.querySelectorAll(".nav-btn");
 for (var i = 0; i < navBtns.length; i++) {
   navBtns[i].addEventListener("click", function() {
     var pg = this.getAttribute("data-pg");
+    // Commit any pending edit when switching pages
+    if (editing !== -1) commitEdit();
     var pages = document.querySelectorAll(".page");
     for (var j = 0; j < pages.length; j++) pages[j].classList.remove("active");
     document.getElementById(pg).classList.add("active");
@@ -369,13 +352,59 @@ for (var i = 0; i < navBtns.length; i++) {
   });
 }
 
-// ===== HELPERS =====
 function fm(n){return Math.round(n).toLocaleString("en")}
 function fd(n){return n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,",")}
 function getSpent(r){if(r.p)return r.b;if(r.cs!==undefined&&r.cs!==null)return r.cs;return r.s}
 function pctCls(p){return p>=75?"g":(p>=40?"y":"r")}
 
-// ===== RENDER =====
+function renderHero(fixS, varS, savActual) {
+  var savNeg = savActual < 0;
+  // Cap segments to 100% total. If overspent, show 100% with a red over-indicator
+  var totalSpent = fixS + varS;
+  var fixW, varW, savW;
+  if (totalSpent <= INFLOW) {
+    fixW = (fixS / INFLOW * 100).toFixed(1);
+    varW = (varS / INFLOW * 100).toFixed(1);
+    savW = ((INFLOW - totalSpent) / INFLOW * 100).toFixed(1);
+  } else {
+    // Overspent - scale to 100% total with no savings segment, all red overflow shown
+    var scale = 100 / totalSpent * INFLOW;
+    fixW = (fixS / INFLOW * 100 * (INFLOW / totalSpent)).toFixed(1);
+    varW = (varS / INFLOW * 100 * (INFLOW / totalSpent)).toFixed(1);
+    savW = 0;
+  }
+
+  return '<div class="hero-label">Available Savings</div>' +
+    '<div class="hero-amt ' + (savNeg ? 'r' : 'g') + '">AED ' + fm(savActual) + '</div>' +
+    '<div class="hero-sub">of ' + fm(INFLOW) + ' inflow · ' + Math.round(savActual/INFLOW*100) + '% saved</div>' +
+    '<div class="hero-bar">' +
+      '<div class="hero-bar-seg hb-fixed" style="width:' + fixW + '%"></div>' +
+      '<div class="hero-bar-seg hb-variable" style="width:' + varW + '%"></div>' +
+      (savW > 0 ? '<div class="hero-bar-seg hb-saved" style="width:' + savW + '%"></div>' : '') +
+    '</div>' +
+    '<div class="hero-legend">' +
+      '<div class="hero-legend-item"><span class="legend-dot" style="background:#58a6ff"></span>Fixed ' + fm(fixS) + '</div>' +
+      '<div class="hero-legend-item"><span class="legend-dot" style="background:#d29922"></span>Variable ' + fm(varS) + '</div>' +
+      '<div class="hero-legend-item"><span class="legend-dot" style="background:' + (savNeg ? '#f85149' : '#3fb950') + '"></span>' + (savNeg ? 'Over ' + fm(Math.abs(savActual)) : 'Saved ' + fm(savActual)) + '</div>' +
+    '</div>';
+}
+
+function renderStats(fixB, fixS, varB, varS) {
+  var fixRem = fixB - fixS, varRem = varB - varS;
+  var fixPct = fixB > 0 ? fixS/fixB*100 : 0;
+  var varPct = varB > 0 ? varS/varB*100 : 0;
+  return '<div class="stat fixed">' +
+      '<div class="stat-label">Fixed Costs</div>' +
+      '<div class="stat-val ' + (fixRem < 0 ? 'r' : '') + '">' + fm(fixRem) + '</div>' +
+      '<div class="stat-pct">left of ' + fm(fixB) + ' · ' + Math.round(fixPct) + '% used</div>' +
+    '</div>' +
+    '<div class="stat variable">' +
+      '<div class="stat-label">Variable Costs</div>' +
+      '<div class="stat-val ' + (varRem < 0 ? 'r' : '') + '">' + fm(varRem) + '</div>' +
+      '<div class="stat-pct">left of ' + fm(varB) + ' · ' + Math.round(varPct) + '% used</div>' +
+    '</div>';
+}
+
 function drawBudget() {
   var data = APP.budget; if (!data) return;
   var fixB=0,fixS=0,varB=0,varS=0,totalS=0,fixedIdx=[],varIdx=[];
@@ -385,49 +414,12 @@ function drawBudget() {
     if(data[i].g==="fixed"){fixedIdx.push(i);fixB+=data[i].b;fixS+=sp}
     else{varIdx.push(i);varB+=data[i].b;varS+=sp}
   }
-  var savBudget = INFLOW - fixB - varB;
   var savActual = INFLOW - totalS;
-  var fixPct = fixB > 0 ? fixS/fixB*100 : 0;
-  var varPct = varB > 0 ? varS/varB*100 : 0;
 
-  // ===== HERO CARD =====
-  // Bar shows: fixed | variable | saved (proportional to inflow)
-  var fixW = (fixS / INFLOW * 100).toFixed(1);
-  var varW = (varS / INFLOW * 100).toFixed(1);
-  var savW = Math.max(0, (savActual / INFLOW * 100)).toFixed(1);
-  var savNeg = savActual < 0;
+  document.getElementById("hero-card").innerHTML = renderHero(fixS, varS, savActual);
+  document.getElementById("stat-row").innerHTML = renderStats(fixB, fixS, varB, varS);
 
-  document.getElementById("hero-card").innerHTML =
-    '<div class="hero-label">Available Savings</div>' +
-    '<div class="hero-amt ' + (savNeg ? 'r' : 'g') + '">AED ' + fm(savActual) + '</div>' +
-    '<div class="hero-sub">of ' + fm(INFLOW) + ' inflow · ' + Math.round(savActual/INFLOW*100) + '% saved</div>' +
-    '<div class="hero-bar">' +
-      '<div class="hero-bar-seg hb-fixed" style="width:' + fixW + '%"></div>' +
-      '<div class="hero-bar-seg hb-variable" style="width:' + varW + '%"></div>' +
-      (!savNeg ? '<div class="hero-bar-seg hb-saved" style="width:' + savW + '%"></div>' : '') +
-    '</div>' +
-    '<div class="hero-legend">' +
-      '<div class="hero-legend-item"><span class="legend-dot" style="background:#58a6ff"></span>Fixed ' + fm(fixS) + '</div>' +
-      '<div class="hero-legend-item"><span class="legend-dot" style="background:#d29922"></span>Variable ' + fm(varS) + '</div>' +
-      '<div class="hero-legend-item"><span class="legend-dot" style="background:#3fb950"></span>Saved ' + fm(savActual >= 0 ? savActual : 0) + '</div>' +
-    '</div>';
-
-  // ===== STATS =====
-  document.getElementById("stat-row").innerHTML =
-    '<div class="stat fixed">' +
-      '<div class="stat-label">Fixed Costs</div>' +
-      '<div class="stat-val">' + fm(fixB - fixS) + '</div>' +
-      '<div class="stat-pct">left of ' + fm(fixB) + ' · ' + Math.round(fixPct) + '% used</div>' +
-    '</div>' +
-    '<div class="stat variable">' +
-      '<div class="stat-label">Variable Costs</div>' +
-      '<div class="stat-val">' + fm(varB - varS) + '</div>' +
-      '<div class="stat-pct">left of ' + fm(varB) + ' · ' + Math.round(varPct) + '% used</div>' +
-    '</div>';
-
-  // ===== GROUPS =====
   var html = "";
-  // Fixed
   var fCol = APP.collapsed.fixed;
   html += '<div class="group">';
   html += '<div class="group-toggle" data-group="fixed">';
@@ -436,7 +428,6 @@ function drawBudget() {
   if (!fCol) for (var fi = 0; fi < fixedIdx.length; fi++) html += renderRow(fixedIdx[fi]);
   html += '</div>';
 
-  // Variable
   var vCol = APP.collapsed.variable;
   html += '<div class="group">';
   html += '<div class="group-toggle" data-group="variable">';
@@ -450,13 +441,15 @@ function drawBudget() {
 
   bindEvents();
 
-  // Auto-focus edit input
-  if (editing !== -1) {
+  // Focus + select edit input on initial render (not subsequent ones during typing)
+  if (editing !== -1 && justFocusedEdit) {
     var inp = document.querySelector('.edit-input[data-i="' + editing + '"]');
     if (inp) {
       inp.focus();
-      var v = inp.value; inp.value = ""; inp.value = v;
+      // Select all text so user can immediately type to replace
+      try { inp.select(); inp.setSelectionRange(0, 9999); } catch(e) {}
     }
+    justFocusedEdit = false;
   }
 }
 
@@ -470,26 +463,23 @@ function renderRow(i) {
   var pc = pctCls(pct);
   var isEditing = editing === i;
 
-  var h = '<div class="row' + (r.p ? ' paid' : '') + (isEditing ? ' editing' : '') + '" data-i="' + i + '">';
+  var h = '<div class="row' + (r.p && !isEditing ? ' paid' : '') + (isEditing ? ' editing' : '') + '" data-i="' + i + '">';
 
-  // Top row: checkbox + name
   h += '<div class="row-top">';
   h += '<input type="checkbox" class="cb" data-i="' + i + '"' + (r.p ? ' checked' : '') + '>';
-  h += '<span class="row-name' + (r.p ? ' struck' : '') + '">' + r.c + '</span>';
+  // Don't strike-through name when in edit mode (user is actively engaged)
+  h += '<span class="row-name' + (r.p && !isEditing ? ' struck' : '') + '">' + r.c + '</span>';
   h += '</div>';
 
   if (isEditing) {
     h += '<input type="number" inputmode="decimal" class="edit-input" data-i="' + i + '" value="' + (sp > 0 ? sp : '') + '" placeholder="0.00" step="0.01" min="0">';
     h += '<div class="edit-row">';
-    h += '<button class="edit-btn eb-mark" data-i="' + i + '">✓ Mark Paid</button>';
-    h += '<button class="edit-btn eb-clear" data-i="' + i + '">Clear</button>';
-    h += '<button class="edit-btn eb-done" data-i="' + i + '">Done</button>';
+    h += '<button class="edit-btn eb-mark" data-i="' + i + '" data-action="mark">Mark Paid</button>';
+    h += '<button class="edit-btn eb-clear" data-i="' + i + '" data-action="clear">Clear</button>';
+    h += '<button class="edit-btn eb-done" data-i="' + i + '" data-action="done">Done</button>';
     h += '</div>';
   } else {
-    // Bar
     if (r.b > 0) h += '<div class="row-bar"><div class="row-bar-fill bf' + pc + '" style="width:' + used.toFixed(1) + '%"></div></div>';
-
-    // Spent / Remaining row
     h += '<div class="row-nums">';
     h += '<div class="row-spent">';
     h += '<span class="spent-amt">' + (hs ? fd(sp) : '—') + '</span>';
@@ -513,11 +503,19 @@ function renderRow(i) {
   return h;
 }
 
+function commitEdit() {
+  if (editing === -1) return;
+  editing = -1;
+  saveData();
+  drawBudget();
+}
+
 function bindEvents() {
   // Group toggle
   var ghs = document.querySelectorAll(".group-toggle");
   for (var g = 0; g < ghs.length; g++) {
     ghs[g].addEventListener("click", function() {
+      if (editing !== -1) commitEdit();
       var grp = this.getAttribute("data-group");
       APP.collapsed[grp] = !APP.collapsed[grp];
       saveCache();
@@ -530,7 +528,8 @@ function bindEvents() {
   for (var j = 0; j < cbs.length; j++) {
     (function(cb) {
       cb.addEventListener("click", function(e) { e.stopPropagation(); });
-      cb.addEventListener("change", function() {
+      cb.addEventListener("change", function(e) {
+        e.stopPropagation();
         var idx = parseInt(cb.getAttribute("data-i"));
         APP.budget[idx].p = cb.checked;
         if (cb.checked) APP.budget[idx].cs = null;
@@ -541,7 +540,7 @@ function bindEvents() {
     })(cbs[j]);
   }
 
-  // Tap row to edit (excluding rows already in edit mode)
+  // Tap row to edit
   var rows = document.querySelectorAll(".row");
   for (var j = 0; j < rows.length; j++) {
     (function(row) {
@@ -549,16 +548,24 @@ function bindEvents() {
         if (e.target.tagName === "INPUT" || e.target.tagName === "BUTTON") return;
         if (row.classList.contains("editing")) return;
         var idx = parseInt(row.getAttribute("data-i"));
+        // If currently editing another row, commit it first
+        if (editing !== -1 && editing !== idx) {
+          commitEdit();
+        }
+        // Don't enter edit mode for paid rows - they should uncheck via checkbox
+        if (APP.budget[idx].p) return;
         editing = idx;
+        justFocusedEdit = true;
         drawBudget();
       });
     })(rows[j]);
   }
 
-  // Edit input — live updates
+  // Edit input - live updates
   var inps = document.querySelectorAll(".edit-input");
   for (var j = 0; j < inps.length; j++) {
     (function(inp) {
+      inp.addEventListener("click", function(e) { e.stopPropagation(); });
       inp.addEventListener("input", function() {
         var idx = parseInt(inp.getAttribute("data-i"));
         var v = parseFloat(inp.value);
@@ -569,7 +576,6 @@ function bindEvents() {
           APP.budget[idx].cs = null;
           APP.budget[idx].p = false;
         }
-        // Update only the live numbers without redrawing
         recalcLiveTotals();
         saveCache();
         scheduleFBPush();
@@ -581,44 +587,29 @@ function bindEvents() {
     })(inps[j]);
   }
 
-  // Edit buttons
-  var marks = document.querySelectorAll(".eb-mark");
-  for (var j = 0; j < marks.length; j++) {
-    marks[j].addEventListener("click", function() {
+  // Edit action buttons
+  var btns = document.querySelectorAll(".edit-btn");
+  for (var j = 0; j < btns.length; j++) {
+    btns[j].addEventListener("click", function(e) {
+      e.stopPropagation();
       var idx = parseInt(this.getAttribute("data-i"));
-      APP.budget[idx].p = true;
-      APP.budget[idx].cs = null;
+      var action = this.getAttribute("data-action");
+      if (action === "mark") {
+        APP.budget[idx].p = true;
+        APP.budget[idx].cs = null;
+      } else if (action === "clear") {
+        APP.budget[idx].cs = null;
+        APP.budget[idx].p = false;
+        APP.budget[idx].s = 0;
+      }
+      // 'done' just exits edit mode
       editing = -1;
       saveData();
       drawBudget();
     });
   }
-  var clears = document.querySelectorAll(".eb-clear");
-  for (var j = 0; j < clears.length; j++) {
-    clears[j].addEventListener("click", function() {
-      var idx = parseInt(this.getAttribute("data-i"));
-      APP.budget[idx].cs = null;
-      APP.budget[idx].p = false;
-      APP.budget[idx].s = 0;
-      editing = -1;
-      saveData();
-      drawBudget();
-    });
-  }
-  var dones = document.querySelectorAll(".eb-done");
-  for (var j = 0; j < dones.length; j++) {
-    dones[j].addEventListener("click", commitEdit);
-  }
 }
 
-function commitEdit() {
-  if (editing === -1) return;
-  editing = -1;
-  saveData();
-  drawBudget();
-}
-
-// Live totals while typing - updates hero, stats without DOM rebuild
 function recalcLiveTotals() {
   var data = APP.budget; if (!data) return;
   var fixB=0,fixS=0,varB=0,varS=0,totalS=0;
@@ -629,35 +620,10 @@ function recalcLiveTotals() {
     else{varB+=data[i].b;varS+=sp}
   }
   var savActual = INFLOW - totalS;
-  var fixPct = fixB > 0 ? fixS/fixB*100 : 0;
-  var varPct = varB > 0 ? varS/varB*100 : 0;
-  var fixW = (fixS / INFLOW * 100).toFixed(1);
-  var varW = (varS / INFLOW * 100).toFixed(1);
-  var savW = Math.max(0, (savActual / INFLOW * 100)).toFixed(1);
-  var savNeg = savActual < 0;
+  document.getElementById("hero-card").innerHTML = renderHero(fixS, varS, savActual);
+  document.getElementById("stat-row").innerHTML = renderStats(fixB, fixS, varB, varS);
 
-  // Hero
-  document.getElementById("hero-card").innerHTML =
-    '<div class="hero-label">Available Savings</div>' +
-    '<div class="hero-amt ' + (savNeg ? 'r' : 'g') + '">AED ' + fm(savActual) + '</div>' +
-    '<div class="hero-sub">of ' + fm(INFLOW) + ' inflow · ' + Math.round(savActual/INFLOW*100) + '% saved</div>' +
-    '<div class="hero-bar">' +
-      '<div class="hero-bar-seg hb-fixed" style="width:' + fixW + '%"></div>' +
-      '<div class="hero-bar-seg hb-variable" style="width:' + varW + '%"></div>' +
-      (!savNeg ? '<div class="hero-bar-seg hb-saved" style="width:' + savW + '%"></div>' : '') +
-    '</div>' +
-    '<div class="hero-legend">' +
-      '<div class="hero-legend-item"><span class="legend-dot" style="background:#58a6ff"></span>Fixed ' + fm(fixS) + '</div>' +
-      '<div class="hero-legend-item"><span class="legend-dot" style="background:#d29922"></span>Variable ' + fm(varS) + '</div>' +
-      '<div class="hero-legend-item"><span class="legend-dot" style="background:#3fb950"></span>Saved ' + fm(savActual >= 0 ? savActual : 0) + '</div>' +
-    '</div>';
-
-  // Stats
-  document.getElementById("stat-row").innerHTML =
-    '<div class="stat fixed"><div class="stat-label">Fixed Costs</div><div class="stat-val">' + fm(fixB - fixS) + '</div><div class="stat-pct">left of ' + fm(fixB) + ' · ' + Math.round(fixPct) + '% used</div></div>' +
-    '<div class="stat variable"><div class="stat-label">Variable Costs</div><div class="stat-val">' + fm(varB - varS) + '</div><div class="stat-pct">left of ' + fm(varB) + ' · ' + Math.round(varPct) + '% used</div></div>';
-
-  // Group totals
+  // Update group totals without rebuilding the list
   var gts = document.querySelectorAll(".group-toggle");
   for (var g = 0; g < gts.length; g++) {
     var grp = gts[g].getAttribute("data-group");
@@ -669,7 +635,6 @@ function recalcLiveTotals() {
   }
 }
 
-// Throttled FB push during typing
 var fbPushTimeout = null;
 function scheduleFBPush() {
   if (fbPushTimeout) clearTimeout(fbPushTimeout);
@@ -678,7 +643,7 @@ function scheduleFBPush() {
   }, 600);
 }
 
-// ===== CSV =====
+// CSV
 function parseCSV(text){
   var lines=text.split("\n"),txns=[],cc="Primary";
   for(var i=0;i<lines.length;i++){
@@ -785,7 +750,16 @@ function drawMappings(){
   for(var j=0;j<dels.length;j++)dels[j].addEventListener("click",function(){delete APP.mappings[this.getAttribute("data-k")];saveData();drawMappings()});
 }
 function exportData(){var b=new Blob([JSON.stringify(APP,null,2)],{type:"application/json"});var u=URL.createObjectURL(b);var a=document.createElement("a");a.href=u;a.download="budget_"+new Date().toISOString().slice(0,10)+".json";a.click();URL.revokeObjectURL(u)}
-function resetData(){if(confirm("Delete all data?")){APP=defaultData();saveData();drawBudget();alert("Done.")}}
+function resetData(){
+  var c1 = confirm("Reset will delete ALL data including Madiha's. This cannot be undone. Continue?");
+  if (!c1) return;
+  var c2 = prompt('Type RESET in capitals to confirm:');
+  if (c2 !== "RESET") { alert("Cancelled."); return; }
+  APP = defaultData();
+  saveData();
+  drawBudget();
+  alert("Data reset.");
+}
 
 drawBudget();
 initFirebase();
