@@ -37,7 +37,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .hb-fixed{background:#58a6ff}
 .hb-variable{background:#d29922}
 .hb-saved{background:#3fb950}
-.hb-over{background:#f85149}
 .hero-legend{display:flex;justify-content:space-between;font-size:11px;color:#8b949e;flex-wrap:wrap;gap:6px}
 .hero-legend-item{display:flex;align-items:center;gap:5px}
 .legend-dot{width:8px;height:8px;border-radius:2px}
@@ -100,11 +99,22 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .nav-btn.act{color:#58a6ff}
 .nav-icon{font-size:22px;display:block;margin-bottom:1px;line-height:1}
 
-.upload-zone{background:#161b22;border:2px dashed #30363d;border-radius:14px;padding:30px 20px;text-align:center;margin-bottom:16px;cursor:pointer}
+.upload-zone{background:#161b22;border:2px dashed #30363d;border-radius:14px;padding:22px 20px;text-align:center;margin-bottom:14px;cursor:pointer}
 .upload-zone:active{border-color:#58a6ff}
-.upload-zone .icon{font-size:36px;margin-bottom:8px}
+.upload-zone .icon{font-size:32px;margin-bottom:6px}
 .upload-zone p{color:#8b949e;font-size:13px}
 .upload-zone input{display:none}
+
+.date-range{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:12px;margin-bottom:14px}
+.date-range-title{font-size:11px;color:#8b949e;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;font-weight:600}
+.date-range-row{display:flex;gap:8px;align-items:center}
+.date-input{flex:1;background:#0d1117;border:1px solid #30363d;border-radius:8px;color:#E6EDF3;font-size:13px;padding:8px 10px;outline:none;font-family:inherit;font-variant-numeric:tabular-nums}
+.date-input:focus{border-color:#388bfd}
+.date-sep{font-size:11px;color:#8b949e}
+.date-presets{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.date-preset{padding:4px 10px;background:#0d1117;border:1px solid #30363d;border-radius:14px;font-size:11px;color:#8b949e;cursor:pointer;font-family:inherit}
+.date-preset:active{background:#21262d}
+
 .btn{display:inline-block;padding:10px 20px;border-radius:8px;border:none;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
 .btn-blue{background:#388bfd;color:#fff}.btn-blue:disabled{opacity:0.3}
 .btn-outline{background:none;border:1px solid #30363d;color:#8b949e}
@@ -151,11 +161,16 @@ h1{font-size:22px;font-weight:700;margin-bottom:6px;letter-spacing:-0.5px}
 .setup-box label{font-size:12px;color:#8b949e;display:block;margin-bottom:4px}
 .setup-input{width:100%;background:#0d1117;border:1px solid #30363d;border-radius:8px;color:#fff;font-size:14px;padding:10px 12px;outline:none;margin-bottom:12px;font-family:inherit}
 .share-box{background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:10px;margin-top:8px;word-break:break-all;font-size:11px;color:#58a6ff;cursor:pointer}
-.copied-toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#3fb950;color:#fff;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;z-index:300;display:none}
+
+/* Toast */
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-100px);background:#3fb950;color:#fff;padding:10px 18px;border-radius:10px;font-size:13px;font-weight:600;z-index:300;opacity:0;transition:transform 0.3s, opacity 0.3s;box-shadow:0 4px 16px rgba(0,0,0,0.5)}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+.toast.warn{background:#d29922}
+.toast.err{background:#f85149}
 </style>
 </head>
 <body>
-<div class="copied-toast" id="copied-toast">Link copied!</div>
+<div class="toast" id="toast"></div>
 
 <div class="setup-overlay" id="setup-overlay" style="display:none">
   <div class="setup-box">
@@ -182,8 +197,26 @@ h1{font-size:22px;font-weight:700;margin-bottom:6px;letter-spacing:-0.5px}
 
 <div class="page" id="pg-upload">
   <h1>Import Statement</h1>
-  <p style="font-size:12px;color:#8b949e;margin-bottom:14px">Upload CSV. Already-imported transactions are flagged and auto-skipped.</p>
+  <p style="font-size:12px;color:#8b949e;margin-bottom:14px">Choose a date range, then upload your CSV.</p>
+
+  <div class="date-range">
+    <div class="date-range-title">Date Range</div>
+    <div class="date-range-row">
+      <input type="date" class="date-input" id="date-from">
+      <span class="date-sep">to</span>
+      <input type="date" class="date-input" id="date-to">
+    </div>
+    <div class="date-presets">
+      <button class="date-preset" data-preset="7">Last 7 days</button>
+      <button class="date-preset" data-preset="14">Last 14 days</button>
+      <button class="date-preset" data-preset="30">Last 30 days</button>
+      <button class="date-preset" data-preset="month">This month</button>
+      <button class="date-preset" data-preset="prev">Last month</button>
+    </div>
+  </div>
+
   <div class="upload-zone" id="drop-zone"><div class="icon">📄</div><p>Tap to select CSV</p><input type="file" accept=".csv" id="csv-input"></div>
+
   <div id="import-preview" style="display:none">
     <div id="import-period" style="font-size:11px;color:#8b949e;margin-bottom:10px"></div>
     <div id="preview-summary"></div>
@@ -207,8 +240,8 @@ h1{font-size:22px;font-weight:700;margin-bottom:6px;letter-spacing:-0.5px}
   <div id="fb-status-settings"></div>
 
   <div class="section-title">Quick Actions</div>
-  <p style="font-size:11px;color:#8b949e;margin-bottom:8px">Use these to recover from incorrect imports without losing budgets/mappings.</p>
-  <button class="btn btn-yellow" onclick="clearSpent()" style="margin-right:8px;margin-bottom:8px">Clear All Spent Values</button>
+  <p style="font-size:11px;color:#8b949e;margin-bottom:8px">Recover from incorrect imports without losing budgets/mappings.</p>
+  <button class="btn btn-yellow" onclick="clearSpent()" style="margin-right:8px;margin-bottom:8px">Clear All Spent</button>
   <button class="btn btn-yellow" onclick="clearImportHistory()" style="margin-bottom:8px">Clear Import History</button>
 
   <div class="section-title">Merchant Mappings</div>
@@ -217,7 +250,7 @@ h1{font-size:22px;font-weight:700;margin-bottom:6px;letter-spacing:-0.5px}
   <div class="section-title">Data</div>
   <button class="btn btn-outline" onclick="exportData()" style="margin-right:8px;margin-bottom:8px">Export</button>
   <button class="btn btn-red" onclick="resetData()">Reset All</button>
-  <p class="foot">Budget v4.2</p>
+  <p class="foot">Budget v4.3</p>
 </div>
 
 <div class="nav">
@@ -227,9 +260,20 @@ h1{font-size:22px;font-weight:700;margin-bottom:6px;letter-spacing:-0.5px}
 </div>
 
 <script>
-var CACHE_KEY = "bgt_v5";
+var CACHE_KEY = "bgt_v6"; // bumped to force migration
 var INFLOW = 42150;
-var CATS = ["Rent","Car Payments","Telephone+Internet+TV","Electric+Water","Chiller","Gas","Fuel","Tuition","Money to Pakistan","Groceries","Dining / Entertainment","Mueid / Madiha / House","Incidental","SKIP"];
+var CATS = ["Rent","Car Payments","Telephone+Internet+TV","Electric+Water","Chiller","Gas","Fuel","Tuition","Money to Pakistan","Groceries","Dining / Entertainment","Mueid / Madiha / House","Incidental"];
+
+// ===== TOAST =====
+var toastTimeout = null;
+function toast(msg, type) {
+  var el = document.getElementById("toast");
+  el.className = "toast" + (type ? " " + type : "");
+  el.textContent = msg;
+  el.classList.add("show");
+  if (toastTimeout) clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(function() { el.classList.remove("show"); }, 2200);
+}
 
 function parseHash() {
   var h = window.location.hash.substring(1); if (!h) return null;
@@ -244,7 +288,7 @@ function buildShareURL() {
 function copyShareLink() {
   var u = buildShareURL(); if (!u) return;
   try { navigator.clipboard.writeText(u); } catch(e) { var t = document.createElement("textarea"); t.value = u; document.body.appendChild(t); t.select(); document.execCommand("copy"); document.body.removeChild(t); }
-  var toast = document.getElementById("copied-toast"); toast.style.display = "block"; setTimeout(function() { toast.style.display = "none"; }, 2000);
+  toast("Link copied!");
 }
 
 function defaultData() {
@@ -256,9 +300,9 @@ function defaultData() {
       {c:"Electric+Water",b:900,s:0,p:false,g:"fixed"},
       {c:"Chiller",b:250,s:0,p:false,g:"fixed"},
       {c:"Gas",b:100,s:0,p:false,g:"fixed"},
-      {c:"Fuel",b:1000,s:0,p:false,g:"fixed"},
       {c:"Tuition",b:5083,s:5083,p:true,g:"fixed"},
       {c:"Money to Pakistan",b:1414,s:0,p:false,g:"fixed"},
+      {c:"Fuel",b:1000,s:0,p:false,g:"variable"},
       {c:"Groceries",b:3000,s:0,p:false,g:"variable"},
       {c:"Dining / Entertainment",b:2000,s:0,p:false,g:"variable"},
       {c:"Mueid / Madiha / House",b:2500,s:0,p:false,g:"variable"},
@@ -290,11 +334,19 @@ function defaultData() {
 
 function loadCache() { try { var r = localStorage.getItem(CACHE_KEY); if (r) return JSON.parse(r); } catch(e) {} return null; }
 function saveCache() { try { localStorage.setItem(CACHE_KEY, JSON.stringify(APP)); } catch(e) {} }
+
 function fixApp() {
   if (!APP.collapsed) APP.collapsed = {fixed:true,variable:false};
   if (!APP.mappings) APP.mappings = {};
   if (!APP.imported) APP.imported = [];
   if (!APP.budget) APP = defaultData();
+
+  // MIGRATION: ensure Fuel is in variable group
+  for (var i = 0; i < APP.budget.length; i++) {
+    if (APP.budget[i].c === "Fuel" && APP.budget[i].g !== "variable") {
+      APP.budget[i].g = "variable";
+    }
+  }
 }
 
 var APP = loadCache() || defaultData();
@@ -334,7 +386,7 @@ function saveData() {
 function saveConfig() {
   var url = document.getElementById("fb-url").value.trim();
   var key = document.getElementById("fb-key").value.trim();
-  if (!url || !key) { alert("Both fields required"); return; }
+  if (!url || !key) { toast("Both fields required", "err"); return; }
   window.location.hash = "db=" + encodeURIComponent(url) + "&key=" + encodeURIComponent(key);
   document.getElementById("setup-overlay").style.display = "none";
   initFirebase();
@@ -364,6 +416,7 @@ for (var i = 0; i < navBtns.length; i++) {
     this.classList.add("act");
     if (pg === "pg-settings") { drawMappings(); updateSyncUI(); document.getElementById("share-link").textContent = buildShareURL() || "Set up Firebase first"; }
     if (pg === "pg-budget") drawBudget();
+    if (pg === "pg-upload") setupDateDefaults();
   });
 }
 
@@ -581,12 +634,52 @@ function scheduleFBPush() {
   fbPushTimeout = setTimeout(function() { if (fbRef) fbRef.set(APP); }, 600);
 }
 
+// ===== DATE RANGE =====
+function ymd(d) {
+  var y = d.getFullYear();
+  var m = String(d.getMonth() + 1).padStart(2, "0");
+  var dd = String(d.getDate()).padStart(2, "0");
+  return y + "-" + m + "-" + dd;
+}
+
+function setupDateDefaults() {
+  var fromEl = document.getElementById("date-from");
+  var toEl = document.getElementById("date-to");
+  // Don't overwrite if user already set them
+  if (fromEl.value && toEl.value) return;
+  // Default: last 14 days
+  var now = new Date();
+  var weeks2 = new Date(now.getTime() - 14*24*60*60*1000);
+  fromEl.value = ymd(weeks2);
+  toEl.value = ymd(now);
+}
+
+// Date preset buttons
+var presets = document.querySelectorAll(".date-preset");
+for (var i = 0; i < presets.length; i++) {
+  presets[i].addEventListener("click", function() {
+    var p = this.getAttribute("data-preset");
+    var now = new Date();
+    var from, to = now;
+    if (p === "7") from = new Date(now.getTime() - 7*24*60*60*1000);
+    else if (p === "14") from = new Date(now.getTime() - 14*24*60*60*1000);
+    else if (p === "30") from = new Date(now.getTime() - 30*24*60*60*1000);
+    else if (p === "month") {
+      from = new Date(now.getFullYear(), now.getMonth(), 1);
+    } else if (p === "prev") {
+      from = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      to = new Date(now.getFullYear(), now.getMonth(), 0);
+    }
+    document.getElementById("date-from").value = ymd(from);
+    document.getElementById("date-to").value = ymd(to);
+  });
+}
+
 // ===== CSV =====
 function parseCSV(text){
   var lines=text.split("\n"),txns=[],cc="Primary",periodFrom=null,periodTo=null;
   for(var i=0;i<lines.length;i++){
     var line=lines[i].trim();if(!line)continue;
-    // Parse statement period
     var pm = line.match(/Statement Period\s*:\s*From\s*(\d{2}\/\d{2}\/\d{4})\s*To\s*(\d{2}\/\d{2}\/\d{4})/);
     if (pm) { periodFrom = pm[1]; periodTo = pm[2]; continue; }
     if(line.indexOf("Primary Card")>-1){cc="Primary";continue}
@@ -616,11 +709,24 @@ document.getElementById("csv-input").addEventListener("change",function(e){
 function processCSV(text){
   var parsed = parseCSV(text);
   var all = parsed.txns;
+
+  // Get date range from inputs
+  var fromVal = document.getElementById("date-from").value;
+  var toVal = document.getElementById("date-to").value;
+  if (!fromVal || !toVal) {
+    toast("Set date range first", "warn");
+    return;
+  }
+  var fromDate = new Date(fromVal);
+  var toDate = new Date(toVal);
+  toDate.setHours(23, 59, 59); // include the entire end day
+
   pendingTxns=[];
 
   for(var i=0;i<all.length;i++){
     var t=all[i];
     if(t.crdr!=="DR")continue;
+    if(t.date < fromDate || t.date > toDate) continue;
     if(t.desc.indexOf("PAYMENT RECEIVED")>-1||t.desc.indexOf("FOREIGN TRANSACTION FEE")>-1||t.desc.indexOf("VAT ON FOREIGN")>-1)continue;
     var key=t.dateStr+"|"+t.desc+"|"+t.amount;
     var isDup = APP.imported && APP.imported.indexOf(key) > -1;
@@ -628,18 +734,17 @@ function processCSV(text){
     t.cleanDesc=cleanDesc(t.desc);
     t.category=matchCat(t.desc);
     t.isDup = isDup;
-    t.skip = isDup; // default: skip duplicates
+    t.skip = isDup;
     pendingTxns.push(t);
   }
 
-  // Sort: most recent first
   pendingTxns.sort(function(a,b){return b.date - a.date});
 
   if(!pendingTxns.length){
-    document.getElementById("preview-title").textContent="No transactions found";
+    document.getElementById("preview-title").textContent="No transactions in range";
     document.getElementById("preview-summary").innerHTML = "";
-    document.getElementById("import-period").textContent = "";
-    document.getElementById("txn-list").innerHTML='<div class="empty-state">No debit transactions in this CSV.</div>';
+    document.getElementById("import-period").textContent = "Date range: " + fromVal + " to " + toVal + " · 0 transactions";
+    document.getElementById("txn-list").innerHTML='<div class="empty-state">No matching transactions in this date range.</div>';
     document.getElementById("import-preview").style.display="block";
     document.getElementById("btn-apply").style.display="none";return;
   }
@@ -648,9 +753,7 @@ function processCSV(text){
   for (var i = 0; i < pendingTxns.length; i++) if (pendingTxns[i].isDup) dups++;
   var newCount = pendingTxns.length - dups;
 
-  var periodTxt = "";
-  if (parsed.periodFrom && parsed.periodTo) periodTxt = "Statement period: " + parsed.periodFrom + " to " + parsed.periodTo + " · ";
-  periodTxt += pendingTxns.length + " debits · " + newCount + " new · " + dups + " already imported";
+  var periodTxt = "Date range: " + fromVal + " to " + toVal + " · " + pendingTxns.length + " debits · " + newCount + " new · " + dups + " already imported";
   document.getElementById("import-period").textContent = periodTxt;
 
   document.getElementById("btn-apply").style.display="";
@@ -669,7 +772,6 @@ function drawTxnList(){
     var dupClass = t.skip ? ' dup' : '';
     html+='<div class="txn'+dupClass+'"><div class="txn-info"><div class="txn-desc">'+t.cleanDesc+(t.isDup?'<span class="dup-badge">DUP</span>':'')+'</div><div class="txn-date">'+t.card+'</div><div class="txn-cat"><select class="cat-select'+(t.category?'':' unset')+'" data-i="'+i+'"><option value="">— Select —</option>';
     for(var j=0;j<CATS.length;j++) {
-      if (CATS[j] === "SKIP") continue;
       html+='<option value="'+CATS[j]+'"'+(t.category===CATS[j]?' selected':'')+'>'+CATS[j]+'</option>';
     }
     html += '<option value="SKIP"' + (t.skip ? ' selected' : '') + '>— Skip this —</option>';
@@ -753,21 +855,16 @@ document.getElementById("btn-apply").addEventListener("click",function(){
     sums[t.category]+=t.amount;
     appliedKeys.push(t.key);
   }
-
-  // Add to existing s values
   for(var i=0;i<APP.budget.length;i++){
     if(sums[APP.budget[i].c]){
       APP.budget[i].s = Math.round((APP.budget[i].s + sums[APP.budget[i].c]) * 100) / 100;
-      APP.budget[i].cs = null; // clear manual override since we updated s
+      APP.budget[i].cs = null;
     }
   }
-
-  // Track imported (only newly applied)
   if(!APP.imported)APP.imported=[];
   for(var i=0;i<appliedKeys.length;i++) {
     if (APP.imported.indexOf(appliedKeys[i]) === -1) APP.imported.push(appliedKeys[i]);
   }
-
   APP.lastImport=new Date().toLocaleDateString("en-GB");
   saveData();
 
@@ -782,30 +879,29 @@ document.getElementById("btn-apply").addEventListener("click",function(){
   document.getElementById("btn-apply").style.display="none";
   document.getElementById("btn-cancel").textContent="Done";
   pendingTxns=[];
+  toast("Applied " + appliedKeys.length + " transactions");
 });
 
 function cancelImport(){pendingTxns=[];document.getElementById("import-preview").style.display="none";document.getElementById("txn-list").style.display="";document.getElementById("import-summary").style.display="none";document.getElementById("btn-cancel").textContent="Cancel";document.getElementById("csv-input").value=""}
 
 // ===== SETTINGS =====
 function clearSpent() {
-  if (!confirm("Reset all 'Spent' values to 0 (variable categories)? Budgets, mappings, and Madiha's data will stay. Use this if imports went wrong.")) return;
+  if (!confirm("Reset spent values for ALL categories to 0? Budgets, mappings, and Madiha's data stay.")) return;
   for (var i = 0; i < APP.budget.length; i++) {
-    if (APP.budget[i].g === "variable") {
-      APP.budget[i].s = 0;
-      APP.budget[i].cs = null;
-      APP.budget[i].p = false;
-    }
+    APP.budget[i].s = 0;
+    APP.budget[i].cs = null;
+    APP.budget[i].p = false;
   }
   saveData();
   drawBudget();
-  alert("Variable spent values cleared. Re-import your CSV to repopulate.");
+  toast("All spent values cleared");
 }
 
 function clearImportHistory() {
-  if (!confirm("Clear the list of already-imported transactions? Future imports will treat all transactions as new (you may see duplicates if you re-import old CSVs).")) return;
+  if (!confirm("Clear import history? Future imports will treat all transactions as new.")) return;
   APP.imported = [];
   saveData();
-  alert("Import history cleared.");
+  toast("Import history cleared");
 }
 
 function drawMappings(){
@@ -815,21 +911,22 @@ function drawMappings(){
   for(var i=0;i<keys.length;i++)h+='<div class="map-item"><span class="map-merchant">'+keys[i]+'</span><span class="map-cat">'+APP.mappings[keys[i]]+'</span><button class="map-del" data-k="'+keys[i]+'">✕</button></div>';
   document.getElementById("mappings-list").innerHTML=h;
   var dels=document.querySelectorAll(".map-del");
-  for(var j=0;j<dels.length;j++)dels[j].addEventListener("click",function(){delete APP.mappings[this.getAttribute("data-k")];saveData();drawMappings()});
+  for(var j=0;j<dels.length;j++)dels[j].addEventListener("click",function(){delete APP.mappings[this.getAttribute("data-k")];saveData();drawMappings();toast("Mapping removed")});
 }
-function exportData(){var b=new Blob([JSON.stringify(APP,null,2)],{type:"application/json"});var u=URL.createObjectURL(b);var a=document.createElement("a");a.href=u;a.download="budget_"+new Date().toISOString().slice(0,10)+".json";a.click();URL.revokeObjectURL(u)}
+function exportData(){var b=new Blob([JSON.stringify(APP,null,2)],{type:"application/json"});var u=URL.createObjectURL(b);var a=document.createElement("a");a.href=u;a.download="budget_"+new Date().toISOString().slice(0,10)+".json";a.click();URL.revokeObjectURL(u);toast("Exported")}
 function resetData(){
   if (!confirm("Reset will delete ALL data including Madiha's. Continue?")) return;
   var c2 = prompt('Type RESET to confirm:');
-  if (c2 !== "RESET") { alert("Cancelled."); return; }
+  if (c2 !== "RESET") { toast("Cancelled", "warn"); return; }
   APP = defaultData();
   saveData();
   drawBudget();
-  alert("Data reset.");
+  toast("All data reset");
 }
 
 drawBudget();
 initFirebase();
+setupDateDefaults();
 </script>
 </body>
 </html>
