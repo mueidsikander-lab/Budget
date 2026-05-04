@@ -22,6 +22,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
 .h-title{font-size:13px;color:#8b949e;font-weight:500}
 .h-sync{font-size:11px;color:#8b949e}
+.share-btn{background:#388bfd20;border:1px solid #388bfd60;color:#58a6ff;font-size:12px;font-weight:600;padding:6px 12px;border-radius:8px;font-family:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:4px}
+.share-btn:active{background:#388bfd30}
+.share-icon{font-size:13px}
 .dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:4px;vertical-align:middle}
 .dot.on{background:#2ea043}.dot.off{background:#f85149}.dot.pending{background:#d29922;animation:pulse 1s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
@@ -187,7 +190,10 @@ h1{font-size:22px;font-weight:700;margin-bottom:6px;letter-spacing:-0.5px}
 <div class="page active" id="pg-budget">
   <div class="header">
     <span class="h-title">April 2026</span>
-    <span class="h-sync" id="sync-status"></span>
+    <div style="display:flex;align-items:center;gap:10px">
+      <button class="share-btn" onclick="shareSnapshot()"><span class="share-icon">↗</span>Share</button>
+      <span class="h-sync" id="sync-status"></span>
+    </div>
   </div>
   <div class="hero" id="hero-card"></div>
   <div class="stats" id="stat-row"></div>
@@ -885,6 +891,92 @@ document.getElementById("btn-apply").addEventListener("click",function(){
 function cancelImport(){pendingTxns=[];document.getElementById("import-preview").style.display="none";document.getElementById("txn-list").style.display="";document.getElementById("import-summary").style.display="none";document.getElementById("btn-cancel").textContent="Cancel";document.getElementById("csv-input").value=""}
 
 // ===== SETTINGS =====
+// ===== SHARE SNAPSHOT =====
+function buildSnapshotText() {
+  var data = APP.budget;
+  var fixB=0,fixS=0,varB=0,varS=0,totalS=0,fixedItems=[],varItems=[];
+  for(var i=0;i<data.length;i++){
+    var sp = getSpent(data[i]);
+    totalS += sp;
+    if(data[i].g==="fixed"){fixedItems.push(data[i]);fixB+=data[i].b;fixS+=sp}
+    else{varItems.push(data[i]);varB+=data[i].b;varS+=sp}
+  }
+  var savActual = INFLOW - totalS;
+  var savPct = Math.round(savActual / INFLOW * 100);
+  var fixPct = fixB > 0 ? Math.round(fixS/fixB*100) : 0;
+  var varPct = varB > 0 ? Math.round(varS/varB*100) : 0;
+
+  var today = new Date();
+  var dateStr = today.toLocaleDateString("en-GB", {day:"numeric", month:"short", year:"numeric"});
+
+  var t = "📊 *Budget Snapshot* · " + dateStr + "\n";
+  t += "━━━━━━━━━━━━━━━\n";
+  t += (savActual >= 0 ? "💰" : "⚠️") + " *Savings: AED " + fm(savActual) + "* (" + savPct + "%)\n";
+  t += "Inflow: " + fm(INFLOW) + " · Spent: " + fm(totalS) + "\n\n";
+
+  // Fixed summary
+  t += "🔵 *Fixed* " + fm(fixS) + " / " + fm(fixB) + " (" + fixPct + "%)\n";
+  for (var i = 0; i < fixedItems.length; i++) {
+    var r = fixedItems[i];
+    var sp = getSpent(r);
+    var marker = r.p ? "✅" : (sp > r.b ? "⚠️" : (sp > 0 ? "○" : "·"));
+    t += marker + " " + r.c + ": " + fm(sp) + "/" + fm(r.b) + "\n";
+  }
+  t += "\n";
+
+  // Variable summary
+  t += "🟡 *Variable* " + fm(varS) + " / " + fm(varB) + " (" + varPct + "%)\n";
+  for (var i = 0; i < varItems.length; i++) {
+    var r = varItems[i];
+    var sp = getSpent(r);
+    var marker = sp > r.b ? "⚠️" : (sp > r.b * 0.75 ? "🟠" : (sp > 0 ? "○" : "·"));
+    var rem = r.b - sp;
+    t += marker + " " + r.c + ": " + fm(sp) + "/" + fm(r.b);
+    if (rem < 0) t += " (over " + fm(Math.abs(rem)) + ")";
+    else if (sp > 0 && rem > 0) t += " · " + fm(rem) + " left";
+    t += "\n";
+  }
+
+  t += "━━━━━━━━━━━━━━━\n";
+  if (APP.lastImport) t += "Last CC import: " + APP.lastImport;
+
+  return t;
+}
+
+function shareSnapshot() {
+  var text = buildSnapshotText();
+  if (navigator.share) {
+    navigator.share({
+      title: "Budget Snapshot",
+      text: text
+    }).then(function() {
+      // shared successfully
+    }).catch(function(err) {
+      // User cancelled or error - fall back to copy
+      if (err.name !== "AbortError") {
+        copyToClipboard(text);
+      }
+    });
+  } else {
+    copyToClipboard(text);
+  }
+}
+
+function copyToClipboard(text) {
+  try {
+    navigator.clipboard.writeText(text);
+    toast("Snapshot copied · paste in WhatsApp");
+  } catch(e) {
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    document.body.removeChild(ta);
+    toast("Snapshot copied");
+  }
+}
+
 function clearSpent() {
   if (!confirm("Reset spent values for ALL categories to 0? Budgets, mappings, and Madiha's data stay.")) return;
   for (var i = 0; i < APP.budget.length; i++) {
