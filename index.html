@@ -325,7 +325,8 @@ h1{font-size:22px;font-weight:700;margin-bottom:6px;letter-spacing:-0.5px}
   <div class="section-title">Quick Actions</div>
   <p style="font-size:11px;color:#8b949e;margin-bottom:8px">Recover from incorrect imports.</p>
   <button class="btn btn-yellow" onclick="clearSpent()" style="margin-right:8px;margin-bottom:8px">Clear All Spent</button>
-  <button class="btn btn-yellow" onclick="clearImportHistory()" style="margin-bottom:8px">Clear Import History</button>
+  <button class="btn btn-yellow" onclick="clearImportHistory()" style="margin-right:8px;margin-bottom:8px">Clear Import History</button>
+  <button class="btn btn-red" id="btn-undo-import" onclick="undoLastImport()" style="margin-bottom:8px;display:none">Undo Last Import</button>
 
   <div class="section-title">Merchant Mappings</div>
   <div id="mappings-list"></div>
@@ -461,17 +462,21 @@ var justFocusedEdit = false;
 
 function initFirebase() {
   var cfg = parseHash();
+  if (!cfg) {
+    try { var s = localStorage.getItem("bgt_fbcfg"); if (s) cfg = JSON.parse(s); } catch(e) {}
+  }
   if (!cfg) { document.getElementById("setup-overlay").style.display = "flex"; updateSyncUI(); return; }
+  if (parseHash()) { try { localStorage.setItem("bgt_fbcfg", JSON.stringify(cfg)); } catch(e) {} }
   try {
     if (!firebase.apps.length) firebase.initializeApp({apiKey:cfg.apiKey, databaseURL:cfg.databaseURL});
     fbRef = firebase.database().ref("budget");
     fbRef.on("value", function(snap) {
+      fbReady = true; updateSyncUI();
       if (editing !== -1) return;
       var d = snap.val();
       if (d && d.budget) {
         APP = d; fixApp(); saveCache(); drawBudget();
       }
-      fbReady = true; updateSyncUI();
     });
     firebase.database().ref(".info/connected").on("value", function(snap) {
       fbReady = snap.val() === true; updateSyncUI();
@@ -490,6 +495,7 @@ function saveConfig() {
   var key = document.getElementById("fb-key").value.trim();
   if (!url || !key) { toast("Both fields required", "err"); return; }
   window.location.hash = "db=" + encodeURIComponent(url) + "&key=" + encodeURIComponent(key);
+  try { localStorage.setItem("bgt_fbcfg", JSON.stringify({databaseURL:url, apiKey:key})); } catch(e) {}
   document.getElementById("setup-overlay").style.display = "none";
   initFirebase();
   setTimeout(function() {
@@ -499,6 +505,7 @@ function saveConfig() {
 
 function updateSyncUI() {
   var cfg = parseHash();
+  if (!cfg) { try { var s = localStorage.getItem("bgt_fbcfg"); if (s) cfg = JSON.parse(s); } catch(e) {} }
   var el = document.getElementById("sync-status");
   var se = document.getElementById("fb-status-settings");
   if (!cfg) { el.innerHTML = '<span class="dot off"></span>Local'; if (se) se.innerHTML = '<div style="font-size:13px;color:#f85149">Not configured</div>'; }
@@ -544,7 +551,7 @@ function renderHero(fixS, varS, savActual) {
   }
   return '<div class="hero-label">Available Savings</div>' +
     '<div class="hero-amt ' + (savNeg ? 'r' : 'g') + '">AED ' + fm(savActual) + '</div>' +
-    '<div class="hero-sub">of ' + fm(INFLOW) + ' inflow · ' + Math.round(savActual/INFLOW*100) + '% saved</div>' +
+    '<div class="hero-sub">of ' + fm(INFLOW) + ' inflow · ' + (savActual < 0 ? Math.abs(Math.round(savActual/INFLOW*100)) + '% over' : Math.round(savActual/INFLOW*100) + '% saved') + '</div>' +
     '<div class="hero-bar">' +
       '<div class="hero-bar-seg hb-fixed" style="width:' + fixW + '%"></div>' +
       '<div class="hero-bar-seg hb-variable" style="width:' + varW + '%"></div>' +
@@ -622,7 +629,7 @@ function renderRow(i) {
     h += '<input type="number" inputmode="decimal" class="edit-input" data-i="' + i + '" value="' + (sp > 0 ? sp : '') + '" placeholder="0.00" step="0.01" min="0">';
     h += '<div class="edit-row"><button class="edit-btn eb-mark" data-i="' + i + '" data-action="mark">Mark Paid</button><button class="edit-btn eb-clear" data-i="' + i + '" data-action="clear">Clear</button><button class="edit-btn eb-done" data-i="' + i + '" data-action="done">Done</button></div>';
   } else {
-    if (r.b > 0) h += '<div class="row-bar"><div class="row-bar-fill bf' + pc + '" style="width:' + used.toFixed(1) + '%"></div></div>';
+    if (r.b > 0) h += '<div class="row-bar"><div class="row-bar-fill bf-' + pc + '" style="width:' + used.toFixed(1) + '%"></div></div>';
     h += '<div class="row-nums"><div class="row-spent"><span class="spent-amt">' + (hs ? fd(sp) : '—') + '</span><span class="spent-of">/ ' + fm(r.b) + '</span></div><div class="row-remaining">';
     var rc = "dim", rv = "—";
     if (r.b > 0) {
@@ -694,10 +701,16 @@ function bindEvents() {
   }
   var btns = document.querySelectorAll(".edit-btn");
   for (var j = 0; j < btns.length; j++) {
-    btns[j].addEventListener("click", function(e) {
-      e.stopPropagation();
+    btns[j].addEventListener("mousedown", function(e) {
+      e.preventDefault(); e.stopPropagation();
       var idx = parseInt(this.getAttribute("data-i"));
       var action = this.getAttribute("data-action");
+      var inp = document.querySelector('.edit-input[data-i="' + idx + '"]');
+      if (inp) {
+        var v = parseFloat(inp.value);
+        if (!isNaN(v) && v >= 0) { APP.budget[idx].cs = v; APP.budget[idx].p = (v === APP.budget[idx].b); }
+        else if (inp.value.trim() === "") { APP.budget[idx].cs = null; APP.budget[idx].p = false; }
+      }
       if (action === "mark") { APP.budget[idx].p = true; APP.budget[idx].cs = null; }
       else if (action === "clear") { APP.budget[idx].cs = null; APP.budget[idx].p = false; APP.budget[idx].s = 0; }
       editing = -1; saveData(); drawBudget();
@@ -808,10 +821,11 @@ function confirmConclude() {
   for (var i = 0; i < APP.budget.length; i++) {
     if (APP.budget[i].c === "Tuition") {
       APP.budget[i].p = true;
-      APP.budget[i].s = APP.budget[i].b;
+      APP.budget[i].s = 0;
     }
   }
   APP.imported = [];
+  APP.lastImportDelta = null;
 
   saveData();
   document.getElementById("conclude-modal").style.display = "none";
@@ -864,7 +878,7 @@ function drawHistory() {
   // Month cards
   for (var i = 0; i < APP.history.length; i++) {
     var h = APP.history[i];
-    var fixPct = (h.fixedSpent / (h.fixedSpent + h.variableSpent)) * 100;
+    var fixPct = (h.fixedSpent + h.variableSpent) > 0 ? (h.fixedSpent / (h.fixedSpent + h.variableSpent)) * 100 : 0;
     var topCatStr = h.topCategories && h.topCategories.length > 0 ? h.topCategories[0].c : "—";
 
     html += '<div class="month-card" data-i="' + i + '">';
@@ -1142,7 +1156,12 @@ document.getElementById("btn-apply").addEventListener("click",function(){
   }
   for(var i=0;i<APP.budget.length;i++){
     if(sums[APP.budget[i].c]){
-      APP.budget[i].s = Math.round((APP.budget[i].s + sums[APP.budget[i].c]) * 100) / 100;
+      if (APP.budget[i].p) {
+        APP.budget[i].p = false;
+        APP.budget[i].s = Math.round((APP.budget[i].b + sums[APP.budget[i].c]) * 100) / 100;
+      } else {
+        APP.budget[i].s = Math.round((APP.budget[i].s + sums[APP.budget[i].c]) * 100) / 100;
+      }
       APP.budget[i].cs = null;
     }
   }
@@ -1151,6 +1170,11 @@ document.getElementById("btn-apply").addEventListener("click",function(){
     if (APP.imported.indexOf(appliedKeys[i]) === -1) APP.imported.push(appliedKeys[i]);
   }
   APP.lastImport=new Date().toLocaleDateString("en-GB");
+  var prevCs = {};
+  for (var i = 0; i < APP.budget.length; i++) {
+    if (sums[APP.budget[i].c] !== undefined) prevCs[APP.budget[i].c] = APP.budget[i].cs !== undefined ? APP.budget[i].cs : null;
+  }
+  APP.lastImportDelta = {categories: JSON.parse(JSON.stringify(sums)), keys: appliedKeys.slice(), date: new Date().toISOString(), month: APP.currentMonth, prevCs: prevCs};
   saveData();
   var sh='<div class="summary-card"><div class="section-title" style="margin-top:0">Done</div>',tot=0,cs=Object.keys(sums);
   for(var i=0;i<cs.length;i++){sh+='<div class="summary-row"><span class="sr-cat">'+cs[i]+'</span><span class="sr-amt">+'+fd(sums[cs[i]])+'</span></div>';tot+=sums[cs[i]]}
@@ -1167,6 +1191,28 @@ document.getElementById("btn-apply").addEventListener("click",function(){
 });
 
 function cancelImport(){pendingTxns=[];document.getElementById("import-preview").style.display="none";document.getElementById("txn-list").style.display="";document.getElementById("import-summary").style.display="none";document.getElementById("btn-cancel").textContent="Cancel";document.getElementById("csv-input").value=""}
+
+function undoLastImport() {
+  var delta = APP.lastImportDelta;
+  if (!delta) { toast("Nothing to undo", "warn"); return; }
+  var d = new Date(delta.date).toLocaleDateString("en-GB");
+  var cats = Object.keys(delta.categories);
+  if (!confirm("Undo import from " + d + "?\n\nThis will subtract:\n" + cats.map(function(c){return "  " + c + ": " + fd(delta.categories[c])}).join("\n") + "\n\nfrom " + delta.month + ".")) return;
+  for (var i = 0; i < APP.budget.length; i++) {
+    if (delta.categories[APP.budget[i].c] !== undefined) {
+      var sub = delta.categories[APP.budget[i].c];
+      APP.budget[i].s = Math.max(0, Math.round((APP.budget[i].s - sub) * 100) / 100);
+      APP.budget[i].cs = (delta.prevCs && delta.prevCs[APP.budget[i].c] !== undefined) ? delta.prevCs[APP.budget[i].c] : null;
+    }
+  }
+  for (var i = 0; i < delta.keys.length; i++) {
+    var ki = APP.imported.indexOf(delta.keys[i]);
+    if (ki > -1) APP.imported.splice(ki, 1);
+  }
+  APP.lastImportDelta = null;
+  saveData(); drawBudget(); drawSettings();
+  toast("Import undone · " + delta.keys.length + " transactions removed");
+}
 
 // ===== SHARE SNAPSHOT =====
 function buildSnapshotText() {
@@ -1230,6 +1276,16 @@ function copyToClipboard(text) {
 function drawSettings() {
   drawMappings();
   document.getElementById("inflow-input").value = APP.inflow || DEFAULT_INFLOW;
+  var undoBtn = document.getElementById("btn-undo-import");
+  if (undoBtn) {
+    if (APP.lastImportDelta) {
+      var d = new Date(APP.lastImportDelta.date).toLocaleDateString("en-GB");
+      undoBtn.textContent = "Undo Last Import · " + d;
+      undoBtn.style.display = "inline-block";
+    } else {
+      undoBtn.style.display = "none";
+    }
+  }
 }
 
 document.getElementById("inflow-input").addEventListener("change", function() {
