@@ -765,9 +765,13 @@ function recalcLiveTotals() {
   for (var g = 0; g < gts.length; g++) {
     var grp = gts[g].getAttribute("data-group");
     var amt = gts[g].querySelector(".gt-amt");
-    if (amt) {
-      if (grp === "fixed") amt.textContent = fm(fixS) + ' / ' + fm(fixB);
-      else amt.textContent = fm(varS) + ' / ' + fm(varB);
+    if (!amt) continue;
+    if (grp === "fixed") amt.textContent = fm(fixS) + ' / ' + fm(fixB);
+    else if (grp === "variable") amt.textContent = fm(varS) + ' / ' + fm(varB);
+    else if (grp === "reimb") {
+      var rtot = reimbTotal();
+      amt.textContent = rtot > 0 ? '+' + fm(rtot) : '0';
+      amt.style.color = rtot > 0 ? '#3fb950' : '#8b949e';
     }
   }
 }
@@ -817,7 +821,7 @@ function bindReimbEvents() {
     APP.reimbursements.push({id: id, desc: "", amount: ""});
     focusReimbId = id;
     APP.collapsed.reimb = false;
-    saveData(); drawReimbursements(); recalcLiveTotals();
+    saveData(); drawBudget();
   });
   var descs = host.querySelectorAll(".reimb-desc");
   for (var i = 0; i < descs.length; i++) {
@@ -838,12 +842,6 @@ function bindReimbEvents() {
         var entry = findReimb(id); if (!entry) return;
         var v = parseFloat(el.value);
         entry.amount = isNaN(v) ? "" : v;
-        var tot = reimbTotal();
-        var amtEl = host.querySelector('.group-toggle[data-group="reimb"] .gt-amt');
-        if (amtEl) {
-          amtEl.textContent = tot > 0 ? '+' + fm(tot) : '0';
-          amtEl.style.color = tot > 0 ? '#3fb950' : '#8b949e';
-        }
         recalcLiveTotals();
         saveCache(); scheduleFBPush();
       });
@@ -857,7 +855,7 @@ function bindReimbEvents() {
         for (var j = 0; j < APP.reimbursements.length; j++) {
           if (APP.reimbursements[j].id === id) { APP.reimbursements.splice(j, 1); break; }
         }
-        saveData(); drawReimbursements(); recalcLiveTotals();
+        saveData(); drawBudget();
       });
     })(dels[i]);
   }
