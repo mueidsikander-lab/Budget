@@ -214,6 +214,17 @@ h1{font-size:22px;font-weight:700;margin-bottom:6px;letter-spacing:-0.5px}
 .modal-summary{background:#0d1117;border:1px solid #30363d;border-radius:10px;padding:12px;margin-bottom:14px;font-size:13px}
 .modal-row{display:flex;justify-content:space-between;padding:3px 0;font-variant-numeric:tabular-nums}
 .modal-row.tot{font-weight:700;border-top:1px solid #30363d;padding-top:6px;margin-top:4px}
+
+/* Reimbursements */
+.reimb-row{display:flex;gap:6px;align-items:center;margin-bottom:6px;background:#161b22;border:1px solid #30363d;border-radius:10px;padding:8px}
+.reimb-desc{flex:1;background:#0d1117;border:1px solid #30363d;border-radius:6px;color:#E6EDF3;font-size:13px;padding:8px 10px;outline:none;font-family:inherit;min-width:0}
+.reimb-amt{width:96px;background:#0d1117;border:1px solid #30363d;border-radius:6px;color:#E6EDF3;font-size:13px;padding:8px 8px;outline:none;font-family:inherit;font-variant-numeric:tabular-nums;text-align:right;font-weight:600}
+.reimb-desc:focus,.reimb-amt:focus{border-color:#388bfd}
+.reimb-del{background:#f8514920;border:1px solid #f8514940;color:#f85149;width:32px;height:32px;border-radius:6px;font-size:14px;font-family:inherit;cursor:pointer;flex-shrink:0;padding:0}
+.reimb-del:active{background:#f8514940}
+.reimb-add{width:100%;background:#3fb95015;border:1px dashed #3fb95060;color:#3fb950;font-size:13px;font-weight:600;padding:10px;border-radius:8px;font-family:inherit;cursor:pointer;margin-top:4px}
+.reimb-add:active{background:#3fb95025}
+.reimb-empty{font-size:12px;color:#8b949e;text-align:center;padding:8px 0 4px}
 </style>
 </head>
 <body>
@@ -263,6 +274,7 @@ h1{font-size:22px;font-weight:700;margin-bottom:6px;letter-spacing:-0.5px}
 
   <div class="hero" id="hero-card"></div>
   <div class="stats" id="stat-row"></div>
+  <div id="reimb-section"></div>
   <div id="budget-content"></div>
   <p class="foot" id="last-import"></p>
 </div>
@@ -430,7 +442,8 @@ function defaultData() {
       "abu dhabi airports":"Incidental","dpsc etihad":"Incidental",
       "noya british school":"Tuition","xander":"Mueid / Madiha / House"
     },
-    imported:[],lastImport:null,collapsed:{fixed:true,variable:false},
+    imported:[],lastImport:null,collapsed:{fixed:true,variable:false,reimb:false},
+    reimbursements:[],
     history: []
   };
 }
@@ -439,9 +452,11 @@ function loadCache() { try { var r = localStorage.getItem(CACHE_KEY); if (r) ret
 function saveCache() { try { localStorage.setItem(CACHE_KEY, JSON.stringify(APP)); } catch(e) {} }
 
 function fixApp() {
-  if (!APP.collapsed) APP.collapsed = {fixed:true,variable:false};
+  if (!APP.collapsed) APP.collapsed = {fixed:true,variable:false,reimb:false};
+  if (APP.collapsed.reimb === undefined) APP.collapsed.reimb = false;
   if (!APP.mappings) APP.mappings = {};
   if (!APP.imported) APP.imported = [];
+  if (!APP.reimbursements) APP.reimbursements = [];
   if (!APP.budget) APP = defaultData();
   if (!APP.history) APP.history = [];
   if (!APP.currentMonth) APP.currentMonth = nowMonthYear();
@@ -459,6 +474,7 @@ var fbRef = null;
 var fbReady = false;
 var editing = -1;
 var justFocusedEdit = false;
+var focusReimbId = null;
 
 function initFirebase() {
   var cfg = parseHash();
@@ -473,6 +489,8 @@ function initFirebase() {
     fbRef.on("value", function(snap) {
       fbReady = true; updateSyncUI();
       if (editing !== -1) return;
+      var ae = document.activeElement;
+      if (ae && (ae.classList.contains("reimb-desc") || ae.classList.contains("reimb-amt"))) return;
       var d = snap.val();
       if (d && d.budget) {
         APP = d; fixApp(); saveCache(); drawBudget();
@@ -534,9 +552,20 @@ function fm(n){return Math.round(n).toLocaleString("en")}
 function fd(n){return n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,",")}
 function getSpent(r){if(r.p)return r.b;if(r.cs!==undefined&&r.cs!==null)return r.cs;return r.s}
 function pctCls(p){return p>=75?"g":(p>=40?"y":"r")}
+function reimbTotal(){
+  var t = 0;
+  if (APP.reimbursements && APP.reimbursements.length) {
+    for (var i = 0; i < APP.reimbursements.length; i++) {
+      var a = parseFloat(APP.reimbursements[i].amount);
+      if (!isNaN(a)) t += a;
+    }
+  }
+  return t;
+}
+function getTotalInflow(){ return (APP.inflow || DEFAULT_INFLOW) + reimbTotal(); }
 
 function renderHero(fixS, varS, savActual) {
-  var INFLOW = APP.inflow || DEFAULT_INFLOW;
+  var INFLOW = getTotalInflow();
   var savNeg = savActual < 0;
   var totalSpent = fixS + varS;
   var fixW, varW, savW;
@@ -574,7 +603,7 @@ function renderStats(fixB, fixS, varB, varS) {
 
 function drawBudget() {
   var data = APP.budget; if (!data) return;
-  var INFLOW = APP.inflow || DEFAULT_INFLOW;
+  var INFLOW = getTotalInflow();
   var fixB=0,fixS=0,varB=0,varS=0,totalS=0,fixedIdx=[],varIdx=[];
   for(var i=0;i<data.length;i++){
     var sp = getSpent(data[i]);
@@ -602,6 +631,7 @@ function drawBudget() {
   html += '</div>';
 
   document.getElementById("budget-content").innerHTML = html;
+  drawReimbursements();
   if (APP.lastImport) document.getElementById("last-import").textContent = "Last CSV: " + APP.lastImport;
   bindEvents();
 
@@ -720,7 +750,7 @@ function bindEvents() {
 
 function recalcLiveTotals() {
   var data = APP.budget; if (!data) return;
-  var INFLOW = APP.inflow || DEFAULT_INFLOW;
+  var INFLOW = getTotalInflow();
   var fixB=0,fixS=0,varB=0,varS=0,totalS=0;
   for(var i=0;i<data.length;i++){
     var sp = getSpent(data[i]);
@@ -742,6 +772,104 @@ function recalcLiveTotals() {
   }
 }
 
+function escHtml(s) { return String(s == null ? "" : s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+function drawReimbursements() {
+  var host = document.getElementById("reimb-section");
+  if (!host) return;
+  var r = APP.reimbursements || [];
+  var total = reimbTotal();
+  var col = APP.collapsed.reimb;
+  var html = '<div class="group"><div class="group-toggle" data-group="reimb">' +
+    '<div class="gt-left"><span class="gt-arrow ' + (col ? '' : 'open') + '">▶</span>' +
+    '<span class="gt-label">Reimbursements</span>' +
+    '<span class="gt-count">' + r.length + '</span></div>' +
+    '<span class="gt-amt" style="color:' + (total > 0 ? '#3fb950' : '#8b949e') + '">' + (total > 0 ? '+' + fm(total) : '0') + '</span></div>';
+  if (!col) {
+    if (r.length === 0) html += '<div class="reimb-empty">No reimbursements yet</div>';
+    for (var i = 0; i < r.length; i++) {
+      var entry = r[i];
+      var amt = (entry.amount === 0 || entry.amount) ? entry.amount : '';
+      html += '<div class="reimb-row">' +
+        '<input type="text" class="reimb-desc" data-id="' + entry.id + '" placeholder="Description" value="' + escHtml(entry.desc) + '">' +
+        '<input type="number" inputmode="decimal" class="reimb-amt" data-id="' + entry.id + '" placeholder="0.00" step="0.01" min="0" value="' + escHtml(amt) + '">' +
+        '<button class="reimb-del" data-id="' + entry.id + '" aria-label="Delete">✕</button>' +
+        '</div>';
+    }
+    html += '<button class="reimb-add">+ Add Reimbursement</button>';
+  }
+  host.innerHTML = html;
+  bindReimbEvents();
+
+  if (focusReimbId) {
+    var inp = host.querySelector('.reimb-desc[data-id="' + focusReimbId + '"]');
+    if (inp) { inp.focus(); try { inp.select(); } catch(e) {} }
+    focusReimbId = null;
+  }
+}
+
+function bindReimbEvents() {
+  var host = document.getElementById("reimb-section");
+  if (!host) return;
+  var addBtn = host.querySelector(".reimb-add");
+  if (addBtn) addBtn.addEventListener("click", function() {
+    var id = "r" + Date.now() + Math.floor(Math.random() * 1000);
+    APP.reimbursements.push({id: id, desc: "", amount: ""});
+    focusReimbId = id;
+    APP.collapsed.reimb = false;
+    saveData(); drawReimbursements(); recalcLiveTotals();
+  });
+  var descs = host.querySelectorAll(".reimb-desc");
+  for (var i = 0; i < descs.length; i++) {
+    (function(el){
+      el.addEventListener("input", function() {
+        var id = el.getAttribute("data-id");
+        var entry = findReimb(id); if (!entry) return;
+        entry.desc = el.value;
+        saveCache(); scheduleFBPush();
+      });
+    })(descs[i]);
+  }
+  var amts = host.querySelectorAll(".reimb-amt");
+  for (var i = 0; i < amts.length; i++) {
+    (function(el){
+      el.addEventListener("input", function() {
+        var id = el.getAttribute("data-id");
+        var entry = findReimb(id); if (!entry) return;
+        var v = parseFloat(el.value);
+        entry.amount = isNaN(v) ? "" : v;
+        var tot = reimbTotal();
+        var amtEl = host.querySelector('.group-toggle[data-group="reimb"] .gt-amt');
+        if (amtEl) {
+          amtEl.textContent = tot > 0 ? '+' + fm(tot) : '0';
+          amtEl.style.color = tot > 0 ? '#3fb950' : '#8b949e';
+        }
+        recalcLiveTotals();
+        saveCache(); scheduleFBPush();
+      });
+    })(amts[i]);
+  }
+  var dels = host.querySelectorAll(".reimb-del");
+  for (var i = 0; i < dels.length; i++) {
+    (function(el){
+      el.addEventListener("click", function() {
+        var id = el.getAttribute("data-id");
+        for (var j = 0; j < APP.reimbursements.length; j++) {
+          if (APP.reimbursements[j].id === id) { APP.reimbursements.splice(j, 1); break; }
+        }
+        saveData(); drawReimbursements(); recalcLiveTotals();
+      });
+    })(dels[i]);
+  }
+}
+
+function findReimb(id) {
+  for (var i = 0; i < APP.reimbursements.length; i++) {
+    if (APP.reimbursements[i].id === id) return APP.reimbursements[i];
+  }
+  return null;
+}
+
 var fbPushTimeout = null;
 function scheduleFBPush() {
   if (fbPushTimeout) clearTimeout(fbPushTimeout);
@@ -751,7 +879,9 @@ function scheduleFBPush() {
 // ===== CONCLUDE MONTH =====
 function openConcludeModal() {
   if (editing !== -1) commitEdit();
-  var INFLOW = APP.inflow || DEFAULT_INFLOW;
+  var BASE = APP.inflow || DEFAULT_INFLOW;
+  var REIMB = reimbTotal();
+  var INFLOW = BASE + REIMB;
   var totalS = 0, fixS = 0, varS = 0;
   for (var i = 0; i < APP.budget.length; i++) {
     var sp = getSpent(APP.budget[i]);
@@ -762,7 +892,8 @@ function openConcludeModal() {
   var savPct = Math.round(sav / INFLOW * 100);
 
   var html = '<div class="modal-row"><span style="color:#8b949e">' + APP.currentMonth + ' summary</span><span></span></div>';
-  html += '<div class="modal-row"><span>Inflow</span><span>' + fm(INFLOW) + '</span></div>';
+  html += '<div class="modal-row"><span>Inflow</span><span>' + fm(BASE) + '</span></div>';
+  if (REIMB > 0) html += '<div class="modal-row"><span style="color:#3fb950">Reimbursements (' + APP.reimbursements.length + ')</span><span style="color:#3fb950">+' + fm(REIMB) + '</span></div>';
   html += '<div class="modal-row"><span>Spent</span><span>' + fm(totalS) + '</span></div>';
   html += '<div class="modal-row tot"><span>Savings</span><span style="color:' + (sav >= 0 ? '#3fb950' : '#f85149') + '">' + fm(sav) + ' (' + savPct + '%)</span></div>';
   html += '<div style="font-size:11px;color:#8b949e;margin-top:10px">Next month: <strong style="color:#c9d1d9">' + nextMonthYear(APP.currentMonth) + '</strong></div>';
@@ -772,7 +903,9 @@ function openConcludeModal() {
 }
 
 function confirmConclude() {
-  var INFLOW = APP.inflow || DEFAULT_INFLOW;
+  var BASE = APP.inflow || DEFAULT_INFLOW;
+  var REIMB = reimbTotal();
+  var INFLOW = BASE + REIMB;
   var totalS = 0, fixS = 0, varS = 0;
   var snapshotBudget = [];
   for (var i = 0; i < APP.budget.length; i++) {
@@ -797,6 +930,9 @@ function confirmConclude() {
     month: APP.currentMonth,
     concludedAt: new Date().toISOString(),
     inflow: INFLOW,
+    baseInflow: BASE,
+    reimbursements: (APP.reimbursements || []).slice(),
+    reimbursementsTotal: REIMB,
     budget: snapshotBudget,
     totalSpent: totalS,
     fixedSpent: fixS,
@@ -825,6 +961,7 @@ function confirmConclude() {
     }
   }
   APP.imported = [];
+  APP.reimbursements = [];
   APP.lastImportDelta = null;
 
   saveData();
@@ -929,6 +1066,10 @@ function drawHistory() {
           dh += '<div class="md-row"><div class="md-cat"><span class="md-cat-dot" style="background:' + color + '"></span>' + b.c + '</div><div>' + fm(b.s) + ' / ' + fm(b.b) + ' <span style="color:#8b949e">(' + pct + '%)</span></div></div>';
         }
         dh += '<div class="md-row tot"><span>Total Spent</span><span>' + fm(h.totalSpent) + '</span></div>';
+        if (h.reimbursementsTotal && h.reimbursementsTotal > 0) {
+          dh += '<div class="md-row"><span style="color:#3fb950">Reimbursements (' + (h.reimbursements ? h.reimbursements.length : 0) + ')</span><span style="color:#3fb950">+' + fm(h.reimbursementsTotal) + '</span></div>';
+        }
+        dh += '<div class="md-row"><span style="color:#8b949e">Inflow</span><span>' + fm(h.inflow) + '</span></div>';
         dh += '<div class="md-row tot"><span>Savings</span><span style="color:' + (h.savings >= 0 ? '#3fb950' : '#f85149') + '">' + fm(h.savings) + '</span></div>';
         detail.innerHTML = dh;
         card.parentNode.insertBefore(detail, card.nextSibling);
@@ -1216,7 +1357,9 @@ function undoLastImport() {
 
 // ===== SHARE SNAPSHOT =====
 function buildSnapshotText() {
-  var INFLOW = APP.inflow || DEFAULT_INFLOW;
+  var BASE = APP.inflow || DEFAULT_INFLOW;
+  var REIMB = reimbTotal();
+  var INFLOW = BASE + REIMB;
   var data = APP.budget;
   var fixB=0,fixS=0,varB=0,varS=0,totalS=0,fixedItems=[],varItems=[];
   for(var i=0;i<data.length;i++){
@@ -1236,7 +1379,8 @@ function buildSnapshotText() {
   var t = "📊 *" + APP.currentMonth + " Budget* · " + dateStr + "\n";
   t += "━━━━━━━━━━━━━━━\n";
   t += (savActual >= 0 ? "💰" : "⚠️") + " *Savings: AED " + fm(savActual) + "* (" + savPct + "%)\n";
-  t += "Inflow: " + fm(INFLOW) + " · Spent: " + fm(totalS) + "\n\n";
+  if (REIMB > 0) t += "Inflow: " + fm(BASE) + " + " + fm(REIMB) + " reimb = " + fm(INFLOW) + " · Spent: " + fm(totalS) + "\n\n";
+  else t += "Inflow: " + fm(INFLOW) + " · Spent: " + fm(totalS) + "\n\n";
   t += "🔵 *Fixed* " + fm(fixS) + " / " + fm(fixB) + " (" + fixPct + "%)\n";
   for (var i = 0; i < fixedItems.length; i++) {
     var r = fixedItems[i]; var sp = getSpent(r);
