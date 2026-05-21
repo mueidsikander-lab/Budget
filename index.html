@@ -343,6 +343,34 @@ body {
   </div>
 </div>
 
+<div class="modal-overlay center" id="transfer-modal" style="display:none">
+  <div class="modal-box">
+    <div class="modal-grab"></div>
+    <div class="modal-title">Transfer Data</div>
+    <div class="modal-sub">Your budget data is ready to import into this app.</div>
+    <div id="transfer-summary" style="background:rgba(0,0,0,0.3);border-radius:12px;padding:14px;margin-bottom:4px"></div>
+    <div class="btn-row" style="margin-top:16px">
+      <button class="btn btn-secondary" onclick="skipTransfer()">Skip</button>
+      <button class="btn btn-blue" onclick="confirmTransfer()">Import Data</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay center" id="prepare-modal" style="display:none">
+  <div class="modal-box">
+    <div class="modal-grab"></div>
+    <div class="modal-title">📲 Add to Home Screen</div>
+    <div class="modal-sub">Your data is now in the URL. Follow these steps in Safari:</div>
+    <div style="background:rgba(0,0,0,0.3);border-radius:12px;padding:16px;margin-bottom:16px;line-height:1.8">
+      <div style="font-size:15px">1. Tap <strong>Share ⬆</strong> in the toolbar</div>
+      <div style="font-size:15px">2. Tap <strong>Add to Home Screen</strong></div>
+      <div style="font-size:15px">3. Tap <strong>Add</strong></div>
+    </div>
+    <div style="font-size:12px;color:var(--text-3);margin-bottom:16px;text-align:center">Your data transfers automatically on first launch.</div>
+    <button class="btn btn-secondary btn-full" onclick="closePrepareModal()">Done</button>
+  </div>
+</div>
+
 <div id="share-render"></div>
 
 <div class="page active" id="pg-budget">
@@ -449,6 +477,11 @@ body {
 
   <div class="s-section-title">Data</div>
   <div class="s-section">
+    <div class="s-item" onclick="prepareHomeScreen()">
+      <span class="s-icon s-i-purple">📲</span>
+      <div class="s-label">Add to Home Screen<div class="s-sub">Transfer your data to the iOS app icon</div></div>
+      <span class="s-chev">›</span>
+    </div>
     <div class="s-item" onclick="exportData()">
       <span class="s-icon s-i-blue">⤓</span>
       <div class="s-label">Export Data<div class="s-sub">Download a backup as JSON</div></div>
@@ -551,6 +584,74 @@ function fixApp() {
 
 var APP = loadCache() || defaultData();
 fixApp();
+
+// iOS PWA data transfer helpers
+function safeB64Enc(str) { try { return btoa(unescape(encodeURIComponent(str))); } catch(e) { return null; } }
+function safeB64Dec(str) { try { return decodeURIComponent(escape(atob(str))); } catch(e) { return null; } }
+
+var pendingTransferData = null;
+
+// Check for #transfer= hash — runs immediately, only acts in standalone (PWA) mode
+(function() {
+  var h = window.location.hash;
+  if (!h || h.indexOf('#transfer=') !== 0) return;
+  var b64 = h.slice(10);
+  history.replaceState(null, null, window.location.pathname);
+  if (!window.navigator.standalone) return;
+  try {
+    var decoded = safeB64Dec(b64);
+    if (!decoded) return;
+    var payload = JSON.parse(decoded);
+    if (!payload || !payload.budget) return;
+    if (APP._pwaBootstrapped) return;
+    pendingTransferData = payload;
+    var hist = (payload.history || []).length;
+    var txns = (payload.transactions || []).length;
+    var month = payload.currentMonth || '';
+    document.getElementById('transfer-summary').innerHTML =
+      '<div style="font-size:14px;line-height:1.8;color:var(--text-2)">' +
+      (month ? '<div>Month: <strong style="color:var(--text)">' + escHtml(month) + '</strong></div>' : '') +
+      (hist > 0 ? '<div>' + hist + ' month' + (hist > 1 ? 's' : '') + ' of history</div>' : '') +
+      (txns > 0 ? '<div>' + txns + ' transaction' + (txns > 1 ? 's' : '') + ' this cycle</div>' : '') +
+      '</div>';
+    openModal('transfer-modal');
+  } catch(e) {}
+})();
+
+function skipTransfer() {
+  pendingTransferData = null;
+  closeModal('transfer-modal');
+}
+
+function confirmTransfer() {
+  if (!pendingTransferData) { closeModal('transfer-modal'); return; }
+  var data = pendingTransferData;
+  pendingTransferData = null;
+  data._pwaBootstrapped = true;
+  APP = data;
+  fixApp();
+  saveData();
+  closeModal('transfer-modal');
+  drawBudget();
+  toast('Data imported ✓');
+}
+
+function prepareHomeScreen() {
+  if (window.navigator.standalone) { toast('Already running as installed app'); return; }
+  try {
+    var b64 = safeB64Enc(JSON.stringify(APP));
+    if (!b64) { toast('Could not encode data', 'err'); return; }
+    history.replaceState(null, null, '#transfer=' + b64);
+    openModal('prepare-modal');
+  } catch(e) {
+    toast('Could not prepare transfer', 'err');
+  }
+}
+
+function closePrepareModal() {
+  history.replaceState(null, null, window.location.pathname);
+  closeModal('prepare-modal');
+}
 
 var editingCat = null;
 var addingTxnCat = null;
