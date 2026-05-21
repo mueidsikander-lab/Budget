@@ -293,6 +293,20 @@ body {
 .sc-txn-info-d { font-weight: 500; font-size: 13px; }
 .sc-txn-info-dt { font-size: 11px; color: rgba(235,235,245,0.5); margin-top: 1px; }
 .sc-txn-amt { font-weight: 600; font-size: 13px; }
+.bgt-amt-val { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--blue); cursor: pointer; padding: 3px 8px; border-radius: 7px; transition: background 0.12s; flex-shrink: 0; }
+.bgt-amt-val:active { background: rgba(10,132,255,0.14); }
+.bgt-edit { padding: 8px 16px 12px; display: flex; gap: 8px; border-top: 1px solid var(--hair); animation: expandIn 0.15s ease-out; }
+.bgt-inp { flex: 1; background: var(--card-2); border: 1px solid var(--blue); border-radius: 10px; color: var(--text); font-size: 18px; font-weight: 700; padding: 10px 12px; outline: none; font-family: inherit; font-variant-numeric: tabular-nums; text-align: center; }
+.bgt-add-area { padding: 0 16px 14px; }
+.bgt-add-form { display: flex; flex-direction: column; gap: 8px; padding-top: 12px; border-top: 1px solid var(--hair); }
+.bgt-add-inputs { display: flex; gap: 8px; }
+.bgt-add-name { flex: 1; background: var(--card-2); border: 1px solid transparent; border-radius: 8px; color: var(--text); font-size: 14px; padding: 9px 10px; outline: none; font-family: inherit; }
+.bgt-add-name:focus { border-color: var(--blue); }
+.bgt-add-amt { width: 100px; background: var(--card-2); border: 1px solid transparent; border-radius: 8px; color: var(--text); font-size: 14px; padding: 9px 10px; outline: none; font-family: inherit; text-align: right; font-weight: 600; }
+.bgt-add-amt:focus { border-color: var(--blue); }
+.bgt-type-sel { display: flex; gap: 6px; }
+.bgt-type-btn { flex: 1; padding: 8px; background: var(--card-2); border: none; border-radius: 8px; color: var(--text-2); font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; transition: background 0.12s, color 0.12s; }
+.bgt-type-btn.on { background: var(--blue); color: #fff; }
 </style>
 </head>
 <body>
@@ -443,6 +457,9 @@ body {
       <input type="number" id="inflow-input" inputmode="decimal">
     </div>
   </div>
+
+  <div class="s-section-title">Budget &amp; Categories</div>
+  <div class="s-section" id="budget-cat-list"></div>
 
   <div class="s-section-title">Sharing</div>
   <div class="s-section">
@@ -655,6 +672,167 @@ function closePrepareModal() {
 
 var editingCat = null;
 var addingTxnCat = null;
+var editingBudgetCat = null;
+var addingCategory = false;
+var newCatType = 'variable';
+
+function budgetTotal() {
+  var t = 0;
+  for (var i = 0; i < APP.budget.length; i++) t += APP.budget[i].b;
+  return t;
+}
+
+function drawBudgetSettings() {
+  var host = document.getElementById('budget-cat-list');
+  if (!host) return;
+  var INFLOW = getTotalInflow();
+  var totalB = budgetTotal();
+  var isOver = totalB > INFLOW;
+  var pct = INFLOW > 0 ? Math.min(totalB / INFLOW * 100, 100) : 100;
+
+  var html = '<div style="padding:12px 16px;' + (isOver ? 'background:rgba(255,69,58,0.07);' : '') + 'border-bottom:1px solid ' + (isOver ? 'rgba(255,69,58,0.25)' : 'var(--hair)') + '">';
+  html += '<div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;margin-bottom:6px">';
+  html += '<span style="color:var(--text-2)">Total budget</span>';
+  html += '<span style="font-weight:600;font-variant-numeric:tabular-nums;color:' + (isOver ? 'var(--red)' : 'var(--text)') + '">' + fm(totalB) + ' <span style="color:var(--text-3);font-weight:400">/ ' + fm(INFLOW) + '</span></span>';
+  html += '</div>';
+  html += '<div style="height:4px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden">';
+  html += '<div style="height:100%;width:' + pct.toFixed(1) + '%;background:' + (isOver ? 'var(--red)' : 'var(--blue)') + ';border-radius:2px;transition:width 0.3s"></div>';
+  html += '</div>';
+  if (isOver) html += '<div style="font-size:12px;color:var(--red);margin-top:5px;font-weight:500">⚠ Exceeds inflow by AED ' + fm(totalB - INFLOW) + '</div>';
+  html += '</div>';
+
+  for (var i = 0; i < APP.budget.length; i++) {
+    var r = APP.budget[i];
+    var isEditing = editingBudgetCat === r.c;
+    html += '<div class="map-item" style="cursor:default">';
+    html += '<div style="flex:1;min-width:0">';
+    html += '<div style="font-size:15px;font-weight:500">' + escHtml(r.c) + '</div>';
+    html += '<div style="font-size:11px;color:var(--text-2);margin-top:1px">' + (r.g === 'fixed' ? 'Fixed' : 'Variable') + (r.custom ? ' · custom' : '') + '</div>';
+    html += '</div>';
+    html += '<div class="bgt-amt-val" data-act="bgt-edit" data-cat="' + escHtml(r.c) + '">AED ' + fm(r.b) + '</div>';
+    if (r.custom) html += '<button class="map-del" data-act="bgt-del" data-cat="' + escHtml(r.c) + '">✕</button>';
+    html += '</div>';
+    if (isEditing) {
+      html += '<div class="bgt-edit">';
+      html += '<input type="number" inputmode="decimal" class="bgt-inp" data-cat="' + escHtml(r.c) + '" value="' + r.b + '" min="0" step="1">';
+      html += '<button class="exp-btn" data-act="bgt-cancel" style="flex:0 0 72px">Cancel</button>';
+      html += '<button class="exp-btn primary" data-act="bgt-save" data-cat="' + escHtml(r.c) + '" style="flex:0 0 60px">Save</button>';
+      html += '</div>';
+    }
+  }
+
+  html += '<div class="bgt-add-area">';
+  if (addingCategory) {
+    html += '<div class="bgt-add-form">';
+    html += '<div class="bgt-add-inputs">';
+    html += '<input class="bgt-add-name" id="bgt-new-name" placeholder="Category name" type="text" autocorrect="off" autocapitalize="words">';
+    html += '<input class="bgt-add-amt" id="bgt-new-amt" placeholder="Budget" type="number" inputmode="decimal" min="0" step="1">';
+    html += '</div>';
+    html += '<div class="bgt-type-sel">';
+    html += '<button class="bgt-type-btn' + (newCatType === 'fixed' ? ' on' : '') + '" data-act="bgt-type" data-type="fixed">Fixed</button>';
+    html += '<button class="bgt-type-btn' + (newCatType === 'variable' ? ' on' : '') + '" data-act="bgt-type" data-type="variable">Variable</button>';
+    html += '</div>';
+    html += '<div style="display:flex;gap:8px">';
+    html += '<button class="exp-btn" data-act="bgt-add-cancel" style="flex:1">Cancel</button>';
+    html += '<button class="exp-btn primary" data-act="bgt-add-save" style="flex:1">Add</button>';
+    html += '</div></div>';
+  } else {
+    html += '<button class="reimb-add" data-act="bgt-add-open" style="margin-top:10px;border-color:rgba(10,132,255,0.35);color:var(--blue)">+ Add Category</button>';
+  }
+  html += '</div>';
+
+  host.innerHTML = html;
+  if (editingBudgetCat) {
+    setTimeout(function() { var inp = host.querySelector('.bgt-inp'); if (inp) { inp.focus(); try { inp.select(); } catch(ex) {} } }, 0);
+  }
+  if (addingCategory) {
+    setTimeout(function() { var ni = document.getElementById('bgt-new-name'); if (ni) ni.focus(); }, 0);
+  }
+  bindBudgetSettingsEvents();
+}
+
+function bindBudgetSettingsEvents() {
+  var host = document.getElementById('budget-cat-list');
+  if (!host || host._bound) return;
+  host._bound = true;
+
+  host.addEventListener('click', function(e) {
+    var t = e.target;
+    var act = t.getAttribute && t.getAttribute('data-act');
+    var cat = t.getAttribute && t.getAttribute('data-cat');
+
+    if (act === 'bgt-edit') {
+      editingBudgetCat = (editingBudgetCat === cat) ? null : cat;
+      addingCategory = false;
+      drawBudgetSettings();
+      return;
+    }
+    if (act === 'bgt-cancel') { editingBudgetCat = null; drawBudgetSettings(); return; }
+    if (act === 'bgt-save') {
+      var inp = host.querySelector('.bgt-inp');
+      if (!inp) { editingBudgetCat = null; drawBudgetSettings(); return; }
+      var v = parseFloat(inp.value);
+      if (isNaN(v) || v < 0) { toast('Enter a valid amount', 'warn'); return; }
+      var idx = catIndex(cat); if (idx < 0) { editingBudgetCat = null; drawBudgetSettings(); return; }
+      var newTotal = budgetTotal() - APP.budget[idx].b + v;
+      var LIM = getTotalInflow();
+      if (newTotal > LIM) { toast('Budget exceeds inflow by AED ' + fm(newTotal - LIM), 'err'); return; }
+      APP.budget[idx].b = Math.round(v * 100) / 100;
+      editingBudgetCat = null;
+      saveData(); drawBudgetSettings(); drawBudget();
+      toast('Budget updated');
+      return;
+    }
+    if (act === 'bgt-del') {
+      var idx = catIndex(cat); if (idx < 0) return;
+      if (!APP.budget[idx].custom) { toast('Built-in categories cannot be deleted', 'warn'); return; }
+      var hasTxns = APP.transactions.some(function(tx) { return tx.category === cat; });
+      if (!confirm(hasTxns ? '"' + cat + '" has transactions. Delete anyway?' : 'Delete "' + cat + '"?')) return;
+      APP.budget.splice(idx, 1);
+      editingBudgetCat = null;
+      saveData(); drawBudgetSettings(); drawBudget();
+      toast('Category deleted');
+      return;
+    }
+    if (act === 'bgt-add-open') { addingCategory = true; editingBudgetCat = null; drawBudgetSettings(); return; }
+    if (act === 'bgt-add-cancel') { addingCategory = false; drawBudgetSettings(); return; }
+    if (act === 'bgt-type') {
+      var type = t.getAttribute('data-type'); if (!type) return;
+      newCatType = type;
+      var btns = host.querySelectorAll('[data-act="bgt-type"]');
+      for (var b = 0; b < btns.length; b++) btns[b].classList.toggle('on', btns[b].getAttribute('data-type') === type);
+      return;
+    }
+    if (act === 'bgt-add-save') {
+      var ni = document.getElementById('bgt-new-name');
+      var ai = document.getElementById('bgt-new-amt');
+      if (!ni || !ai) return;
+      var name = ni.value.trim();
+      var amt = parseFloat(ai.value);
+      if (!name) { toast('Category name required', 'warn'); return; }
+      if (isNaN(amt) || amt < 0) { toast('Enter a valid budget amount', 'warn'); return; }
+      if (catIndex(name) >= 0) { toast('Category already exists', 'warn'); return; }
+      var newTotal = budgetTotal() + amt;
+      var LIM = getTotalInflow();
+      if (newTotal > LIM) { toast('Budget exceeds inflow by AED ' + fm(newTotal - LIM), 'err'); return; }
+      APP.budget.push({ c: name, b: amt, s: 0, p: false, g: newCatType, custom: true });
+      addingCategory = false; newCatType = 'variable';
+      saveData(); drawBudgetSettings(); drawBudget();
+      toast('"' + name + '" added');
+      return;
+    }
+  });
+
+  host.addEventListener('keydown', function(e) {
+    if (e.target.classList && e.target.classList.contains('bgt-inp')) {
+      if (e.key === 'Enter') { var s = host.querySelector('[data-act="bgt-save"]'); if (s) s.click(); }
+      if (e.key === 'Escape') { editingBudgetCat = null; drawBudgetSettings(); }
+    }
+    if (e.target.classList && (e.target.classList.contains('bgt-add-name') || e.target.classList.contains('bgt-add-amt'))) {
+      if (e.key === 'Escape') { addingCategory = false; drawBudgetSettings(); }
+    }
+  });
+}
 
 function reimbTotal() {
   var t = 0;
@@ -1388,7 +1566,8 @@ function drawTxnList() {
     if (t.dateStr !== ld) { ld = t.dateStr; var dn = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]; html += '<div class="day-header">' + dn[t.date.getDay()] + ", " + t.dateStr + '</div>'; }
     var dupClass = t.skip ? ' dup' : '';
     html += '<div class="txn' + dupClass + '"><div class="txn-info"><div class="txn-info-desc">' + escHtml(t.cleanDesc) + (t.isDup ? '<span class="dup-badge">DUP</span>' : '') + '</div><div class="txn-info-date">' + t.card + '</div><div class="txn-info-cat"><select class="cat-select' + (t.category ? '' : ' unset') + '" data-i="' + i + '"><option value="">— Select —</option>';
-    for (var j = 0; j < CATS.length; j++) html += '<option value="' + CATS[j] + '"' + (t.category === CATS[j] ? ' selected' : '') + '>' + CATS[j] + '</option>';
+    var allCatNames = APP.budget.map(function(b) { return b.c; });
+    for (var j = 0; j < allCatNames.length; j++) html += '<option value="' + escHtml(allCatNames[j]) + '"' + (t.category === allCatNames[j] ? ' selected' : '') + '>' + escHtml(allCatNames[j]) + '</option>';
     html += '<option value="SKIP"' + (t.skip ? ' selected' : '') + '>— Skip —</option>';
     html += '</select></div></div>';
     html += '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px"><div class="txn-info-amt">' + fd(t.amount) + '</div>';
@@ -1741,6 +1920,7 @@ for (var i = 0; i < overlays.length; i++) {
 
 function drawSettings() {
   drawMappings();
+  drawBudgetSettings();
   document.getElementById("inflow-input").value = APP.inflow || DEFAULT_INFLOW;
   var undoRow = document.getElementById("undo-import-row");
   if (undoRow) {
@@ -1755,7 +1935,7 @@ function drawSettings() {
 }
 document.getElementById("inflow-input").addEventListener("change", function () {
   var v = parseFloat(this.value);
-  if (!isNaN(v) && v > 0) { APP.inflow = v; saveData(); toast("Inflow updated"); }
+  if (!isNaN(v) && v > 0) { APP.inflow = v; saveData(); drawBudgetSettings(); toast("Inflow updated"); }
 });
 
 function clearSpent() {
