@@ -10,6 +10,7 @@
 <meta name="apple-mobile-web-app-title" content="Budget">
 <meta name="theme-color" content="#000000">
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
 :root {
   --bg: #000;
@@ -307,6 +308,7 @@ body {
 .bgt-type-sel { display: flex; gap: 6px; }
 .bgt-type-btn { flex: 1; padding: 8px; background: var(--card-2); border: none; border-radius: 8px; color: var(--text-2); font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; transition: background 0.12s, color 0.12s; }
 .bgt-type-btn.on { background: var(--blue); color: #fff; }
+#adj-cat:focus { border-color: var(--blue); outline: none; }
 </style>
 </head>
 <body>
@@ -385,6 +387,27 @@ body {
   </div>
 </div>
 
+<div class="modal-overlay center" id="adj-modal" style="display:none">
+  <div class="modal-box">
+    <div class="modal-grab"></div>
+    <div class="modal-title" id="adj-modal-title">Add Adjustment</div>
+    <div class="modal-sub" id="adj-modal-sub"></div>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px">
+      <input type="text" id="adj-desc" class="reimb-desc" style="width:100%" placeholder="Description">
+      <input type="number" inputmode="decimal" id="adj-amt" class="reimb-amt" style="width:100%;text-align:left" placeholder="Amount (AED)" step="0.01" min="0">
+      <div id="adj-cat-row" style="display:none">
+        <select id="adj-cat" style="width:100%;background:var(--card-2);border:1px solid transparent;border-radius:8px;color:var(--text);font-size:14px;padding:9px 10px;font-family:inherit;outline:none">
+          <option value="">— Category (optional) —</option>
+        </select>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="closeModal('adj-modal')">Cancel</button>
+      <button class="btn btn-blue" onclick="confirmAdj()">Add</button>
+    </div>
+  </div>
+</div>
+
 <div id="share-render"></div>
 
 <div class="page active" id="pg-budget">
@@ -408,7 +431,7 @@ body {
 
 <div class="page" id="pg-upload">
   <div class="page-h">Import Statement</div>
-  <div class="page-sub">Pick a date range, then upload your CSV.</div>
+  <div class="page-sub">Pick a date range, then upload your CSV or PDF statement.</div>
 
   <div class="date-range">
     <div class="date-range-title">Date Range</div>
@@ -426,7 +449,7 @@ body {
     </div>
   </div>
 
-  <div class="upload-zone" id="drop-zone"><div class="icon">📄</div><p>Tap to select CSV</p><input type="file" accept=".csv" id="csv-input"></div>
+  <div class="upload-zone" id="drop-zone"><div class="icon">📄</div><p>Tap to select CSV or PDF</p><input type="file" accept=".csv,.pdf,application/pdf" id="csv-input"></div>
 
   <div id="import-preview" style="display:none">
     <div id="detected-month-banner"></div>
@@ -1441,9 +1464,18 @@ function drawHistory() {
         if (h.reimbursementsTotal && h.reimbursementsTotal > 0) {
           dh += '<div class="md-row"><span style="color:var(--green)">Reimbursements (' + (h.reimbursements ? h.reimbursements.length : 0) + ')</span><span style="color:var(--green)">+' + fm(h.reimbursementsTotal) + '</span></div>';
         }
+        if (h.outflows && h.outflows.length > 0) {
+          for (var oi = 0; oi < h.outflows.length; oi++) {
+            dh += '<div class="md-row"><span style="color:var(--orange)">Outflow: ' + escHtml(h.outflows[oi].desc) + '</span><span style="color:var(--orange)">+' + fm(h.outflows[oi].amount) + '</span></div>';
+          }
+        }
         dh += '<div class="md-row"><span style="color:var(--text-2)">Inflow</span><span>' + fm(h.inflow) + '</span></div>';
         dh += '<div class="md-row tot"><span>Total Spent</span><span>' + fm(h.totalSpent) + '</span></div>';
         dh += '<div class="md-row tot"><span>Savings</span><span style="color:' + (h.savings >= 0 ? 'var(--green)' : 'var(--red)') + '">' + fm(h.savings) + '</span></div>';
+        dh += '<div style="display:flex;gap:8px;margin-top:12px">';
+        dh += '<button class="btn btn-secondary" style="flex:1;font-size:13px;padding:10px" onclick="openAdjModal(\'reimb\',' + idx + ')">+ Reimbursement</button>';
+        dh += '<button class="btn btn-secondary" style="flex:1;font-size:13px;padding:10px" onclick="openAdjModal(\'outflow\',' + idx + ')">+ Outflow</button>';
+        dh += '</div>';
         detail.innerHTML = dh;
         card.parentNode.insertBefore(detail, card.nextSibling);
       });
@@ -1495,6 +1527,80 @@ function parseCSV(text) {
 }
 function matchCat(d) { var l = d.toLowerCase(); var k = Object.keys(APP.mappings); for (var i = 0; i < k.length; i++) { if (l.indexOf(k[i]) > -1) return APP.mappings[k[i]]; } return null; }
 function cleanDesc(d) { return d.replace(/\s+(DUBAI|ABU DHABI|ABUDHABI|LONDON|ISLAMABAD)\s+(ARE|GBR|PAK|IRL).*$/i, "").replace(/\s+ARE$/, "").replace(/\s+WWW\..+$/, "").trim(); }
+
+function parsePDFLines(lines) {
+  var txns = [], cc = "Primary", periodFrom = null, periodTo = null;
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i].trim();
+    if (!line) continue;
+    var pm = line.match(/Statement Period\s*:?\s*From\s*(\d{2}\/\d{2}\/\d{4})\s*To\s*(\d{2}\/\d{2}\/\d{4})/i);
+    if (pm) { periodFrom = pm[1]; periodTo = pm[2]; continue; }
+    if (/Primary Card/i.test(line)) { cc = "Primary"; continue; }
+    if (/Supplementary Card/i.test(line)) { cc = "Supplementary"; continue; }
+    if (/PAYMENT RECEIVED|FOREIGN TRANSACTION FEE|VAT ON FOREIGN|Transaction Date|Current Balance|Minimum Amount|Credit Limit|Available Credit/i.test(line)) continue;
+    // Primary match: DD/MM/YYYY ... DR/CR amount
+    var m = line.match(/^(\d{2}\/\d{2}\/\d{4})\s+(.+?)\s+(DR|CR)\s+([\d,]+\.?\d*)$/);
+    if (m) {
+      var ds = m[1], desc = m[2].trim(), crdr = m[3], amt = parseFloat(m[4].replace(/,/g, ''));
+      if (!isNaN(amt)) {
+        var dp = ds.split("/");
+        txns.push({ date: new Date(parseInt(dp[2]), parseInt(dp[1])-1, parseInt(dp[0])), dateStr: ds, desc: desc, crdr: crdr, amount: amt, card: cc });
+      }
+      continue;
+    }
+    // Fallback: date, DR/CR and amount anywhere on line
+    var dateM = line.match(/(\d{2}\/\d{2}\/\d{4})/);
+    var crdrM = line.match(/\b(DR|CR)\b/);
+    var amtM = line.match(/\b([\d,]+\.\d{2})(?:\s*)$/);
+    if (dateM && crdrM && amtM) {
+      var ds = dateM[1], crdr = crdrM[1], amt = parseFloat(amtM[1].replace(/,/g, ''));
+      var desc = line.replace(ds, '').replace(crdr, '').replace(amtM[0], '').replace(/\s+/g, ' ').trim();
+      if (!isNaN(amt)) {
+        var dp = ds.split("/");
+        txns.push({ date: new Date(parseInt(dp[2]), parseInt(dp[1])-1, parseInt(dp[0])), dateStr: ds, desc: desc, crdr: crdr, amount: amt, card: cc });
+      }
+    }
+  }
+  return { txns: txns, periodFrom: periodFrom, periodTo: periodTo };
+}
+
+function processPDFFile(file) {
+  if (typeof pdfjsLib === 'undefined') { toast('PDF library not loaded', 'err'); return; }
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  toast('Reading PDF...');
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var data = new Uint8Array(e.target.result);
+    pdfjsLib.getDocument({ data: data }).promise.then(function(pdf) {
+      var pageNums = [];
+      for (var p = 1; p <= pdf.numPages; p++) pageNums.push(p);
+      return Promise.all(pageNums.map(function(p) { return pdf.getPage(p).then(function(pg) { return pg.getTextContent(); }); }));
+    }).then(function(pages) {
+      var allLines = [];
+      for (var pi = 0; pi < pages.length; pi++) {
+        var items = pages[pi].items;
+        var byY = {};
+        for (var ii = 0; ii < items.length; ii++) {
+          var item = items[ii];
+          if (!item.str || !item.str.trim()) continue;
+          var y = Math.round(item.transform[5]);
+          if (!byY[y]) byY[y] = [];
+          byY[y].push({ x: item.transform[4], str: item.str });
+        }
+        var ys = Object.keys(byY).map(Number).sort(function(a, b) { return b - a; });
+        for (var yi = 0; yi < ys.length; yi++) {
+          var row = byY[ys[yi]].sort(function(a, b) { return a.x - b.x; });
+          allLines.push(row.map(function(i) { return i.str; }).join(' '));
+        }
+      }
+      processStatement(parsePDFLines(allLines));
+    }).catch(function(err) {
+      toast('Could not read PDF', 'err');
+      console.error('PDF parse error:', err);
+    });
+  };
+  reader.readAsArrayBuffer(file);
+}
 function detectPredominantMonth(txns) {
   var counts = {};
   for (var i = 0; i < txns.length; i++) { var t = txns[i]; var key = MONTHS[t.date.getMonth()] + " " + t.date.getFullYear(); counts[key] = (counts[key] || 0) + 1; }
@@ -1507,11 +1613,20 @@ var pendingTxns = [];
 document.getElementById("drop-zone").addEventListener("click", function () { document.getElementById("csv-input").click(); });
 document.getElementById("csv-input").addEventListener("change", function (e) {
   var f = e.target.files[0]; if (!f) return;
-  var r = new FileReader(); r.onload = function (ev) { processCSV(ev.target.result); }; r.readAsText(f);
+  if (f.name.toLowerCase().endsWith('.pdf') || f.type === 'application/pdf') {
+    processPDFFile(f);
+  } else {
+    var r = new FileReader(); r.onload = function (ev) { processCSV(ev.target.result); }; r.readAsText(f);
+  }
 });
 
 function processCSV(text) {
-  var parsed = parseCSV(text); var all = parsed.txns;
+  var parsed = parseCSV(text);
+  processStatement(parsed);
+}
+
+function processStatement(parsed) {
+  var all = parsed.txns;
   var fromVal = document.getElementById("date-from").value;
   var toVal = document.getElementById("date-to").value;
   if (!fromVal || !toVal) { toast("Set date range first", "warn"); return; }
@@ -1980,6 +2095,62 @@ function resetData() {
   APP = defaultData();
   saveData(); drawBudget(); drawSettings();
   toast("All data reset");
+}
+
+var adjState = { type: null, idx: null };
+function openAdjModal(type, idx) {
+  adjState = { type: type, idx: idx };
+  var h = APP.history[idx];
+  if (type === 'reimb') {
+    document.getElementById('adj-modal-title').textContent = 'Add Reimbursement';
+    document.getElementById('adj-modal-sub').textContent = 'Add income/reimbursement received for ' + h.month + '. Increases savings.';
+    document.getElementById('adj-cat-row').style.display = 'none';
+  } else {
+    document.getElementById('adj-modal-title').textContent = 'Add Outflow';
+    document.getElementById('adj-modal-sub').textContent = 'Add a missed expense for ' + h.month + '. Reduces savings.';
+    var sel = document.getElementById('adj-cat');
+    sel.innerHTML = '<option value="">— Category (optional) —</option>';
+    var cats = h.budget || APP.budget;
+    for (var i = 0; i < cats.length; i++) {
+      sel.innerHTML += '<option value="' + escHtml(cats[i].c) + '">' + escHtml(cats[i].c) + '</option>';
+    }
+    document.getElementById('adj-cat-row').style.display = '';
+  }
+  document.getElementById('adj-desc').value = '';
+  document.getElementById('adj-amt').value = '';
+  openModal('adj-modal');
+  setTimeout(function() { document.getElementById('adj-desc').focus(); }, 200);
+}
+
+function confirmAdj() {
+  var desc = document.getElementById('adj-desc').value.trim();
+  var amt = parseFloat(document.getElementById('adj-amt').value);
+  if (!desc) { toast('Enter a description', 'warn'); return; }
+  if (isNaN(amt) || amt <= 0) { toast('Enter a valid amount', 'warn'); return; }
+  var h = APP.history[adjState.idx];
+  if (adjState.type === 'reimb') {
+    if (!h.reimbursements) h.reimbursements = [];
+    h.reimbursements.push({ id: uid('r'), desc: desc, amount: amt });
+    h.reimbursementsTotal = Math.round(((h.reimbursementsTotal || 0) + amt) * 100) / 100;
+    h.inflow = Math.round(((h.inflow || 0) + amt) * 100) / 100;
+  } else {
+    var cat = document.getElementById('adj-cat').value;
+    if (!h.outflows) h.outflows = [];
+    h.outflows.push({ id: uid('o'), desc: desc, amount: amt, category: cat || null });
+    h.totalSpent = Math.round(((h.totalSpent || 0) + amt) * 100) / 100;
+    h.variableSpent = Math.round(((h.variableSpent || 0) + amt) * 100) / 100;
+    if (cat && h.budget) {
+      for (var i = 0; i < h.budget.length; i++) {
+        if (h.budget[i].c === cat) { h.budget[i].s = Math.round(((h.budget[i].s || 0) + amt) * 100) / 100; break; }
+      }
+    }
+  }
+  h.savings = Math.round((h.inflow - h.totalSpent) * 100) / 100;
+  h.savingsPct = h.inflow > 0 ? Math.round(h.savings / h.inflow * 100) : 0;
+  closeModal('adj-modal');
+  saveData();
+  drawHistory();
+  toast((adjState.type === 'reimb' ? 'Reimbursement' : 'Outflow') + ' added to ' + h.month);
 }
 
 drawBudget();
