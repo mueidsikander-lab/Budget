@@ -1363,6 +1363,8 @@ function recalcHeader() {
     if (data[i].g === "fixed") { fixB += data[i].b; fixS += sp; }
     else { varB += data[i].b; varS += sp; }
   }
+  var OUT = outflowTotal();
+  varS += OUT; totalS += OUT;
   var savActual = INFLOW - totalS;
   document.getElementById("hero-card").innerHTML = renderHero(fixS, varS, savActual, INFLOW);
   document.getElementById("stat-row").innerHTML = renderStats(fixB, fixS, varB, varS);
