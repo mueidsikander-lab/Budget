@@ -879,7 +879,7 @@ function outflowTotal() {
   }
   return t;
 }
-function getTotalInflow() { return (APP.inflow || DEFAULT_INFLOW) + reimbTotal() - outflowTotal(); }
+function getTotalInflow() { return (APP.inflow || DEFAULT_INFLOW) + reimbTotal(); }
 
 var toastT = null;
 function toast(msg, type) {
@@ -917,6 +917,8 @@ function drawBudget() {
     if (data[i].g === "fixed") { fixedIdx.push(i); fixB += data[i].b; fixS += sp; }
     else { varIdx.push(i); varB += data[i].b; varS += sp; }
   }
+  var OUT = outflowTotal();
+  varS += OUT; totalS += OUT;
   var savActual = INFLOW - totalS;
 
   document.getElementById("month-display").textContent = APP.currentMonth;
@@ -1106,9 +1108,9 @@ function drawOutflows() {
   html += '<div class="reimb-head" data-act="toggle-outflow">';
   html += '<div class="reimb-head-left">';
   html += '<div class="reimb-icon outflow-icon">−</div>';
-  html += '<div><div class="reimb-title">Outflows</div><div style="font-size:11px;color:var(--text-2);margin-top:1px">' + r.length + ' entr' + (r.length === 1 ? 'y' : 'ies') + ' · reduces inflow</div></div>';
+  html += '<div><div class="reimb-title">Outflows</div><div style="font-size:11px;color:var(--text-2);margin-top:1px">' + r.length + ' entr' + (r.length === 1 ? 'y' : 'ies') + ' · counts as extra spending</div></div>';
   html += '</div>';
-  html += '<div class="reimb-total outflow-total ' + (tot > 0 ? 'o' : 'dim') + '">' + (tot > 0 ? '−' + fm(tot) : '0') + '</div>';
+  html += '<div class="reimb-total outflow-total ' + (tot > 0 ? 'o' : 'dim') + '">' + (tot > 0 ? '+' + fm(tot) : '0') + '</div>';
   html += '</div>';
   if (!col) {
     html += '<div class="reimb-body">';
@@ -1303,8 +1305,26 @@ function bindBudgetEvents() {
         saveCache();
         recalcHeader();
         var tot = reimbTotal();
-        var totEl = document.querySelector(".reimb-total");
+        var totEl = document.querySelector("#reimb-section .reimb-total");
         if (totEl) { totEl.textContent = tot > 0 ? '+' + fm(tot) : '0'; totEl.className = "reimb-total " + (tot > 0 ? 'g' : 'dim'); }
+      }
+      return;
+    }
+    if (act === "outflow-desc") {
+      var id = t.getAttribute("data-id");
+      var entry = findOutflow(id); if (entry) { entry.desc = t.value; saveCache(); }
+      return;
+    }
+    if (act === "outflow-amt") {
+      var id = t.getAttribute("data-id");
+      var entry = findOutflow(id); if (entry) {
+        var v = parseFloat(t.value);
+        entry.amount = isNaN(v) ? "" : v;
+        saveCache();
+        recalcHeader();
+        var tot = outflowTotal();
+        var totEl = document.querySelector("#outflow-section .reimb-total");
+        if (totEl) { totEl.textContent = tot > 0 ? '+' + fm(tot) : '0'; totEl.className = "reimb-total outflow-total " + (tot > 0 ? 'o' : 'dim'); }
       }
       return;
     }
@@ -1390,16 +1410,16 @@ function openConcludeModal() {
   var BASE = APP.inflow || DEFAULT_INFLOW;
   var REIMB = reimbTotal();
   var OUT = outflowTotal();
-  var INFLOW = BASE + REIMB - OUT;
+  var INFLOW = BASE + REIMB;
   var totalS = 0;
   for (var i = 0; i < APP.budget.length; i++) totalS += getSpent(APP.budget[i]);
-  var sav = INFLOW - totalS;
+  var sav = INFLOW - totalS - OUT;
   var savPct = INFLOW > 0 ? Math.round(sav / INFLOW * 100) : 0;
   var html = '<div class="modal-row"><span style="color:var(--text-2)">' + APP.currentMonth + '</span><span></span></div>';
   html += '<div class="modal-row"><span>Inflow</span><span>' + fm(BASE) + '</span></div>';
   if (REIMB > 0) html += '<div class="modal-row"><span style="color:var(--green)">Reimbursements</span><span style="color:var(--green)">+' + fm(REIMB) + '</span></div>';
-  if (OUT > 0) html += '<div class="modal-row"><span style="color:var(--orange)">Outflows</span><span style="color:var(--orange)">−' + fm(OUT) + '</span></div>';
   html += '<div class="modal-row"><span>Spent</span><span>' + fm(totalS) + '</span></div>';
+  if (OUT > 0) html += '<div class="modal-row"><span style="color:var(--orange)">Outflows (extra spend)</span><span style="color:var(--orange)">+' + fm(OUT) + '</span></div>';
   html += '<div class="modal-row tot"><span>Savings</span><span style="color:' + (sav >= 0 ? 'var(--green)' : 'var(--red)') + '">' + fm(sav) + ' · ' + savPct + '%</span></div>';
   html += '<div style="font-size:12px;color:var(--text-2);margin-top:12px">Next month: <strong style="color:var(--text)">' + nextMonthYear(APP.currentMonth) + '</strong></div>';
   document.getElementById("conclude-summary").innerHTML = html;
@@ -1410,7 +1430,7 @@ function confirmConclude() {
   var BASE = APP.inflow || DEFAULT_INFLOW;
   var REIMB = reimbTotal();
   var OUT = outflowTotal();
-  var INFLOW = BASE + REIMB - OUT;
+  var INFLOW = BASE + REIMB;
   var totalS = 0, fixS = 0, varS = 0;
   var snapshotBudget = [];
   for (var i = 0; i < APP.budget.length; i++) {
@@ -1419,6 +1439,7 @@ function confirmConclude() {
     if (APP.budget[i].g === "fixed") fixS += sp; else varS += sp;
     snapshotBudget.push({ c: APP.budget[i].c, b: APP.budget[i].b, s: sp, g: APP.budget[i].g, p: APP.budget[i].p });
   }
+  totalS += OUT; varS += OUT;
   var sortedSpend = snapshotBudget.slice().sort(function (a, b) { return b.s - a.s; });
   var topCats = sortedSpend.slice(0, 3).filter(function (c) { return c.s > 0; }).map(function (c) { return { c: c.c, s: c.s }; });
   var overCats = snapshotBudget.filter(function (c) { return c.s > c.b && c.b > 0; }).map(function (c) { return { c: c.c, over: c.s - c.b }; });
@@ -1542,7 +1563,7 @@ function drawHistory() {
         }
         if (h.outflows && h.outflows.length > 0) {
           for (var oi = 0; oi < h.outflows.length; oi++) {
-            dh += '<div class="md-row"><span style="color:var(--orange)">Outflow: ' + escHtml(h.outflows[oi].desc) + '</span><span style="color:var(--orange)">−' + fm(h.outflows[oi].amount) + '</span></div>';
+            dh += '<div class="md-row"><span style="color:var(--orange)">Outflow (extra spend): ' + escHtml(h.outflows[oi].desc) + '</span><span style="color:var(--orange)">+' + fm(h.outflows[oi].amount) + '</span></div>';
           }
         }
         dh += '<div class="md-row"><span style="color:var(--text-2)">Inflow</span><span>' + fm(h.inflow) + '</span></div>';
@@ -1896,7 +1917,7 @@ function buildSnapshotText() {
   var BASE = APP.inflow || DEFAULT_INFLOW;
   var REIMB = reimbTotal();
   var OUT = outflowTotal();
-  var INFLOW = BASE + REIMB - OUT;
+  var INFLOW = BASE + REIMB;
   var data = APP.budget;
   var fixB = 0, fixS = 0, varB = 0, varS = 0, totalS = 0, fixedItems = [], varItems = [];
   for (var i = 0; i < data.length; i++) {
@@ -1904,6 +1925,7 @@ function buildSnapshotText() {
     if (data[i].g === "fixed") { fixedItems.push(data[i]); fixB += data[i].b; fixS += sp; }
     else { varItems.push(data[i]); varB += data[i].b; varS += sp; }
   }
+  varS += OUT; totalS += OUT;
   var savActual = INFLOW - totalS;
   var savPct = INFLOW > 0 ? Math.round(savActual / INFLOW * 100) : 0;
   var fixPct = fixB > 0 ? Math.round(fixS / fixB * 100) : 0;
@@ -1957,6 +1979,7 @@ function copyToClipboard(text) {
 function buildShareCardAll() {
   var BASE = APP.inflow || DEFAULT_INFLOW;
   var REIMB = reimbTotal();
+  var OUT = outflowTotal();
   var INFLOW = BASE + REIMB;
   var data = APP.budget;
   var fixB = 0, fixS = 0, varB = 0, varS = 0, totalS = 0, fixedItems = [], varItems = [];
@@ -1965,6 +1988,7 @@ function buildShareCardAll() {
     if (data[i].g === "fixed") { fixedItems.push(data[i]); fixB += data[i].b; fixS += sp; }
     else { varItems.push(data[i]); varB += data[i].b; varS += sp; }
   }
+  varS += OUT; totalS += OUT;
   var sav = INFLOW - totalS;
   var savPct = INFLOW > 0 ? Math.round(sav / INFLOW * 100) : 0;
   var today = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
@@ -1986,6 +2010,7 @@ function buildShareCardAll() {
   for (var i = 0; i < varItems.length; i++) h += scRow(varItems[i]);
   h += '</div>';
   if (REIMB > 0) h += '<div class="sc-foot" style="color:#30D158">Reimbursements: +' + fm(REIMB) + '</div>';
+  if (OUT > 0) h += '<div class="sc-foot" style="color:#FF9F0A">Outflows (extra spend): +' + fm(OUT) + '</div>';
   h += '<div class="sc-foot">Generated ' + today + '</div>';
   h += '</div>';
   return h;
@@ -2183,7 +2208,7 @@ function openAdjModal(type, idx) {
     document.getElementById('adj-modal-sub').textContent = 'Add income/reimbursement received for ' + h.month + '. Increases inflow and savings.';
   } else {
     document.getElementById('adj-modal-title').textContent = 'Add Outflow';
-    document.getElementById('adj-modal-sub').textContent = 'Add an outflow for ' + h.month + '. Reduces inflow and savings.';
+    document.getElementById('adj-modal-sub').textContent = 'Add an outflow for ' + h.month + '. Counts as extra spending, reduces savings.';
   }
   document.getElementById('adj-cat-row').style.display = 'none';
   document.getElementById('adj-desc').value = '';
@@ -2207,7 +2232,8 @@ function confirmAdj() {
     if (!h.outflows) h.outflows = [];
     h.outflows.push({ id: uid('o'), desc: desc, amount: amt });
     h.outflowsTotal = Math.round(((h.outflowsTotal || 0) + amt) * 100) / 100;
-    h.inflow = Math.round(((h.inflow || 0) - amt) * 100) / 100;
+    h.totalSpent = Math.round(((h.totalSpent || 0) + amt) * 100) / 100;
+    h.variableSpent = Math.round(((h.variableSpent || 0) + amt) * 100) / 100;
   }
   h.savings = Math.round((h.inflow - h.totalSpent) * 100) / 100;
   h.savingsPct = h.inflow > 0 ? Math.round(h.savings / h.inflow * 100) : 0;
