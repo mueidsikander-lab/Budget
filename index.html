@@ -136,6 +136,10 @@ body {
 .reimb-del:active { background: rgba(255,69,58,0.25); }
 .reimb-add { width: 100%; background: transparent; border: 1px dashed rgba(48,209,88,0.5); color: var(--green); padding: 11px; border-radius: 10px; font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; margin-top: 10px; transition: background 0.12s; }
 .reimb-add:active { background: rgba(48,209,88,0.1); }
+.outflow-icon { background: rgba(255,159,10,0.15) !important; color: var(--orange) !important; }
+.outflow-total.o { color: var(--orange); }
+.outflow-add { border-color: rgba(255,159,10,0.5) !important; color: var(--orange) !important; }
+.outflow-add:active { background: rgba(255,159,10,0.1) !important; }
 .cb-paid { width: 22px; height: 22px; border-radius: 11px; border: 1.5px solid rgba(255,255,255,0.25); background: none; appearance: none; -webkit-appearance: none; cursor: pointer; flex-shrink: 0; position: relative; transition: all 0.15s; }
 .cb-paid:checked { border-color: var(--green); background: var(--green); }
 .cb-paid:checked::after { content: ""; position: absolute; top: 4px; left: 7px; width: 5px; height: 9px; border: solid #000; border-width: 0 2px 2px 0; transform: rotate(45deg); }
@@ -425,6 +429,7 @@ body {
   <div class="hero" id="hero-card"></div>
   <div class="stats" id="stat-row"></div>
   <div id="reimb-section"></div>
+  <div id="outflow-section"></div>
   <div id="budget-content"></div>
   <p class="foot" id="last-import"></p>
 </div>
@@ -865,7 +870,16 @@ function reimbTotal() {
   }
   return t;
 }
-function getTotalInflow() { return (APP.inflow || DEFAULT_INFLOW) + reimbTotal(); }
+function outflowTotal() {
+  var t = 0;
+  var o = APP.outflows || [];
+  for (var i = 0; i < o.length; i++) {
+    var a = parseFloat(o[i].amount);
+    if (!isNaN(a)) t += a;
+  }
+  return t;
+}
+function getTotalInflow() { return (APP.inflow || DEFAULT_INFLOW) + reimbTotal() - outflowTotal(); }
 
 var toastT = null;
 function toast(msg, type) {
@@ -911,6 +925,7 @@ function drawBudget() {
   document.getElementById("stat-row").innerHTML = renderStats(fixB, fixS, varB, varS);
 
   drawReimbursements();
+  drawOutflows();
 
   var html = "";
   html += '<div class="sec-head"><div class="sec-title">Fixed</div><div class="sec-amt">' + fm(fixS) + ' / ' + fm(fixB) + '</div></div>';
@@ -1081,6 +1096,38 @@ function drawReimbursements() {
   host.innerHTML = html;
 }
 
+function drawOutflows() {
+  var host = document.getElementById("outflow-section");
+  if (!host) return;
+  var r = APP.outflows || [];
+  var tot = outflowTotal();
+  var col = !APP.expanded.__outflow;
+  var html = '<div class="reimb-card">';
+  html += '<div class="reimb-head" data-act="toggle-outflow">';
+  html += '<div class="reimb-head-left">';
+  html += '<div class="reimb-icon outflow-icon">−</div>';
+  html += '<div><div class="reimb-title">Outflows</div><div style="font-size:11px;color:var(--text-2);margin-top:1px">' + r.length + ' entr' + (r.length === 1 ? 'y' : 'ies') + ' · reduces inflow</div></div>';
+  html += '</div>';
+  html += '<div class="reimb-total outflow-total ' + (tot > 0 ? 'o' : 'dim') + '">' + (tot > 0 ? '−' + fm(tot) : '0') + '</div>';
+  html += '</div>';
+  if (!col) {
+    html += '<div class="reimb-body">';
+    for (var i = 0; i < r.length; i++) {
+      var entry = r[i];
+      var amt = (entry.amount === 0 || entry.amount) ? entry.amount : '';
+      html += '<div class="reimb-row">';
+      html += '<input type="text" class="reimb-desc" data-id="' + escHtml(entry.id) + '" data-act="outflow-desc" placeholder="Description" value="' + escHtml(entry.desc) + '">';
+      html += '<input type="number" inputmode="decimal" class="reimb-amt" data-id="' + escHtml(entry.id) + '" data-act="outflow-amt" placeholder="0.00" step="0.01" min="0" value="' + escHtml(amt) + '">';
+      html += '<button class="reimb-del" data-id="' + escHtml(entry.id) + '" data-act="outflow-del">✕</button>';
+      html += '</div>';
+    }
+    html += '<button class="reimb-add outflow-add" data-act="outflow-add">+ Add Outflow</button>';
+    html += '</div>';
+  }
+  html += '</div>';
+  host.innerHTML = html;
+}
+
 function bindBudgetEvents() {
   var page = document.getElementById("pg-budget");
   if (page._bound) return;
@@ -1107,6 +1154,29 @@ function bindBudgetEvents() {
       var id = t.getAttribute("data-id");
       for (var i = 0; i < APP.reimbursements.length; i++) {
         if (APP.reimbursements[i].id === id) { APP.reimbursements.splice(i, 1); break; }
+      }
+      saveData(); drawBudget();
+      return;
+    }
+
+    if (act === "toggle-outflow") { APP.expanded.__outflow = !APP.expanded.__outflow; saveData(); drawBudget(); return; }
+    if (act === "outflow-add") {
+      e.stopPropagation();
+      if (!APP.outflows) APP.outflows = [];
+      APP.outflows.push({ id: uid("o"), desc: "", amount: "" });
+      APP.expanded.__outflow = true;
+      saveData(); drawBudget();
+      setTimeout(function () {
+        var inps = document.querySelectorAll("#outflow-section .reimb-desc");
+        if (inps.length) inps[inps.length - 1].focus();
+      }, 0);
+      return;
+    }
+    if (act === "outflow-del") {
+      e.stopPropagation();
+      var id = t.getAttribute("data-id");
+      for (var i = 0; i < APP.outflows.length; i++) {
+        if (APP.outflows[i].id === id) { APP.outflows.splice(i, 1); break; }
       }
       saveData(); drawBudget();
       return;
@@ -1262,6 +1332,7 @@ function bindBudgetEvents() {
 function cssEsc(s) { return String(s).replace(/(["\\])/g, "\\$1"); }
 function catIndex(cat) { for (var i = 0; i < APP.budget.length; i++) { if (APP.budget[i].c === cat) return i; } return -1; }
 function findReimb(id) { for (var i = 0; i < APP.reimbursements.length; i++) { if (APP.reimbursements[i].id === id) return APP.reimbursements[i]; } return null; }
+function findOutflow(id) { var o = APP.outflows || []; for (var i = 0; i < o.length; i++) { if (o[i].id === id) return o[i]; } return null; }
 
 function recalcHeader() {
   var data = APP.budget; if (!data) return;
@@ -1318,7 +1389,8 @@ function openConcludeModal() {
   if (editingCat) editingCat = null;
   var BASE = APP.inflow || DEFAULT_INFLOW;
   var REIMB = reimbTotal();
-  var INFLOW = BASE + REIMB;
+  var OUT = outflowTotal();
+  var INFLOW = BASE + REIMB - OUT;
   var totalS = 0;
   for (var i = 0; i < APP.budget.length; i++) totalS += getSpent(APP.budget[i]);
   var sav = INFLOW - totalS;
@@ -1326,6 +1398,7 @@ function openConcludeModal() {
   var html = '<div class="modal-row"><span style="color:var(--text-2)">' + APP.currentMonth + '</span><span></span></div>';
   html += '<div class="modal-row"><span>Inflow</span><span>' + fm(BASE) + '</span></div>';
   if (REIMB > 0) html += '<div class="modal-row"><span style="color:var(--green)">Reimbursements</span><span style="color:var(--green)">+' + fm(REIMB) + '</span></div>';
+  if (OUT > 0) html += '<div class="modal-row"><span style="color:var(--orange)">Outflows</span><span style="color:var(--orange)">−' + fm(OUT) + '</span></div>';
   html += '<div class="modal-row"><span>Spent</span><span>' + fm(totalS) + '</span></div>';
   html += '<div class="modal-row tot"><span>Savings</span><span style="color:' + (sav >= 0 ? 'var(--green)' : 'var(--red)') + '">' + fm(sav) + ' · ' + savPct + '%</span></div>';
   html += '<div style="font-size:12px;color:var(--text-2);margin-top:12px">Next month: <strong style="color:var(--text)">' + nextMonthYear(APP.currentMonth) + '</strong></div>';
@@ -1336,7 +1409,8 @@ function openConcludeModal() {
 function confirmConclude() {
   var BASE = APP.inflow || DEFAULT_INFLOW;
   var REIMB = reimbTotal();
-  var INFLOW = BASE + REIMB;
+  var OUT = outflowTotal();
+  var INFLOW = BASE + REIMB - OUT;
   var totalS = 0, fixS = 0, varS = 0;
   var snapshotBudget = [];
   for (var i = 0; i < APP.budget.length; i++) {
@@ -1353,6 +1427,7 @@ function confirmConclude() {
     month: APP.currentMonth, concludedAt: new Date().toISOString(),
     inflow: INFLOW, baseInflow: BASE,
     reimbursements: APP.reimbursements.slice(), reimbursementsTotal: REIMB,
+    outflows: (APP.outflows || []).slice(), outflowsTotal: OUT,
     transactions: APP.transactions.slice(),
     budget: snapshotBudget,
     totalSpent: totalS, fixedSpent: fixS, variableSpent: varS,
@@ -1372,6 +1447,7 @@ function confirmConclude() {
   APP.imported = [];
   APP.transactions = [];
   APP.reimbursements = [];
+  APP.outflows = [];
   APP.expanded = {};
   APP.lastImportDelta = null;
 
@@ -1466,7 +1542,7 @@ function drawHistory() {
         }
         if (h.outflows && h.outflows.length > 0) {
           for (var oi = 0; oi < h.outflows.length; oi++) {
-            dh += '<div class="md-row"><span style="color:var(--orange)">Outflow: ' + escHtml(h.outflows[oi].desc) + '</span><span style="color:var(--orange)">+' + fm(h.outflows[oi].amount) + '</span></div>';
+            dh += '<div class="md-row"><span style="color:var(--orange)">Outflow: ' + escHtml(h.outflows[oi].desc) + '</span><span style="color:var(--orange)">−' + fm(h.outflows[oi].amount) + '</span></div>';
           }
         }
         dh += '<div class="md-row"><span style="color:var(--text-2)">Inflow</span><span>' + fm(h.inflow) + '</span></div>';
@@ -1819,7 +1895,8 @@ function openShareModal() { openModal("share-modal"); }
 function buildSnapshotText() {
   var BASE = APP.inflow || DEFAULT_INFLOW;
   var REIMB = reimbTotal();
-  var INFLOW = BASE + REIMB;
+  var OUT = outflowTotal();
+  var INFLOW = BASE + REIMB - OUT;
   var data = APP.budget;
   var fixB = 0, fixS = 0, varB = 0, varS = 0, totalS = 0, fixedItems = [], varItems = [];
   for (var i = 0; i < data.length; i++) {
@@ -2103,19 +2180,12 @@ function openAdjModal(type, idx) {
   var h = APP.history[idx];
   if (type === 'reimb') {
     document.getElementById('adj-modal-title').textContent = 'Add Reimbursement';
-    document.getElementById('adj-modal-sub').textContent = 'Add income/reimbursement received for ' + h.month + '. Increases savings.';
-    document.getElementById('adj-cat-row').style.display = 'none';
+    document.getElementById('adj-modal-sub').textContent = 'Add income/reimbursement received for ' + h.month + '. Increases inflow and savings.';
   } else {
     document.getElementById('adj-modal-title').textContent = 'Add Outflow';
-    document.getElementById('adj-modal-sub').textContent = 'Add a missed expense for ' + h.month + '. Reduces savings.';
-    var sel = document.getElementById('adj-cat');
-    sel.innerHTML = '<option value="">— Category (optional) —</option>';
-    var cats = h.budget || APP.budget;
-    for (var i = 0; i < cats.length; i++) {
-      sel.innerHTML += '<option value="' + escHtml(cats[i].c) + '">' + escHtml(cats[i].c) + '</option>';
-    }
-    document.getElementById('adj-cat-row').style.display = '';
+    document.getElementById('adj-modal-sub').textContent = 'Add an outflow for ' + h.month + '. Reduces inflow and savings.';
   }
+  document.getElementById('adj-cat-row').style.display = 'none';
   document.getElementById('adj-desc').value = '';
   document.getElementById('adj-amt').value = '';
   openModal('adj-modal');
@@ -2134,16 +2204,10 @@ function confirmAdj() {
     h.reimbursementsTotal = Math.round(((h.reimbursementsTotal || 0) + amt) * 100) / 100;
     h.inflow = Math.round(((h.inflow || 0) + amt) * 100) / 100;
   } else {
-    var cat = document.getElementById('adj-cat').value;
     if (!h.outflows) h.outflows = [];
-    h.outflows.push({ id: uid('o'), desc: desc, amount: amt, category: cat || null });
-    h.totalSpent = Math.round(((h.totalSpent || 0) + amt) * 100) / 100;
-    h.variableSpent = Math.round(((h.variableSpent || 0) + amt) * 100) / 100;
-    if (cat && h.budget) {
-      for (var i = 0; i < h.budget.length; i++) {
-        if (h.budget[i].c === cat) { h.budget[i].s = Math.round(((h.budget[i].s || 0) + amt) * 100) / 100; break; }
-      }
-    }
+    h.outflows.push({ id: uid('o'), desc: desc, amount: amt });
+    h.outflowsTotal = Math.round(((h.outflowsTotal || 0) + amt) * 100) / 100;
+    h.inflow = Math.round(((h.inflow || 0) - amt) * 100) / 100;
   }
   h.savings = Math.round((h.inflow - h.totalSpent) * 100) / 100;
   h.savingsPct = h.inflow > 0 ? Math.round(h.savings / h.inflow * 100) : 0;
