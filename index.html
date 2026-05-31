@@ -71,6 +71,22 @@ body {
 .stat-pct { font-size: 12px; color: var(--text-2); margin-top: 2px; font-variant-numeric: tabular-nums; }
 .stat-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
 .stat-dot.b { background: var(--blue); } .stat-dot.o { background: var(--orange); }
+.forecast { background: var(--card); border-radius: 16px; padding: 16px 18px 14px; margin-bottom: 18px; position: relative; overflow: hidden; }
+.forecast::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, var(--purple), var(--blue)); opacity: 0.9; }
+.fc-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.fc-head-title { font-size: 13px; font-weight: 600; color: var(--text); letter-spacing: 0.2px; display: flex; align-items: center; gap: 7px; }
+.fc-head-ic { font-size: 14px; }
+.fc-badge { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--purple); background: rgba(191,90,242,0.15); padding: 3px 8px; border-radius: 8px; }
+.fc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.fc-col { position: relative; }
+.fc-col + .fc-col::before { content: ""; position: absolute; left: -6px; top: 2px; bottom: 2px; width: 1px; background: var(--hair); }
+.fc-label { font-size: 11px; color: var(--text-2); font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 5px; }
+.fc-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.fc-amt { font-size: 23px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.6px; line-height: 1.05; }
+.fc-amt.g { color: var(--green); } .fc-amt.r { color: var(--red); }
+.fc-sub { font-size: 11px; color: var(--text-2); margin-top: 3px; font-variant-numeric: tabular-nums; }
+.fc-note { font-size: 11px; color: var(--text-3); margin-top: 13px; padding-top: 11px; border-top: 1px solid var(--hair); line-height: 1.45; }
+.fc-note strong { color: var(--text-2); font-weight: 600; }
 .sec-head { display: flex; justify-content: space-between; align-items: baseline; padding: 18px 4px 8px; }
 .sec-title { font-size: 13px; font-weight: 600; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.6px; }
 .sec-amt { font-size: 13px; color: var(--text-2); font-variant-numeric: tabular-nums; font-weight: 500; }
@@ -430,6 +446,7 @@ body {
 
   <div class="hero" id="hero-card"></div>
   <div class="stats" id="stat-row"></div>
+  <div id="forecast-section"></div>
   <div id="reimb-section"></div>
   <div id="outflow-section"></div>
   <div id="budget-content"></div>
@@ -928,6 +945,7 @@ function drawBudget() {
   document.getElementById("month-sub").textContent = APP.history.length > 0 ? APP.history.length + " month" + (APP.history.length > 1 ? "s" : "") + " in history" : "Active cycle";
   document.getElementById("hero-card").innerHTML = renderHero(fixS, varS + OUT, savActual, INFLOW, fixDisplay, varDisplay);
   document.getElementById("stat-row").innerHTML = renderStats(fixB, fixS, varB, varS);
+  renderForecast(INFLOW, OUT);
 
   drawReimbursements();
   drawOutflows();
@@ -983,6 +1001,102 @@ function renderStats(fixB, fixS, varB, varS) {
   var varPct = varB > 0 ? varS / varB * 100 : 0;
   return '<div class="stat"><div class="stat-label"><span class="stat-dot b"></span>Fixed left</div><div class="stat-val ' + (fixRem < 0 ? 'r' : '') + '">' + fm(fixRem) + '</div><div class="stat-pct">' + Math.round(fixPct) + '% used</div></div>' +
     '<div class="stat"><div class="stat-label"><span class="stat-dot o"></span>Variable left</div><div class="stat-val ' + (varRem < 0 ? 'r' : '') + '">' + fm(varRem) + '</div><div class="stat-pct">' + Math.round(varPct) + '% used</div></div>';
+}
+
+// Fraction of the current cycle's calendar month that has elapsed (0..1).
+// Past cycles count as fully elapsed; future cycles as just started.
+function getElapsedFraction() {
+  var parts = (APP.currentMonth || "").split(" ");
+  var mi = MONTHS.indexOf(parts[0]), yr = parseInt(parts[1]);
+  if (mi < 0 || isNaN(yr)) return 1;
+  var now = new Date(), cy = now.getFullYear(), cm = now.getMonth();
+  if (yr < cy || (yr === cy && mi < cm)) return 1;
+  if (yr > cy || (yr === cy && mi > cm)) return 0;
+  var daysInMonth = new Date(yr, mi + 1, 0).getDate();
+  return Math.min(1, now.getDate() / daysInMonth);
+}
+
+// Predicts end-of-month savings two ways:
+//  - trend: each category projected from its current pace blended with how much
+//    it consumed last month (overruns carried through); fixed bills land at budget.
+//  - max: every category that still has budget left is assumed fully spent.
+function computeForecast(data, INFLOW, OUT) {
+  var elapsed = getElapsedFraction();
+  var prevMap = {}, hasHistory = !!(APP.history && APP.history.length > 0);
+  if (hasHistory && APP.history[0].budget) {
+    var pb = APP.history[0].budget;
+    for (var p = 0; p < pb.length; p++) prevMap[pb[p].c] = pb[p].s;
+  }
+  var trendSpend = 0, maxSpend = 0, overCount = 0;
+  for (var i = 0; i < data.length; i++) {
+    var r = data[i], cur = getSpent(r);
+    maxSpend += Math.max(cur, r.b);
+    var proj;
+    if (r.g === "fixed") {
+      // Recurring bills: they will land at their budget unless already overrun.
+      proj = Math.max(cur, r.b);
+    } else if (prevMap.hasOwnProperty(r.c)) {
+      // Blend extrapolated pace with last month's actual, weighted by elapsed time.
+      var paceProj = cur / Math.max(elapsed, 0.1);
+      proj = elapsed * paceProj + (1 - elapsed) * prevMap[r.c];
+      if (proj < cur) proj = cur;
+    } else {
+      // No history: extrapolate current pace to the full month.
+      proj = Math.max(cur, cur / Math.max(elapsed, 0.1));
+    }
+    if (r.b > 0 && proj > r.b + 0.5) overCount++;
+    trendSpend += proj;
+  }
+  trendSpend += OUT;
+  maxSpend += OUT;
+  return {
+    elapsed: elapsed, hasHistory: hasHistory, overCount: overCount,
+    trendSpend: trendSpend, maxSpend: maxSpend,
+    trendSavings: INFLOW - trendSpend, maxSavings: INFLOW - maxSpend
+  };
+}
+
+function renderForecast(INFLOW, OUT) {
+  var f = computeForecast(APP.budget, INFLOW, OUT);
+  function amtCls(v) { return v < 0 ? "r" : "g"; }
+  function pctLine(sav, spend) {
+    var pct = INFLOW > 0 ? Math.round(sav / INFLOW * 100) : 0;
+    return (sav < 0 ? Math.abs(pct) + "% over" : pct + "% saved") + " · " + fm(spend) + " spend";
+  }
+  var note;
+  if (f.hasHistory) {
+    note = "Trend blends your current pace (" + Math.round(f.elapsed * 100) +
+      "% through the month) with last month's actuals";
+  } else {
+    note = "Trend extrapolates your current pace (" + Math.round(f.elapsed * 100) +
+      "% through the month) — add history for sharper estimates";
+  }
+  if (f.overCount > 0) {
+    note += ". <strong>" + f.overCount + " categor" + (f.overCount > 1 ? "ies" : "y") +
+      "</strong> trending over budget.";
+  } else {
+    note += ".";
+  }
+  document.getElementById("forecast-section").innerHTML =
+    '<div class="forecast">' +
+      '<div class="fc-head">' +
+        '<div class="fc-head-title"><span class="fc-head-ic">🔮</span>Projected Savings</div>' +
+        '<div class="fc-badge">Forecast</div>' +
+      '</div>' +
+      '<div class="fc-grid">' +
+        '<div class="fc-col">' +
+          '<div class="fc-label"><span class="fc-dot" style="background:var(--purple)"></span>Trend-based</div>' +
+          '<div class="fc-amt ' + amtCls(f.trendSavings) + '">AED ' + fm(f.trendSavings) + '</div>' +
+          '<div class="fc-sub">' + pctLine(f.trendSavings, f.trendSpend) + '</div>' +
+        '</div>' +
+        '<div class="fc-col">' +
+          '<div class="fc-label"><span class="fc-dot" style="background:var(--blue)"></span>If budgets maxed</div>' +
+          '<div class="fc-amt ' + amtCls(f.maxSavings) + '">AED ' + fm(f.maxSavings) + '</div>' +
+          '<div class="fc-sub">' + pctLine(f.maxSavings, f.maxSpend) + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="fc-note">' + note + '</div>' +
+    '</div>';
 }
 
 function renderRow(i) {
@@ -1388,6 +1502,7 @@ function recalcHeader() {
   var savActual = INFLOW - fixDisplay - varDisplay;
   document.getElementById("hero-card").innerHTML = renderHero(fixS, varS + OUT, savActual, INFLOW, fixDisplay, varDisplay);
   document.getElementById("stat-row").innerHTML = renderStats(fixB, fixS, varB, varS);
+  renderForecast(INFLOW, OUT);
 }
 
 function addManualTxn(cat, desc, amount, dateStr) {
