@@ -103,6 +103,8 @@ body {
 .txn-amt { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .txn-del { background: none; border: none; color: var(--text-3); font-size: 17px; width: 28px; height: 28px; border-radius: 14px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: background 0.15s, color 0.15s; }
 .txn-del:active { background: rgba(255,69,58,0.15); color: var(--red); }
+.txn-cat-select { margin-top: 5px; background: var(--card-2); border: 1px solid var(--hair); border-radius: 7px; color: var(--text-2); font-size: 11px; padding: 4px 8px; font-family: inherit; max-width: 100%; cursor: pointer; }
+.txn-cat-select:focus { border-color: var(--blue); color: var(--text); outline: none; }
 .exp-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .exp-btn { flex: 1; min-width: 0; background: var(--card-2); border: none; color: var(--text); padding: 10px; border-radius: 10px; font-size: 13px; font-weight: 500; font-family: inherit; cursor: pointer; transition: background 0.12s, transform 0.1s; }
 .exp-btn:active { background: rgba(255,255,255,0.12); transform: scale(0.98); }
@@ -1043,6 +1045,7 @@ function renderTxnList(cat) {
   var txns = APP.transactions.filter(function (t) { return t.category === cat; });
   txns.sort(function (a, b) { return new Date(b.date) - new Date(a.date); });
   if (txns.length === 0) return '<div class="txn-empty">No transactions tracked yet</div>';
+  var catNames = APP.budget.map(function (b) { return b.c; });
   var h = '<div class="txn-list">';
   for (var i = 0; i < txns.length; i++) {
     var t = txns[i];
@@ -1051,6 +1054,11 @@ function renderTxnList(cat) {
     h += '<div class="txn-meta">';
     h += '<div class="txn-desc">' + escHtml(t.cleanDesc || t.desc || "Unknown") + '</div>';
     h += '<div class="txn-date">' + escHtml(d) + (t.source === "manual" ? " · manual" : "") + '</div>';
+    h += '<select class="txn-cat-select" data-act="recat-txn" data-id="' + escHtml(t.id) + '" data-cat="' + escHtml(cat) + '" title="Change category">';
+    for (var j = 0; j < catNames.length; j++) {
+      h += '<option value="' + escHtml(catNames[j]) + '"' + (catNames[j] === cat ? ' selected' : '') + '>' + escHtml(catNames[j]) + '</option>';
+    }
+    h += '</select>';
     h += '</div>';
     h += '<div class="txn-amt">' + fd(t.amount) + '</div>';
     h += '<button class="txn-del" data-act="del-txn" data-id="' + escHtml(t.id) + '" data-cat="' + escHtml(cat) + '" title="Remove">✕</button>';
@@ -1330,6 +1338,14 @@ function bindBudgetEvents() {
     }
   });
 
+  page.addEventListener("change", function (e) {
+    var t = e.target;
+    if (t.getAttribute && t.getAttribute("data-act") === "recat-txn") {
+      e.stopPropagation();
+      recategorizeTxn(t.getAttribute("data-id"), t.value);
+    }
+  });
+
   page.addEventListener("keydown", function (e) {
     var t = e.target;
     if (t.classList && t.classList.contains("edit-input") && e.key === "Enter") {
@@ -1405,6 +1421,31 @@ function removeTxn(id, cat) {
     if (ki > -1) APP.imported.splice(ki, 1);
   }
   saveData(); drawBudget();
+}
+
+function recategorizeTxn(id, newCat) {
+  var t = null;
+  for (var i = 0; i < APP.transactions.length; i++) {
+    if (APP.transactions[i].id === id) { t = APP.transactions[i]; break; }
+  }
+  if (!t) return;
+  var oldCat = t.category;
+  if (oldCat === newCat) return;
+  var oidx = catIndex(oldCat);
+  if (oidx >= 0) {
+    APP.budget[oidx].s = Math.max(0, Math.round((APP.budget[oidx].s - t.amount) * 100) / 100);
+    APP.budget[oidx].cs = null;
+  }
+  var nidx = catIndex(newCat);
+  if (nidx >= 0) {
+    if (APP.budget[nidx].p) { APP.budget[nidx].p = false; APP.budget[nidx].s = APP.budget[nidx].b + t.amount; }
+    else { APP.budget[nidx].s = Math.round((APP.budget[nidx].s + t.amount) * 100) / 100; }
+    APP.budget[nidx].cs = null;
+  }
+  t.category = newCat;
+  if (APP.expanded[oldCat]) APP.expanded[newCat] = true;
+  saveData(); drawBudget();
+  toast('Moved to ' + newCat);
 }
 
 function openConcludeModal() {
