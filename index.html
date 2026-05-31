@@ -920,12 +920,13 @@ function drawBudget() {
     else { varIdx.push(i); varB += data[i].b; varS += sp; }
   }
   var OUT = outflowTotal();
-  varS += OUT; totalS += OUT;
-  var savActual = INFLOW - totalS;
+  var fixDisplay = Math.max(fixB, fixS);
+  var varDisplay = Math.max(varB, varS) + OUT;
+  var savActual = INFLOW - fixDisplay - varDisplay;
 
   document.getElementById("month-display").textContent = APP.currentMonth;
   document.getElementById("month-sub").textContent = APP.history.length > 0 ? APP.history.length + " month" + (APP.history.length > 1 ? "s" : "") + " in history" : "Active cycle";
-  document.getElementById("hero-card").innerHTML = renderHero(fixS, varS, savActual, INFLOW);
+  document.getElementById("hero-card").innerHTML = renderHero(fixS, varS + OUT, savActual, INFLOW, fixDisplay, varDisplay);
   document.getElementById("stat-row").innerHTML = renderStats(fixB, fixS, varB, varS);
 
   drawReimbursements();
@@ -946,17 +947,19 @@ function drawBudget() {
   bindBudgetEvents();
 }
 
-function renderHero(fixS, varS, savActual, INFLOW) {
+function renderHero(fixS, varS, savActual, INFLOW, fixDisplay, varDisplay) {
+  if (fixDisplay === undefined) fixDisplay = fixS;
+  if (varDisplay === undefined) varDisplay = varS;
   var savNeg = savActual < 0;
-  var totalSpent = fixS + varS;
+  var totalDisplay = fixDisplay + varDisplay;
   var fixW, varW, savW;
-  if (totalSpent <= INFLOW) {
-    fixW = (fixS / INFLOW * 100).toFixed(1);
-    varW = (varS / INFLOW * 100).toFixed(1);
-    savW = ((INFLOW - totalSpent) / INFLOW * 100).toFixed(1);
+  if (savActual >= 0) {
+    fixW = (fixDisplay / INFLOW * 100).toFixed(1);
+    varW = (varDisplay / INFLOW * 100).toFixed(1);
+    savW = (savActual / INFLOW * 100).toFixed(1);
   } else {
-    fixW = (fixS / totalSpent * 100).toFixed(1);
-    varW = (varS / totalSpent * 100).toFixed(1);
+    fixW = (fixDisplay / totalDisplay * 100).toFixed(1);
+    varW = (varDisplay / totalDisplay * 100).toFixed(1);
     savW = 0;
   }
   return '<div class="hero-label">Available</div>' +
@@ -1373,16 +1376,17 @@ function findOutflow(id) { var o = APP.outflows || []; for (var i = 0; i < o.len
 function recalcHeader() {
   var data = APP.budget; if (!data) return;
   var INFLOW = getTotalInflow();
-  var fixB = 0, fixS = 0, varB = 0, varS = 0, totalS = 0;
+  var fixB = 0, fixS = 0, varB = 0, varS = 0;
   for (var i = 0; i < data.length; i++) {
-    var sp = getSpent(data[i]); totalS += sp;
+    var sp = getSpent(data[i]);
     if (data[i].g === "fixed") { fixB += data[i].b; fixS += sp; }
     else { varB += data[i].b; varS += sp; }
   }
   var OUT = outflowTotal();
-  varS += OUT; totalS += OUT;
-  var savActual = INFLOW - totalS;
-  document.getElementById("hero-card").innerHTML = renderHero(fixS, varS, savActual, INFLOW);
+  var fixDisplay = Math.max(fixB, fixS);
+  var varDisplay = Math.max(varB, varS) + OUT;
+  var savActual = INFLOW - fixDisplay - varDisplay;
+  document.getElementById("hero-card").innerHTML = renderHero(fixS, varS + OUT, savActual, INFLOW, fixDisplay, varDisplay);
   document.getElementById("stat-row").innerHTML = renderStats(fixB, fixS, varB, varS);
 }
 
@@ -1454,9 +1458,13 @@ function openConcludeModal() {
   var REIMB = reimbTotal();
   var OUT = outflowTotal();
   var INFLOW = BASE + REIMB;
-  var totalS = 0;
-  for (var i = 0; i < APP.budget.length; i++) totalS += getSpent(APP.budget[i]);
-  var sav = INFLOW - totalS - OUT;
+  var totalS = 0, fixB = 0, fixS = 0, varB = 0, varS = 0;
+  for (var i = 0; i < APP.budget.length; i++) {
+    var sp = getSpent(APP.budget[i]); totalS += sp;
+    if (APP.budget[i].g === "fixed") { fixB += APP.budget[i].b; fixS += sp; }
+    else { varB += APP.budget[i].b; varS += sp; }
+  }
+  var sav = INFLOW - Math.max(fixB, fixS) - Math.max(varB, varS) - OUT;
   var savPct = INFLOW > 0 ? Math.round(sav / INFLOW * 100) : 0;
   var html = '<div class="modal-row"><span style="color:var(--text-2)">' + APP.currentMonth + '</span><span></span></div>';
   html += '<div class="modal-row"><span>Inflow</span><span>' + fm(BASE) + '</span></div>';
@@ -1474,15 +1482,17 @@ function confirmConclude() {
   var REIMB = reimbTotal();
   var OUT = outflowTotal();
   var INFLOW = BASE + REIMB;
-  var totalS = 0, fixS = 0, varS = 0;
+  var totalS = 0, fixB = 0, fixS = 0, varB = 0, varS = 0;
   var snapshotBudget = [];
   for (var i = 0; i < APP.budget.length; i++) {
     var sp = getSpent(APP.budget[i]);
     totalS += sp;
-    if (APP.budget[i].g === "fixed") fixS += sp; else varS += sp;
+    if (APP.budget[i].g === "fixed") { fixB += APP.budget[i].b; fixS += sp; }
+    else { varB += APP.budget[i].b; varS += sp; }
     snapshotBudget.push({ c: APP.budget[i].c, b: APP.budget[i].b, s: sp, g: APP.budget[i].g, p: APP.budget[i].p });
   }
   totalS += OUT; varS += OUT;
+  var savAmt = INFLOW - Math.max(fixB, fixS) - Math.max(varB, varS - OUT) - OUT;
   var sortedSpend = snapshotBudget.slice().sort(function (a, b) { return b.s - a.s; });
   var topCats = sortedSpend.slice(0, 3).filter(function (c) { return c.s > 0; }).map(function (c) { return { c: c.c, s: c.s }; });
   var overCats = snapshotBudget.filter(function (c) { return c.s > c.b && c.b > 0; }).map(function (c) { return { c: c.c, over: c.s - c.b }; });
@@ -1495,8 +1505,8 @@ function confirmConclude() {
     transactions: APP.transactions.slice(),
     budget: snapshotBudget,
     totalSpent: totalS, fixedSpent: fixS, variableSpent: varS,
-    savings: INFLOW - totalS,
-    savingsPct: INFLOW > 0 ? Math.round((INFLOW - totalS) / INFLOW * 100) : 0,
+    savings: savAmt,
+    savingsPct: INFLOW > 0 ? Math.round(savAmt / INFLOW * 100) : 0,
     topCategories: topCats, overBudget: overCats
   };
   APP.history.unshift(entry);
@@ -1968,9 +1978,9 @@ function buildSnapshotText() {
     if (data[i].g === "fixed") { fixedItems.push(data[i]); fixB += data[i].b; fixS += sp; }
     else { varItems.push(data[i]); varB += data[i].b; varS += sp; }
   }
-  varS += OUT; totalS += OUT;
-  var savActual = INFLOW - totalS;
+  var savActual = INFLOW - Math.max(fixB, fixS) - Math.max(varB, varS) - OUT;
   var savPct = INFLOW > 0 ? Math.round(savActual / INFLOW * 100) : 0;
+  varS += OUT; totalS += OUT;
   var fixPct = fixB > 0 ? Math.round(fixS / fixB * 100) : 0;
   var varPct = varB > 0 ? Math.round(varS / varB * 100) : 0;
   var today = new Date();
