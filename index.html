@@ -1108,67 +1108,86 @@ function getElapsedFraction() {
   return Math.min(1, now.getDate() / daysInMonth);
 }
 
-// Predicts end-of-month savings two ways:
-//  - trend: each category projected from its current pace blended with how much
-//    it consumed last month (overruns carried through); fixed bills land at budget.
-//  - max: every category that still has budget left is assumed fully spent.
+// Forecast:
+//  - payday projection: weekly average spend extrapolated to the 25th (next payday)
+//  - cash position: debit balance + reimbursements - CC payable
 function computeForecast(data, INFLOW, OUT) {
   var elapsed = getElapsedFraction();
-  var prevMap = {}, hasHistory = !!(APP.history && APP.history.length > 0);
-  if (hasHistory && APP.history[0].budget) {
-    var pb = APP.history[0].budget;
-    for (var p = 0; p < pb.length; p++) prevMap[pb[p].c] = pb[p].s;
+
+  // Days elapsed since start of current cycle month
+  var now = new Date(); now.setHours(0, 0, 0, 0);
+  var parts = (APP.currentMonth || "").split(" ");
+  var mi = MONTHS.indexOf(parts[0]), yr = parseInt(parts[1]);
+  var monthStart = (mi >= 0 && !isNaN(yr)) ? new Date(yr, mi, 1) : new Date(now.getFullYear(), now.getMonth(), 1);
+  var daysElapsed = Math.max(1, Math.round((now - monthStart) / 86400000));
+
+  // Total spend from actual transactions this cycle
+  var txnTotal = 0;
+  for (var i = 0; i < APP.transactions.length; i++) {
+    var a = parseFloat(APP.transactions[i].amount);
+    if (!isNaN(a)) txnTotal += a;
   }
-  var trendSpend = 0, maxSpend = 0, overCount = 0;
-  for (var i = 0; i < data.length; i++) {
-    var r = data[i], cur = getSpent(r);
-    maxSpend += Math.max(cur, r.b);
-    var proj;
-    if (r.g === "fixed") {
-      // Recurring bills: they will land at their budget unless already overrun.
-      proj = Math.max(cur, r.b);
-    } else if (prevMap.hasOwnProperty(r.c)) {
-      // Blend extrapolated pace with last month's actual, weighted by elapsed time.
-      var paceProj = cur / Math.max(elapsed, 0.1);
-      proj = elapsed * paceProj + (1 - elapsed) * prevMap[r.c];
-      if (proj < cur) proj = cur;
-    } else {
-      // No history: extrapolate current pace to the full month.
-      proj = Math.max(cur, cur / Math.max(elapsed, 0.1));
-    }
-    if (r.b > 0 && proj > r.b + 0.5) overCount++;
-    trendSpend += proj;
+  var dailyAvg = txnTotal / daysElapsed;
+  var weeklyAvg = dailyAvg * 7;
+
+  // Days remaining until next payday (25th of current or next month)
+  var todayDate = now.getDate();
+  var daysToPayday;
+  if (todayDate <= 25) {
+    daysToPayday = 25 - todayDate;
+  } else {
+    var daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    daysToPayday = (daysInMonth - todayDate) + 25;
   }
-  trendSpend += OUT;
-  maxSpend += OUT;
+
+  var projectedAdditional = dailyAvg * daysToPayday;
+  var paydaySpend = txnTotal + projectedAdditional + OUT;
+  var paydaySavings = INFLOW - paydaySpend;
+
+  // Cash position: what you'll actually have after paying the CC bill
+  var acc = APP.accounts || {};
+  var debitBal = (acc.debit && acc.debit.balance != null) ? acc.debit.balance : null;
+  var reimb = reimbTotal();
+  var sp = acctSpendTotals();
+  var cashPosition = debitBal != null ? (debitBal + reimb - sp.cc) : null;
+
   return {
-    elapsed: elapsed, hasHistory: hasHistory, overCount: overCount,
-    trendSpend: trendSpend, maxSpend: maxSpend,
-    trendSavings: INFLOW - trendSpend, maxSavings: INFLOW - maxSpend
+    elapsed: elapsed, daysElapsed: daysElapsed, daysToPayday: daysToPayday,
+    txnTotal: txnTotal, weeklyAvg: weeklyAvg, projectedAdditional: projectedAdditional,
+    paydaySpend: paydaySpend, paydaySavings: paydaySavings,
+    cashPosition: cashPosition, debitBal: debitBal, reimb: reimb, ccPayable: sp.cc
   };
 }
 
 function renderForecast(INFLOW, OUT) {
   var f = computeForecast(APP.budget, INFLOW, OUT);
   function amtCls(v) { return v < 0 ? "r" : "g"; }
-  function pctLine(sav, spend) {
-    var pct = INFLOW > 0 ? Math.round(sav / INFLOW * 100) : 0;
-    return (sav < 0 ? Math.abs(pct) + "% over" : pct + "% saved") + " · " + fm(spend) + " spend";
-  }
-  var note;
-  if (f.hasHistory) {
-    note = "Trend blends your current pace (" + Math.round(f.elapsed * 100) +
-      "% through the month) with last month's actuals";
+
+  var paydayTitle = f.daysToPayday === 0 ? "Payday is today!" : "Till payday · " + f.daysToPayday + "d left";
+  var paydayPct = INFLOW > 0 ? Math.round(f.paydaySavings / INFLOW * 100) : 0;
+  var paydaySub = (f.paydaySavings < 0 ? Math.abs(paydayPct) + "% over" : paydayPct + "% saved") +
+    " · AED " + fm(f.weeklyAvg) + "/wk avg";
+
+  var cashCol;
+  if (f.cashPosition != null) {
+    cashCol =
+      '<div class="fc-col">' +
+        '<div class="fc-label"><span class="fc-dot" style="background:var(--teal)"></span>Cash on hand</div>' +
+        '<div class="fc-amt ' + amtCls(f.cashPosition) + '">AED ' + fm(f.cashPosition) + '</div>' +
+        '<div class="fc-sub">' + fm(f.debitBal) + ' debit + ' + fm(f.reimb) + ' reimb − ' + fm(f.ccPayable) + ' CC</div>' +
+      '</div>';
   } else {
-    note = "Trend extrapolates your current pace (" + Math.round(f.elapsed * 100) +
-      "% through the month) — add history for sharper estimates";
+    cashCol =
+      '<div class="fc-col">' +
+        '<div class="fc-label"><span class="fc-dot" style="background:var(--teal)"></span>Cash on hand</div>' +
+        '<div class="fc-amt" style="color:var(--text-3);font-size:15px">—</div>' +
+        '<div class="fc-sub">Set debit balance in Accounts</div>' +
+      '</div>';
   }
-  if (f.overCount > 0) {
-    note += ". <strong>" + f.overCount + " categor" + (f.overCount > 1 ? "ies" : "y") +
-      "</strong> trending over budget.";
-  } else {
-    note += ".";
-  }
+
+  var note = "Weekly avg AED " + fm(f.weeklyAvg) + " based on " + f.daysElapsed + " days of spend" +
+    (f.daysToPayday > 0 ? " · projecting AED " + fm(f.projectedAdditional) + " more before the 25th" : " · payday reached") + ".";
+
   document.getElementById("forecast-section").innerHTML =
     '<div class="forecast">' +
       '<div class="fc-head">' +
@@ -1177,15 +1196,11 @@ function renderForecast(INFLOW, OUT) {
       '</div>' +
       '<div class="fc-grid">' +
         '<div class="fc-col">' +
-          '<div class="fc-label"><span class="fc-dot" style="background:var(--purple)"></span>Trend-based</div>' +
-          '<div class="fc-amt ' + amtCls(f.trendSavings) + '">AED ' + fm(f.trendSavings) + '</div>' +
-          '<div class="fc-sub">' + pctLine(f.trendSavings, f.trendSpend) + '</div>' +
+          '<div class="fc-label"><span class="fc-dot" style="background:var(--purple)"></span>' + paydayTitle + '</div>' +
+          '<div class="fc-amt ' + amtCls(f.paydaySavings) + '">AED ' + fm(f.paydaySavings) + '</div>' +
+          '<div class="fc-sub">' + paydaySub + '</div>' +
         '</div>' +
-        '<div class="fc-col">' +
-          '<div class="fc-label"><span class="fc-dot" style="background:var(--blue)"></span>If budgets maxed</div>' +
-          '<div class="fc-amt ' + amtCls(f.maxSavings) + '">AED ' + fm(f.maxSavings) + '</div>' +
-          '<div class="fc-sub">' + pctLine(f.maxSavings, f.maxSpend) + '</div>' +
-        '</div>' +
+        cashCol +
       '</div>' +
       '<div class="fc-note">' + note + '</div>' +
     '</div>';
