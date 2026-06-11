@@ -27,6 +27,10 @@
   --orange: #FF9F0A;
   --yellow: #FFD60A;
   --purple: #BF5AF2;
+  --teal: #64D2FF;
+  --pink: #FF6482;
+  --indigo: #5E5CE6;
+  --mint: #66D4CF;
 }
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; }
 input, textarea { user-select: text; -webkit-user-select: text; }
@@ -51,7 +55,8 @@ body {
   font-size: 16px; transition: background 0.15s, transform 0.1s;
 }
 .icon-btn:active { background: var(--card-2); transform: scale(0.94); }
-.hero { background: var(--card); border-radius: 18px; padding: 22px 20px 20px; margin-bottom: 14px; }
+.hero { background: linear-gradient(150deg, #1e2030 0%, #17171c 55%, #141417 100%); border: 1px solid rgba(94,92,230,0.22); border-radius: 18px; padding: 22px 20px 20px; margin-bottom: 14px; position: relative; overflow: hidden; }
+.hero::after { content: ""; position: absolute; top: -60px; right: -40px; width: 180px; height: 180px; border-radius: 50%; background: radial-gradient(circle, rgba(10,132,255,0.16), transparent 70%); pointer-events: none; }
 .hero-label { font-size: 13px; color: var(--text-2); font-weight: 500; margin-bottom: 4px; }
 .hero-amt { font-size: 44px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.05; letter-spacing: -1.5px; margin-bottom: 10px; }
 .hero-amt.g { color: var(--green); }
@@ -63,8 +68,8 @@ body {
 .hero-legend { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-2); flex-wrap: wrap; gap: 8px; font-variant-numeric: tabular-nums; }
 .hero-legend-item { display: flex; align-items: center; gap: 6px; }
 .legend-dot { width: 8px; height: 8px; border-radius: 2px; }
-.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
-.stat { background: var(--card); border-radius: 14px; padding: 14px 16px; }
+.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.stat { background: var(--card); border: 1px solid var(--hair); border-radius: 14px; padding: 14px 16px; }
 .stat-label { font-size: 11px; color: var(--text-2); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
 .stat-val { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.5px; }
 .stat-val.r { color: var(--red); }
@@ -87,10 +92,52 @@ body {
 .fc-sub { font-size: 11px; color: var(--text-2); margin-top: 3px; font-variant-numeric: tabular-nums; }
 .fc-note { font-size: 11px; color: var(--text-3); margin-top: 13px; padding-top: 11px; border-top: 1px solid var(--hair); line-height: 1.45; }
 .fc-note strong { color: var(--text-2); font-weight: 600; }
+.dash-card { background: var(--card); border: 1px solid var(--hair); border-radius: 16px; padding: 16px 18px 14px; margin-bottom: 12px; }
+.dash-title { font-size: 13px; font-weight: 600; color: var(--text); letter-spacing: 0.2px; display: flex; align-items: center; gap: 7px; margin-bottom: 13px; }
+.dash-title .ic { font-size: 14px; }
+.dash-title .dash-aside { margin-left: auto; font-size: 11px; font-weight: 500; color: var(--text-3); }
+.acct-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+.acct-cell { background: rgba(0,0,0,0.25); border: 1px solid var(--hair); border-radius: 12px; padding: 11px 13px; }
+.acct-cell-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 4px; display: flex; align-items: center; gap: 5px; }
+.acct-cell-label.deb { color: var(--teal); } .acct-cell-label.cc { color: var(--pink); }
+.acct-amt { font-size: 19px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.4px; }
+.acct-sub { font-size: 10.5px; color: var(--text-2); margin-top: 2px; font-variant-numeric: tabular-nums; }
+.acct-balance-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 13px; background: rgba(100,210,255,0.07); border: 1px solid rgba(100,210,255,0.18); border-radius: 12px; margin-bottom: 12px; }
+.acct-balance-label { font-size: 12px; color: var(--text-2); font-weight: 500; }
+.acct-balance-val { font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--teal); cursor: pointer; padding: 2px 8px; border-radius: 8px; }
+.acct-balance-val:active { background: rgba(100,210,255,0.15); }
+.acct-net { display: flex; justify-content: space-between; align-items: center; padding-top: 11px; border-top: 1px solid var(--hair); }
+.acct-net-label { font-size: 12px; font-weight: 600; color: var(--text-2); }
+.acct-net-label .s { display: block; font-size: 10px; font-weight: 400; color: var(--text-3); margin-top: 1px; }
+.acct-net-val { font-size: 21px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.5px; }
+.acct-net-val.g { color: var(--green); } .acct-net-val.r { color: var(--red); }
+.chart-daily { display: flex; align-items: flex-end; gap: 3px; height: 76px; margin: 4px 0 2px; }
+.cd-col { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; gap: 1px; height: 100%; min-width: 0; }
+.cd-seg { width: 100%; border-radius: 2px; min-height: 0; }
+.cd-seg.deb { background: var(--teal); opacity: 0.85; }
+.cd-seg.cc { background: var(--pink); opacity: 0.85; }
+.chart-x { display: flex; gap: 3px; margin-top: 4px; }
+.chart-x span { flex: 1; font-size: 8.5px; color: var(--text-3); text-align: center; font-variant-numeric: tabular-nums; overflow: hidden; }
+.chart-legend { display: flex; gap: 14px; font-size: 11px; color: var(--text-2); margin-top: 8px; font-variant-numeric: tabular-nums; }
+.chart-legend .li { display: flex; align-items: center; gap: 5px; }
+.cbk-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
+.cbk-name { flex: 0 0 38%; font-size: 12px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cbk-bar { flex: 1; height: 8px; border-radius: 4px; background: rgba(255,255,255,0.06); overflow: hidden; }
+.cbk-fill { height: 100%; border-radius: 4px; transition: width 0.35s ease-out; }
+.cbk-amt { flex: 0 0 62px; text-align: right; font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.cbk-delta { flex: 0 0 52px; text-align: right; font-size: 10.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.cbk-delta.up { color: var(--red); } .cbk-delta.down { color: var(--green); } .cbk-delta.flat { color: var(--text-3); }
+.acct-toggle { display: flex; gap: 8px; margin-bottom: 14px; }
+.acct-toggle-btn { flex: 1; padding: 12px 10px; background: var(--card); border: 1px solid var(--hair); border-radius: 12px; color: var(--text-2); font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; transition: all 0.15s; text-align: left; }
+.acct-toggle-btn .t-sub { display: block; font-size: 10.5px; font-weight: 400; color: var(--text-3); margin-top: 2px; }
+.acct-toggle-btn.on.cc { background: rgba(255,100,130,0.12); border-color: rgba(255,100,130,0.45); color: var(--pink); }
+.acct-toggle-btn.on.deb { background: rgba(100,210,255,0.1); border-color: rgba(100,210,255,0.45); color: var(--teal); }
+.acct-toggle-btn.on .t-sub { color: inherit; opacity: 0.75; }
 .sec-head { display: flex; justify-content: space-between; align-items: baseline; padding: 18px 4px 8px; }
 .sec-title { font-size: 13px; font-weight: 600; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.6px; }
 .sec-amt { font-size: 13px; color: var(--text-2); font-variant-numeric: tabular-nums; font-weight: 500; }
-.list { background: var(--card); border-radius: 14px; overflow: hidden; }
+.list { background: var(--card); border: 1px solid var(--hair); border-radius: 14px; overflow: hidden; }
+.row-cat-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .list + .list { margin-top: 16px; }
 .row { padding: 14px 16px; cursor: pointer; position: relative; transition: background 0.12s; }
 .row:active { background: var(--card-2); }
@@ -447,6 +494,7 @@ body {
   <div class="hero" id="hero-card"></div>
   <div class="stats" id="stat-row"></div>
   <div id="forecast-section"></div>
+  <div id="dash-section"></div>
   <div id="reimb-section"></div>
   <div id="outflow-section"></div>
   <div id="budget-content"></div>
@@ -455,7 +503,12 @@ body {
 
 <div class="page" id="pg-upload">
   <div class="page-h">Import Statement</div>
-  <div class="page-sub">Pick a date range, then upload your CSV or PDF statement.</div>
+  <div class="page-sub">Choose the account, pick a date range, then upload your CSV or PDF statement.</div>
+
+  <div class="acct-toggle">
+    <button class="acct-toggle-btn cc on" id="acct-btn-cc">💳 Credit Card<span class="t-sub" id="acct-sub-cc">Everyday spending</span></button>
+    <button class="acct-toggle-btn deb" id="acct-btn-debit">🏦 Debit Account<span class="t-sub" id="acct-sub-debit">Salary, rent &amp; transfers</span></button>
+  </div>
 
   <div class="date-range">
     <div class="date-range-title">Date Range</div>
@@ -502,6 +555,23 @@ body {
   <div class="s-section">
     <div class="s-inflow">
       <input type="number" id="inflow-input" inputmode="decimal">
+    </div>
+  </div>
+
+  <div class="s-section-title">Accounts</div>
+  <div class="s-section">
+    <div class="s-inflow" style="padding-bottom:6px">
+      <div style="font-size:11px;color:var(--text-2);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Debit Account Balance</div>
+      <input type="number" id="debit-balance-input" inputmode="decimal" placeholder="Enter balance">
+      <div style="font-size:11px;color:var(--text-3);margin-top:8px;text-align:center" id="debit-balance-meta"></div>
+    </div>
+    <div class="s-item" style="cursor:default">
+      <span class="s-icon s-i-blue">🏦</span>
+      <div class="s-label">Debit statement<div class="s-sub" id="debit-upload-sub">No uploads yet</div></div>
+    </div>
+    <div class="s-item" style="cursor:default">
+      <span class="s-icon s-i-red">💳</span>
+      <div class="s-label">Credit card statement<div class="s-sub" id="cc-upload-sub">No uploads yet</div></div>
     </div>
   </div>
 
@@ -623,8 +693,22 @@ function defaultData() {
       "noya british school":"Tuition","xander":"Mueid / Madiha / House"
     },
     imported: [], transactions: [], reimbursements: [],
-    lastImport: null, expanded: {}, history: []
+    lastImport: null, expanded: {}, history: [],
+    accounts: { debit: { balance: null, balanceDate: null, lastUploadTo: null }, cc: { lastUploadTo: null } }
   };
+}
+
+var CAT_COLORS = ["#0A84FF","#30D158","#FF9F0A","#BF5AF2","#64D2FF","#FF6482","#FFD60A","#5E5CE6","#66D4CF","#FF453A","#34C759","#FFB340","#AC8E68"];
+function catColor(name) {
+  var i = catIndex(name);
+  if (i < 0) i = 0;
+  return CAT_COLORS[i % CAT_COLORS.length];
+}
+// Manual spends aren't tied to a statement; assume fixed bills leave the debit
+// account and variable day-to-day spending goes on the credit card.
+function defaultAcctForCat(cat) {
+  var i = catIndex(cat);
+  return (i >= 0 && APP.budget[i].g === "fixed") ? "debit" : "cc";
 }
 
 function loadCache() { try { var r = localStorage.getItem(CACHE_KEY); if (r) return JSON.parse(r); } catch (e) {} return null; }
@@ -643,6 +727,13 @@ function fixApp() {
   if (!APP.inflow) APP.inflow = DEFAULT_INFLOW;
   for (var i = 0; i < APP.budget.length; i++) {
     if (APP.budget[i].c === "Fuel" && APP.budget[i].g !== "variable") APP.budget[i].g = "variable";
+  }
+  if (!APP.accounts) APP.accounts = {};
+  if (!APP.accounts.debit) APP.accounts.debit = { balance: null, balanceDate: null, lastUploadTo: null };
+  if (!APP.accounts.cc) APP.accounts.cc = { lastUploadTo: null };
+  // Pre-accounts transactions were all credit card statement imports
+  for (var i = 0; i < APP.transactions.length; i++) {
+    if (!APP.transactions[i].acct) APP.transactions[i].acct = "cc";
   }
 }
 
@@ -946,6 +1037,7 @@ function drawBudget() {
   document.getElementById("hero-card").innerHTML = renderHero(fixS, varS + OUT, savActual, INFLOW, fixDisplay, varDisplay);
   document.getElementById("stat-row").innerHTML = renderStats(fixB, fixS, varB, varS);
   renderForecast(INFLOW, OUT);
+  renderDashboard();
 
   drawReimbursements();
   drawOutflows();
@@ -1016,67 +1108,86 @@ function getElapsedFraction() {
   return Math.min(1, now.getDate() / daysInMonth);
 }
 
-// Predicts end-of-month savings two ways:
-//  - trend: each category projected from its current pace blended with how much
-//    it consumed last month (overruns carried through); fixed bills land at budget.
-//  - max: every category that still has budget left is assumed fully spent.
+// Forecast:
+//  - payday projection: weekly average spend extrapolated to the 25th (next payday)
+//  - cash position: debit balance + reimbursements - CC payable
 function computeForecast(data, INFLOW, OUT) {
   var elapsed = getElapsedFraction();
-  var prevMap = {}, hasHistory = !!(APP.history && APP.history.length > 0);
-  if (hasHistory && APP.history[0].budget) {
-    var pb = APP.history[0].budget;
-    for (var p = 0; p < pb.length; p++) prevMap[pb[p].c] = pb[p].s;
+
+  // Days elapsed since start of current cycle month
+  var now = new Date(); now.setHours(0, 0, 0, 0);
+  var parts = (APP.currentMonth || "").split(" ");
+  var mi = MONTHS.indexOf(parts[0]), yr = parseInt(parts[1]);
+  var monthStart = (mi >= 0 && !isNaN(yr)) ? new Date(yr, mi, 1) : new Date(now.getFullYear(), now.getMonth(), 1);
+  var daysElapsed = Math.max(1, Math.round((now - monthStart) / 86400000));
+
+  // Total spend from actual transactions this cycle
+  var txnTotal = 0;
+  for (var i = 0; i < APP.transactions.length; i++) {
+    var a = parseFloat(APP.transactions[i].amount);
+    if (!isNaN(a)) txnTotal += a;
   }
-  var trendSpend = 0, maxSpend = 0, overCount = 0;
-  for (var i = 0; i < data.length; i++) {
-    var r = data[i], cur = getSpent(r);
-    maxSpend += Math.max(cur, r.b);
-    var proj;
-    if (r.g === "fixed") {
-      // Recurring bills: they will land at their budget unless already overrun.
-      proj = Math.max(cur, r.b);
-    } else if (prevMap.hasOwnProperty(r.c)) {
-      // Blend extrapolated pace with last month's actual, weighted by elapsed time.
-      var paceProj = cur / Math.max(elapsed, 0.1);
-      proj = elapsed * paceProj + (1 - elapsed) * prevMap[r.c];
-      if (proj < cur) proj = cur;
-    } else {
-      // No history: extrapolate current pace to the full month.
-      proj = Math.max(cur, cur / Math.max(elapsed, 0.1));
-    }
-    if (r.b > 0 && proj > r.b + 0.5) overCount++;
-    trendSpend += proj;
+  var dailyAvg = txnTotal / daysElapsed;
+  var weeklyAvg = dailyAvg * 7;
+
+  // Days remaining until next payday (25th of current or next month)
+  var todayDate = now.getDate();
+  var daysToPayday;
+  if (todayDate <= 25) {
+    daysToPayday = 25 - todayDate;
+  } else {
+    var daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    daysToPayday = (daysInMonth - todayDate) + 25;
   }
-  trendSpend += OUT;
-  maxSpend += OUT;
+
+  var projectedAdditional = dailyAvg * daysToPayday;
+  var paydaySpend = txnTotal + projectedAdditional + OUT;
+  var paydaySavings = INFLOW - paydaySpend;
+
+  // Cash position: what you'll actually have after paying the CC bill
+  var acc = APP.accounts || {};
+  var debitBal = (acc.debit && acc.debit.balance != null) ? acc.debit.balance : null;
+  var reimb = reimbTotal();
+  var sp = acctSpendTotals();
+  var cashPosition = debitBal != null ? (debitBal + reimb - sp.cc) : null;
+
   return {
-    elapsed: elapsed, hasHistory: hasHistory, overCount: overCount,
-    trendSpend: trendSpend, maxSpend: maxSpend,
-    trendSavings: INFLOW - trendSpend, maxSavings: INFLOW - maxSpend
+    elapsed: elapsed, daysElapsed: daysElapsed, daysToPayday: daysToPayday,
+    txnTotal: txnTotal, weeklyAvg: weeklyAvg, projectedAdditional: projectedAdditional,
+    paydaySpend: paydaySpend, paydaySavings: paydaySavings,
+    cashPosition: cashPosition, debitBal: debitBal, reimb: reimb, ccPayable: sp.cc
   };
 }
 
 function renderForecast(INFLOW, OUT) {
   var f = computeForecast(APP.budget, INFLOW, OUT);
   function amtCls(v) { return v < 0 ? "r" : "g"; }
-  function pctLine(sav, spend) {
-    var pct = INFLOW > 0 ? Math.round(sav / INFLOW * 100) : 0;
-    return (sav < 0 ? Math.abs(pct) + "% over" : pct + "% saved") + " · " + fm(spend) + " spend";
-  }
-  var note;
-  if (f.hasHistory) {
-    note = "Trend blends your current pace (" + Math.round(f.elapsed * 100) +
-      "% through the month) with last month's actuals";
+
+  var paydayTitle = f.daysToPayday === 0 ? "Payday is today!" : "Till payday · " + f.daysToPayday + "d left";
+  var paydayPct = INFLOW > 0 ? Math.round(f.paydaySavings / INFLOW * 100) : 0;
+  var paydaySub = (f.paydaySavings < 0 ? Math.abs(paydayPct) + "% over" : paydayPct + "% saved") +
+    " · AED " + fm(f.weeklyAvg) + "/wk avg";
+
+  var cashCol;
+  if (f.cashPosition != null) {
+    cashCol =
+      '<div class="fc-col">' +
+        '<div class="fc-label"><span class="fc-dot" style="background:var(--teal)"></span>Cash on hand</div>' +
+        '<div class="fc-amt ' + amtCls(f.cashPosition) + '">AED ' + fm(f.cashPosition) + '</div>' +
+        '<div class="fc-sub">' + fm(f.debitBal) + ' debit + ' + fm(f.reimb) + ' reimb − ' + fm(f.ccPayable) + ' CC</div>' +
+      '</div>';
   } else {
-    note = "Trend extrapolates your current pace (" + Math.round(f.elapsed * 100) +
-      "% through the month) — add history for sharper estimates";
+    cashCol =
+      '<div class="fc-col">' +
+        '<div class="fc-label"><span class="fc-dot" style="background:var(--teal)"></span>Cash on hand</div>' +
+        '<div class="fc-amt" style="color:var(--text-3);font-size:15px">—</div>' +
+        '<div class="fc-sub">Set debit balance in Accounts</div>' +
+      '</div>';
   }
-  if (f.overCount > 0) {
-    note += ". <strong>" + f.overCount + " categor" + (f.overCount > 1 ? "ies" : "y") +
-      "</strong> trending over budget.";
-  } else {
-    note += ".";
-  }
+
+  var note = "Weekly avg AED " + fm(f.weeklyAvg) + " based on " + f.daysElapsed + " days of spend" +
+    (f.daysToPayday > 0 ? " · projecting AED " + fm(f.projectedAdditional) + " more before the 25th" : " · payday reached") + ".";
+
   document.getElementById("forecast-section").innerHTML =
     '<div class="forecast">' +
       '<div class="fc-head">' +
@@ -1085,18 +1196,153 @@ function renderForecast(INFLOW, OUT) {
       '</div>' +
       '<div class="fc-grid">' +
         '<div class="fc-col">' +
-          '<div class="fc-label"><span class="fc-dot" style="background:var(--purple)"></span>Trend-based</div>' +
-          '<div class="fc-amt ' + amtCls(f.trendSavings) + '">AED ' + fm(f.trendSavings) + '</div>' +
-          '<div class="fc-sub">' + pctLine(f.trendSavings, f.trendSpend) + '</div>' +
+          '<div class="fc-label"><span class="fc-dot" style="background:var(--purple)"></span>' + paydayTitle + '</div>' +
+          '<div class="fc-amt ' + amtCls(f.paydaySavings) + '">AED ' + fm(f.paydaySavings) + '</div>' +
+          '<div class="fc-sub">' + paydaySub + '</div>' +
         '</div>' +
-        '<div class="fc-col">' +
-          '<div class="fc-label"><span class="fc-dot" style="background:var(--blue)"></span>If budgets maxed</div>' +
-          '<div class="fc-amt ' + amtCls(f.maxSavings) + '">AED ' + fm(f.maxSavings) + '</div>' +
-          '<div class="fc-sub">' + pctLine(f.maxSavings, f.maxSpend) + '</div>' +
-        '</div>' +
+        cashCol +
       '</div>' +
       '<div class="fc-note">' + note + '</div>' +
     '</div>';
+}
+
+function acctSpendTotals() {
+  var deb = 0, cc = 0;
+  for (var i = 0; i < APP.transactions.length; i++) {
+    var t = APP.transactions[i];
+    var a = parseFloat(t.amount); if (isNaN(a)) continue;
+    if (t.acct === "debit") deb += a; else cc += a;
+  }
+  return { debit: deb, cc: cc };
+}
+
+function editDebitBalance() {
+  var cur = APP.accounts.debit.balance;
+  var v = prompt("Current debit account balance (AED):", cur != null ? cur : "");
+  if (v === null) return;
+  var n = parseFloat(String(v).replace(/,/g, ""));
+  if (isNaN(n)) { toast("Enter a valid number", "warn"); return; }
+  APP.accounts.debit.balance = Math.round(n * 100) / 100;
+  APP.accounts.debit.balanceDate = ymd(new Date());
+  saveData(); renderDashboard();
+  toast("Balance updated");
+}
+
+function renderAccountsCard() {
+  var sp = acctSpendTotals();
+  var acc = APP.accounts || {};
+  var bal = acc.debit ? acc.debit.balance : null;
+  var balDate = acc.debit ? acc.debit.balanceDate : null;
+  var h = '<div class="dash-card"><div class="dash-title"><span class="ic">🏦</span>Accounts<span class="dash-aside">this cycle</span></div>';
+  h += '<div class="acct-balance-row"><span class="acct-balance-label">Debit balance' + (balDate ? ' · ' + escHtml(balDate) : '') + '</span>';
+  h += '<span class="acct-balance-val" onclick="editDebitBalance()">' + (bal == null ? 'Set balance' : 'AED ' + fm(bal)) + '</span></div>';
+  h += '<div class="acct-grid">';
+  h += '<div class="acct-cell"><div class="acct-cell-label deb"><span class="legend-dot" style="background:var(--teal)"></span>Debit spend</div><div class="acct-amt">' + fm(sp.debit) + '</div><div class="acct-sub">out of main account</div></div>';
+  h += '<div class="acct-cell"><div class="acct-cell-label cc"><span class="legend-dot" style="background:var(--pink)"></span>CC payable</div><div class="acct-amt">' + fm(sp.cc) + '</div><div class="acct-sub">due next salary day</div></div>';
+  h += '</div>';
+  if (bal != null) {
+    var net = bal - sp.cc;
+    h += '<div class="acct-net"><div class="acct-net-label">Net position<span class="s">debit balance − CC payable</span></div>';
+    h += '<div class="acct-net-val ' + (net >= 0 ? 'g' : 'r') + '">AED ' + fm(net) + '</div></div>';
+  } else {
+    h += '<div class="acct-net"><div class="acct-net-label">Net position<span class="s">set your debit balance to track real savings</span></div><div class="acct-net-val" style="color:var(--text-3);font-size:15px">—</div></div>';
+  }
+  h += '</div>';
+  return h;
+}
+
+function renderDailyChart() {
+  var days = 21;
+  var now = new Date(); now.setHours(0, 0, 0, 0);
+  var buckets = [], map = {};
+  for (var i = days - 1; i >= 0; i--) {
+    var d = new Date(now.getTime() - i * 86400000);
+    var b = { key: ymd(d), d: d, deb: 0, cc: 0 };
+    buckets.push(b); map[b.key] = b;
+  }
+  var debTot = 0, ccTot = 0, any = false;
+  for (var i = 0; i < APP.transactions.length; i++) {
+    var t = APP.transactions[i];
+    var k = ymd(new Date(t.date));
+    if (!map[k]) continue;
+    var a = parseFloat(t.amount); if (isNaN(a)) continue;
+    any = true;
+    if (t.acct === "debit") { map[k].deb += a; debTot += a; }
+    else { map[k].cc += a; ccTot += a; }
+  }
+  var h = '<div class="dash-card"><div class="dash-title"><span class="ic">📈</span>Daily Spending<span class="dash-aside">last ' + days + ' days</span></div>';
+  if (!any) {
+    h += '<div style="text-align:center;color:var(--text-3);font-size:12px;padding:18px 0">No transactions in the last ' + days + ' days</div></div>';
+    return h;
+  }
+  var max = 0;
+  for (var i = 0; i < buckets.length; i++) max = Math.max(max, buckets[i].deb + buckets[i].cc);
+  h += '<div class="chart-daily">';
+  for (var i = 0; i < buckets.length; i++) {
+    var b = buckets[i];
+    var ccH = max > 0 ? b.cc / max * 100 : 0;
+    var debH = max > 0 ? b.deb / max * 100 : 0;
+    h += '<div class="cd-col" title="' + b.key + '">';
+    if (ccH > 0) h += '<div class="cd-seg cc" style="height:' + ccH.toFixed(1) + '%"></div>';
+    if (debH > 0) h += '<div class="cd-seg deb" style="height:' + debH.toFixed(1) + '%"></div>';
+    if (ccH === 0 && debH === 0) h += '<div class="cd-seg" style="height:1px;background:rgba(255,255,255,0.08)"></div>';
+    h += '</div>';
+  }
+  h += '</div><div class="chart-x">';
+  for (var i = 0; i < buckets.length; i++) {
+    var showLbl = (days - 1 - i) % 4 === 0;
+    h += '<span>' + (showLbl ? buckets[i].d.getDate() : '') + '</span>';
+  }
+  h += '</div>';
+  h += '<div class="chart-legend">';
+  h += '<div class="li"><span class="legend-dot" style="background:var(--pink)"></span>Credit card ' + fm(ccTot) + '</div>';
+  h += '<div class="li"><span class="legend-dot" style="background:var(--teal)"></span>Debit ' + fm(debTot) + '</div>';
+  h += '</div></div>';
+  return h;
+}
+
+function renderCatBreakdown() {
+  var rows = [], total = 0;
+  for (var i = 0; i < APP.budget.length; i++) {
+    var s = getSpent(APP.budget[i]);
+    if (s > 0) { rows.push({ c: APP.budget[i].c, s: s }); total += s; }
+  }
+  if (!rows.length) return '';
+  rows.sort(function (a, b) { return b.s - a.s; });
+  rows = rows.slice(0, 6);
+  var prevMap = null;
+  if (APP.history && APP.history.length > 0 && APP.history[0].budget) {
+    prevMap = {};
+    var pb = APP.history[0].budget;
+    for (var p = 0; p < pb.length; p++) prevMap[pb[p].c] = pb[p].s;
+  }
+  var max = rows[0].s;
+  var h = '<div class="dash-card"><div class="dash-title"><span class="ic">🧭</span>Where It Goes<span class="dash-aside">' + (prevMap ? 'vs last month' : 'top categories') + '</span></div>';
+  for (var i = 0; i < rows.length; i++) {
+    var r = rows[i];
+    var w = max > 0 ? r.s / max * 100 : 0;
+    h += '<div class="cbk-row">';
+    h += '<div class="cbk-name">' + escHtml(r.c) + '</div>';
+    h += '<div class="cbk-bar"><div class="cbk-fill" style="width:' + w.toFixed(1) + '%;background:' + catColor(r.c) + '"></div></div>';
+    h += '<div class="cbk-amt">' + fm(r.s) + '</div>';
+    if (prevMap && prevMap[r.c] > 0) {
+      var pct = Math.round(r.s / prevMap[r.c] * 100);
+      var cls = pct >= 100 ? 'up' : (pct <= 66 ? 'down' : 'flat');
+      h += '<div class="cbk-delta ' + cls + '">' + pct + '%<span style="display:block;font-size:8px;font-weight:400;color:var(--text-3)">of last mo</span></div>';
+    } else if (prevMap) {
+      h += '<div class="cbk-delta flat">new</div>';
+    }
+    h += '</div>';
+  }
+  h += '<div style="font-size:11px;color:var(--text-3);margin-top:8px;text-align:right">Total spent ' + fm(total) + '</div>';
+  h += '</div>';
+  return h;
+}
+
+function renderDashboard() {
+  var host = document.getElementById("dash-section");
+  if (!host) return;
+  host.innerHTML = renderAccountsCard() + renderDailyChart() + renderCatBreakdown();
 }
 
 function renderRow(i) {
@@ -1113,6 +1359,7 @@ function renderRow(i) {
   var h = '<div class="row' + (r.p ? ' paid' : '') + (isOpen ? ' open' : '') + '" data-cat="' + escHtml(r.c) + '">';
   h += '<div class="row-top">';
   h += '<input type="checkbox" class="cb-paid" data-cat="' + escHtml(r.c) + '"' + (r.p ? ' checked' : '') + '>';
+  h += '<span class="row-cat-dot" style="background:' + catColor(r.c) + '"></span>';
   h += '<div class="row-name">' + escHtml(r.c) + '</div>';
   h += '<div class="row-vals">';
   h += '<div class="row-spent' + (isOver ? ' over' : '') + '">' + fm(sp) + '</div>';
@@ -1503,6 +1750,7 @@ function recalcHeader() {
   document.getElementById("hero-card").innerHTML = renderHero(fixS, varS + OUT, savActual, INFLOW, fixDisplay, varDisplay);
   document.getElementById("stat-row").innerHTML = renderStats(fixB, fixS, varB, varS);
   renderForecast(INFLOW, OUT);
+  renderDashboard();
 }
 
 function addManualTxn(cat, desc, amount, dateStr) {
@@ -1512,6 +1760,7 @@ function addManualTxn(cat, desc, amount, dateStr) {
     desc: desc, cleanDesc: desc,
     amount: Math.round(amount * 100) / 100,
     category: cat, card: "Manual", source: "manual",
+    acct: defaultAcctForCat(cat),
     addedAt: new Date().toISOString()
   };
   APP.transactions.push(t);
@@ -1620,6 +1869,8 @@ function confirmConclude() {
     transactions: APP.transactions.slice(),
     budget: snapshotBudget,
     totalSpent: totalS, fixedSpent: fixS, variableSpent: varS,
+    accountSplit: acctSpendTotals(),
+    debitBalanceAtClose: (APP.accounts && APP.accounts.debit) ? APP.accounts.debit.balance : null,
     savings: savAmt,
     savingsPct: INFLOW > 0 ? Math.round(savAmt / INFLOW * 100) : 0,
     topCategories: topCats, overBudget: overCats
@@ -1749,11 +2000,40 @@ function drawHistory() {
 }
 
 function ymd(d) { var y = d.getFullYear(); var m = String(d.getMonth() + 1).padStart(2, "0"); var dd = String(d.getDate()).padStart(2, "0"); return y + "-" + m + "-" + dd; }
-function setupDateDefaults() {
+
+var importAcct = "cc";
+function setImportAcct(acct) {
+  importAcct = acct;
+  document.getElementById("acct-btn-cc").classList.toggle("on", acct === "cc");
+  document.getElementById("acct-btn-debit").classList.toggle("on", acct === "debit");
+  setupDateDefaults(true);
+}
+document.getElementById("acct-btn-cc").addEventListener("click", function () { setImportAcct("cc"); });
+document.getElementById("acct-btn-debit").addEventListener("click", function () { setImportAcct("debit"); });
+
+function updateAcctToggleSubs() {
+  var ccLast = APP.accounts && APP.accounts.cc && APP.accounts.cc.lastUploadTo;
+  var dbLast = APP.accounts && APP.accounts.debit && APP.accounts.debit.lastUploadTo;
+  document.getElementById("acct-sub-cc").textContent = ccLast ? "Last upload: " + ccLast : "Everyday spending";
+  document.getElementById("acct-sub-debit").textContent = dbLast ? "Last upload: " + dbLast : "Salary, rent & transfers";
+}
+
+function setupDateDefaults(force) {
   var fromEl = document.getElementById("date-from"); var toEl = document.getElementById("date-to");
-  if (fromEl.value && toEl.value) return;
-  var now = new Date(); var weeks2 = new Date(now.getTime() - 14 * 86400000);
-  fromEl.value = ymd(weeks2); toEl.value = ymd(now);
+  updateAcctToggleSubs();
+  if (!force && fromEl.value && toEl.value) return;
+  var now = new Date();
+  // Continue from the day after the selected account's last upload to avoid overlap
+  var last = APP.accounts && APP.accounts[importAcct] && APP.accounts[importAcct].lastUploadTo;
+  var from;
+  if (last) {
+    from = new Date(last + "T00:00:00");
+    if (!isNaN(from.getTime())) { from.setDate(from.getDate() + 1); if (from > now) from = now; }
+    else from = new Date(now.getTime() - 14 * 86400000);
+  } else {
+    from = new Date(now.getTime() - 14 * 86400000);
+  }
+  fromEl.value = ymd(from); toEl.value = ymd(now);
 }
 var presets = document.querySelectorAll(".date-preset");
 for (var i = 0; i < presets.length; i++) {
@@ -1783,10 +2063,13 @@ function parseCSV(text) {
     for (var k = 0; k < line.length; k++) { var ch = line[k]; if (ch === '"') inQ = !inQ; else if (ch === ',' && !inQ) { parts.push(cur.trim()); cur = ""; } else cur += ch; }
     parts.push(cur.trim());
     if (parts.length < 4) continue;
-    var ds = parts[0], desc = parts[1], crdr = parts[2], amt = parseFloat(parts[3].replace(/,/g, ""));
+    var ds = parts[0], desc = parts[1], crdr = parts[2].toUpperCase(), amt = parseFloat(parts[3].replace(/,/g, ""));
+    if (crdr === "D" || crdr === "DEBIT") crdr = "DR";
+    if (crdr === "C" || crdr === "CREDIT") crdr = "CR";
     if (!ds.match(/^\d{2}\/\d{2}\/\d{4}$/) || isNaN(amt)) continue;
+    var bal = parts.length > 4 ? parseFloat(parts[4].replace(/,/g, "")) : NaN;
     var dp = ds.split("/");
-    txns.push({ date: new Date(parseInt(dp[2]), parseInt(dp[1]) - 1, parseInt(dp[0])), dateStr: ds, desc: desc, crdr: crdr, amount: amt, card: cc });
+    txns.push({ date: new Date(parseInt(dp[2]), parseInt(dp[1]) - 1, parseInt(dp[0])), dateStr: ds, desc: desc, crdr: crdr, amount: amt, card: cc, bal: isNaN(bal) ? null : bal });
   }
   return { txns: txns, periodFrom: periodFrom, periodTo: periodTo };
 }
@@ -1875,6 +2158,9 @@ function detectPredominantMonth(txns) {
 }
 
 var pendingTxns = [];
+var pendingAcct = "cc";
+var pendingMaxDate = null;
+var pendingBalance = null;
 document.getElementById("drop-zone").addEventListener("click", function () { document.getElementById("csv-input").click(); });
 document.getElementById("csv-input").addEventListener("change", function (e) {
   var f = e.target.files[0]; if (!f) return;
@@ -1898,16 +2184,22 @@ function processStatement(parsed) {
   var fromDate = new Date(fromVal); var toDate = new Date(toVal); toDate.setHours(23, 59, 59);
 
   pendingTxns = []; var inRangeTxns = [];
+  pendingAcct = importAcct; pendingMaxDate = null; pendingBalance = null;
   for (var i = 0; i < all.length; i++) {
     var t = all[i];
-    if (t.crdr !== "DR") continue;
     if (t.date < fromDate || t.date > toDate) continue;
+    // Latest balance figure in range (debit statements carry a running balance column)
+    if (pendingAcct === "debit" && t.bal !== null && t.bal !== undefined) {
+      if (!pendingBalance || t.date >= pendingBalance.date) pendingBalance = { date: t.date, bal: t.bal };
+    }
+    if (pendingMaxDate === null || t.date > pendingMaxDate) pendingMaxDate = t.date;
+    if (t.crdr !== "DR") continue;
     if (t.desc.indexOf("PAYMENT RECEIVED") > -1 || t.desc.indexOf("FOREIGN TRANSACTION FEE") > -1 || t.desc.indexOf("VAT ON FOREIGN") > -1) continue;
     inRangeTxns.push(t);
     var key = t.dateStr + "|" + t.desc + "|" + t.amount;
     var isDup = APP.imported && APP.imported.indexOf(key) > -1;
     t.key = key; t.cleanDesc = cleanDesc(t.desc); t.category = matchCat(t.desc);
-    t.isDup = isDup; t.skip = isDup;
+    t.isDup = isDup; t.skip = isDup; t.acct = pendingAcct;
     pendingTxns.push(t);
   }
   pendingTxns.sort(function (a, b) { return b.date - a.date; });
@@ -1930,7 +2222,7 @@ function processStatement(parsed) {
   var dups = 0;
   for (var i = 0; i < pendingTxns.length; i++) if (pendingTxns[i].isDup) dups++;
   var newCount = pendingTxns.length - dups;
-  document.getElementById("import-period").textContent = "Date range: " + fromVal + " to " + toVal + " · " + pendingTxns.length + " debits · " + newCount + " new · " + dups + " already imported";
+  document.getElementById("import-period").textContent = (pendingAcct === "debit" ? "🏦 Debit Account" : "💳 Credit Card") + " · " + fromVal + " to " + toVal + " · " + pendingTxns.length + " debits · " + newCount + " new · " + dups + " already imported";
   document.getElementById("btn-apply").style.display = "";
   document.getElementById("preview-title").textContent = "Review Transactions";
   drawTxnList();
@@ -2013,6 +2305,7 @@ document.getElementById("btn-apply").addEventListener("click", function () {
       id: uid("t"), date: t.date.toISOString(), dateStr: t.dateStr,
       desc: t.desc, cleanDesc: t.cleanDesc, amount: t.amount,
       category: t.category, card: t.card, key: t.key, source: "csv",
+      acct: t.acct || pendingAcct,
       addedAt: new Date().toISOString()
     });
   }
@@ -2027,6 +2320,17 @@ document.getElementById("btn-apply").addEventListener("click", function () {
   if (!APP.imported) APP.imported = [];
   for (var i = 0; i < appliedKeys.length; i++) if (APP.imported.indexOf(appliedKeys[i]) === -1) APP.imported.push(appliedKeys[i]);
   APP.lastImport = new Date().toLocaleDateString("en-GB");
+  // Remember where this account's statement coverage ends so the next
+  // import can start the day after (reduces overlapping ranges).
+  if (pendingMaxDate && APP.accounts && APP.accounts[pendingAcct]) {
+    var prevTo = APP.accounts[pendingAcct].lastUploadTo;
+    var newTo = ymd(pendingMaxDate);
+    if (!prevTo || newTo > prevTo) APP.accounts[pendingAcct].lastUploadTo = newTo;
+  }
+  if (pendingAcct === "debit" && pendingBalance) {
+    APP.accounts.debit.balance = pendingBalance.bal;
+    APP.accounts.debit.balanceDate = ymd(pendingBalance.date);
+  }
   var prevCs = {};
   for (var i = 0; i < APP.budget.length; i++) if (sums[APP.budget[i].c] !== undefined) prevCs[APP.budget[i].c] = APP.budget[i].cs !== undefined ? APP.budget[i].cs : null;
   APP.lastImportDelta = { categories: JSON.parse(JSON.stringify(sums)), keys: appliedKeys.slice(), txnIds: appliedTxns.map(function (t) { return t.id; }), date: new Date().toISOString(), month: APP.currentMonth, prevCs: prevCs };
@@ -2307,6 +2611,17 @@ function drawSettings() {
   drawMappings();
   drawBudgetSettings();
   document.getElementById("inflow-input").value = APP.inflow || DEFAULT_INFLOW;
+  var acc = APP.accounts || {};
+  var balInp = document.getElementById("debit-balance-input");
+  if (balInp) {
+    balInp.value = (acc.debit && acc.debit.balance != null) ? acc.debit.balance : "";
+    document.getElementById("debit-balance-meta").textContent =
+      (acc.debit && acc.debit.balanceDate) ? "As of " + acc.debit.balanceDate + " · updated by debit imports" : "Set manually or import a debit statement with a balance column";
+    document.getElementById("debit-upload-sub").textContent =
+      (acc.debit && acc.debit.lastUploadTo) ? "Covered through " + acc.debit.lastUploadTo : "No uploads yet";
+    document.getElementById("cc-upload-sub").textContent =
+      (acc.cc && acc.cc.lastUploadTo) ? "Covered through " + acc.cc.lastUploadTo : "No uploads yet";
+  }
   var undoRow = document.getElementById("undo-import-row");
   if (undoRow) {
     if (APP.lastImportDelta) {
@@ -2321,6 +2636,18 @@ function drawSettings() {
 document.getElementById("inflow-input").addEventListener("change", function () {
   var v = parseFloat(this.value);
   if (!isNaN(v) && v > 0) { APP.inflow = v; saveData(); drawBudgetSettings(); toast("Inflow updated"); }
+});
+document.getElementById("debit-balance-input").addEventListener("change", function () {
+  if (this.value.trim() === "") {
+    APP.accounts.debit.balance = null; APP.accounts.debit.balanceDate = null;
+    saveData(); drawSettings(); toast("Balance cleared");
+    return;
+  }
+  var v = parseFloat(this.value);
+  if (isNaN(v)) { toast("Enter a valid number", "warn"); return; }
+  APP.accounts.debit.balance = Math.round(v * 100) / 100;
+  APP.accounts.debit.balanceDate = ymd(new Date());
+  saveData(); drawSettings(); toast("Balance updated");
 });
 
 function clearSpent() {
