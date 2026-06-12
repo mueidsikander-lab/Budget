@@ -2369,6 +2369,7 @@ function processStatement(parsed) {
   document.getElementById("import-preview").style.display = "block";
   document.getElementById("import-summary").style.display = "none";
   updatePreviewSummary();
+  setTimeout(function() { document.getElementById("import-preview").scrollIntoView({ behavior: "smooth", block: "start" }); }, 50);
 }
 
 function drawTxnList() {
