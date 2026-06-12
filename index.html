@@ -127,12 +127,13 @@ body {
 .cbk-amt { flex: 0 0 62px; text-align: right; font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .cbk-delta { flex: 0 0 52px; text-align: right; font-size: 10.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .cbk-delta.up { color: var(--red); } .cbk-delta.down { color: var(--green); } .cbk-delta.flat { color: var(--text-3); }
-.acct-toggle { display: flex; gap: 8px; margin-bottom: 14px; }
-.acct-toggle-btn { flex: 1; padding: 12px 10px; background: var(--card); border: 1px solid var(--hair); border-radius: 12px; color: var(--text-2); font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; transition: all 0.15s; text-align: left; }
-.acct-toggle-btn .t-sub { display: block; font-size: 10.5px; font-weight: 400; color: var(--text-3); margin-top: 2px; }
-.acct-toggle-btn.on.cc { background: rgba(255,100,130,0.12); border-color: rgba(255,100,130,0.45); color: var(--pink); }
-.acct-toggle-btn.on.deb { background: rgba(100,210,255,0.1); border-color: rgba(100,210,255,0.45); color: var(--teal); }
-.acct-toggle-btn.on .t-sub { color: inherit; opacity: 0.75; }
+.sms-import-section { background: var(--card); border: 1px solid var(--hair); border-radius: 14px; padding: 14px; margin-bottom: 14px; }
+.sms-import-title { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+.sms-import-sub { font-size: 12px; color: var(--text-2); margin-bottom: 10px; line-height: 1.4; }
+.sms-textarea { width: 100%; min-height: 90px; background: var(--bg); border: 1px solid var(--hair); border-radius: 10px; padding: 10px; font-family: inherit; font-size: 12px; color: var(--text); resize: vertical; box-sizing: border-box; outline: none; }
+.sms-textarea:focus { border-color: var(--blue); }
+.import-or-divider { display: flex; align-items: center; gap: 10px; margin: 0 0 14px; color: var(--text-3); font-size: 12px; font-weight: 500; }
+.import-or-divider::before, .import-or-divider::after { content: ''; flex: 1; height: 1px; background: var(--hair); }
 .sec-head { display: flex; justify-content: space-between; align-items: baseline; padding: 18px 4px 8px; }
 .sec-title { font-size: 13px; font-weight: 600; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.6px; }
 .sec-amt { font-size: 13px; color: var(--text-2); font-variant-numeric: tabular-nums; font-weight: 500; }
@@ -503,12 +504,16 @@ body {
 
 <div class="page" id="pg-upload">
   <div class="page-h">Import Statement</div>
-  <div class="page-sub">Choose the account, pick a date range, then upload your CSV or PDF statement.</div>
+  <div class="page-sub">Paste ADCB SMS alerts to import instantly, or upload your credit card CSV/PDF.</div>
 
-  <div class="acct-toggle">
-    <button class="acct-toggle-btn cc on" id="acct-btn-cc">💳 Credit Card<span class="t-sub" id="acct-sub-cc">Everyday spending</span></button>
-    <button class="acct-toggle-btn deb" id="acct-btn-debit">🏦 Debit Account<span class="t-sub" id="acct-sub-debit">Salary, rent &amp; transfers</span></button>
+  <div class="sms-import-section">
+    <div class="sms-import-title">💬 Paste ADCB Message Alerts</div>
+    <div class="sms-import-sub">Copy SMS alerts from your phone and paste them all here at once. Each alert is parsed automatically.</div>
+    <textarea id="sms-input" class="sms-textarea" placeholder="Your ADCB Credit Card ending 1234 has been charged AED 85.50 at SPINNEYS ABU DHABI ARE on 12/06/2026. Available limit AED 3,500.00.&#10;&#10;Your ADCB Credit Card ending 1234 has been charged AED 120.00 at NOON.COM ARE on 11/06/2026..."></textarea>
+    <button class="btn btn-blue" style="width:100%;margin-top:10px" onclick="parseSMSText()">Parse &amp; Preview</button>
   </div>
+
+  <div class="import-or-divider"><span>or upload a file</span></div>
 
   <div class="date-range">
     <div class="date-range-title">Date Range</div>
@@ -2002,25 +2007,9 @@ function drawHistory() {
 function ymd(d) { var y = d.getFullYear(); var m = String(d.getMonth() + 1).padStart(2, "0"); var dd = String(d.getDate()).padStart(2, "0"); return y + "-" + m + "-" + dd; }
 
 var importAcct = "cc";
-function setImportAcct(acct) {
-  importAcct = acct;
-  document.getElementById("acct-btn-cc").classList.toggle("on", acct === "cc");
-  document.getElementById("acct-btn-debit").classList.toggle("on", acct === "debit");
-  setupDateDefaults(true);
-}
-document.getElementById("acct-btn-cc").addEventListener("click", function () { setImportAcct("cc"); });
-document.getElementById("acct-btn-debit").addEventListener("click", function () { setImportAcct("debit"); });
-
-function updateAcctToggleSubs() {
-  var ccLast = APP.accounts && APP.accounts.cc && APP.accounts.cc.lastUploadTo;
-  var dbLast = APP.accounts && APP.accounts.debit && APP.accounts.debit.lastUploadTo;
-  document.getElementById("acct-sub-cc").textContent = ccLast ? "Last upload: " + ccLast : "Everyday spending";
-  document.getElementById("acct-sub-debit").textContent = dbLast ? "Last upload: " + dbLast : "Salary, rent & transfers";
-}
 
 function setupDateDefaults(force) {
   var fromEl = document.getElementById("date-from"); var toEl = document.getElementById("date-to");
-  updateAcctToggleSubs();
   if (!force && fromEl.value && toEl.value) return;
   var now = new Date();
   // Continue from the day after the selected account's last upload to avoid overlap
@@ -2048,6 +2037,66 @@ for (var i = 0; i < presets.length; i++) {
     document.getElementById("date-from").value = ymd(from);
     document.getElementById("date-to").value = ymd(to);
   });
+}
+
+function parseSMSMessages(text) {
+  // Split pasted text into individual messages (blank-line or new-message delimiters)
+  var lines = text.split('\n');
+  var msgs = [], cur = '';
+  for (var i = 0; i < lines.length; i++) {
+    var l = lines[i].trim();
+    if (!l) { if (cur) { msgs.push(cur); cur = ''; } }
+    else if (cur && /^(?:Your|AED|ADCB:|Dear)/i.test(l)) { msgs.push(cur); cur = l; }
+    else { cur = cur ? cur + ' ' + l : l; }
+  }
+  if (cur) msgs.push(cur);
+
+  var txns = [], seenKeys = {};
+  for (var i = 0; i < msgs.length; i++) {
+    var msg = msgs[i].trim();
+    if (!msg) continue;
+    if (!/adcb/i.test(msg) && !/credit card/i.test(msg)) continue;
+
+    // Date: DD/MM/YYYY
+    var dateM = msg.match(/\b(\d{2}\/\d{2}\/\d{4})\b/);
+    if (!dateM) continue;
+    var dateStr = dateM[1];
+
+    // Amount: first AED figure is the transaction amount
+    var amtM = msg.match(/AED\s+([\d,]+\.\d{2})/i);
+    if (!amtM) continue;
+    var amt = parseFloat(amtM[1].replace(/,/g, ''));
+    if (isNaN(amt) || amt <= 0) continue;
+
+    // Merchant: text after "at " before optional country code + " on " + date
+    var merchantM = msg.match(/\bat\s+(.+?)\s+(?:[A-Z]{2,3}\s+)?on\s+\d{2}\/\d{2}\/\d{4}/i);
+    if (!merchantM) continue;
+    var desc = merchantM[1].replace(/\s+/g, ' ').trim().toUpperCase();
+    // Strip trailing 2-3 letter country codes (e.g. ARE, GBR, PAK)
+    desc = desc.replace(/\s+[A-Z]{2,3}$/, '').trim();
+
+    var key = dateStr + '|' + desc + '|' + amt;
+    if (seenKeys[key]) continue;
+    seenKeys[key] = true;
+
+    var dp = dateStr.split('/');
+    txns.push({ date: new Date(parseInt(dp[2]), parseInt(dp[1])-1, parseInt(dp[0])), dateStr: dateStr, desc: desc, crdr: 'DR', amount: amt, card: 'Primary', source: 'sms' });
+  }
+  return { txns: txns, periodFrom: null, periodTo: null };
+}
+
+function parseSMSText() {
+  var text = document.getElementById("sms-input").value.trim();
+  if (!text) { toast("Paste SMS messages first", "warn"); return; }
+  var parsed = parseSMSMessages(text);
+  if (!parsed.txns.length) { toast("No ADCB transactions found — check format", "warn"); return; }
+  // Auto-set date range to span all detected transactions
+  var dates = parsed.txns.map(function(t) { return t.date; });
+  var minD = dates.reduce(function(a,b) { return a < b ? a : b; });
+  var maxD = dates.reduce(function(a,b) { return a > b ? a : b; });
+  document.getElementById("date-from").value = ymd(minD);
+  document.getElementById("date-to").value = ymd(maxD);
+  processStatement(parsed);
 }
 
 function parseCSV(text) {
@@ -2222,7 +2271,7 @@ function processStatement(parsed) {
   var dups = 0;
   for (var i = 0; i < pendingTxns.length; i++) if (pendingTxns[i].isDup) dups++;
   var newCount = pendingTxns.length - dups;
-  document.getElementById("import-period").textContent = (pendingAcct === "debit" ? "🏦 Debit Account" : "💳 Credit Card") + " · " + fromVal + " to " + toVal + " · " + pendingTxns.length + " debits · " + newCount + " new · " + dups + " already imported";
+  document.getElementById("import-period").textContent = "💳 Credit Card · " + fromVal + " to " + toVal + " · " + pendingTxns.length + " debits · " + newCount + " new · " + dups + " already imported";
   document.getElementById("btn-apply").style.display = "";
   document.getElementById("preview-title").textContent = "Review Transactions";
   drawTxnList();
@@ -2304,7 +2353,7 @@ document.getElementById("btn-apply").addEventListener("click", function () {
     appliedTxns.push({
       id: uid("t"), date: t.date.toISOString(), dateStr: t.dateStr,
       desc: t.desc, cleanDesc: t.cleanDesc, amount: t.amount,
-      category: t.category, card: t.card, key: t.key, source: "csv",
+      category: t.category, card: t.card, key: t.key, source: t.source || "csv",
       acct: t.acct || pendingAcct,
       addedAt: new Date().toISOString()
     });
