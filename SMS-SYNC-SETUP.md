@@ -1,5 +1,12 @@
 # ADCB SMS Auto-Sync — One-Time Setup (iPhone)
 
+> **Easiest path:** open **`setup.html`** on your phone (same place the app is
+> hosted, e.g. `https://mueidsikander-lab.github.io/Budget/setup.html`, or via
+> *Settings → SMS Auto-Sync → Setup Assistant*). It creates the secret Gist for
+> you, connects it to the app automatically, gives you copy-paste values for
+> the Shortcut, and tests the whole pipeline. The manual steps below do the
+> same thing by hand.
+
 After this setup, every ADCB credit card SMS alert is forwarded automatically
 from your iPhone to a private GitHub Gist. When you open the Budget app and tap
 **Sync New Alerts**, new transactions appear in the normal review screen — no

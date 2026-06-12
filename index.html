@@ -593,6 +593,11 @@ body {
       <input type="text" id="gist-id-input" placeholder="e.g. a1b2c3d4e5f6..." autocapitalize="off" autocorrect="off" spellcheck="false" style="font-size:13px">
       <div style="font-size:11px;color:var(--text-3);margin-top:8px;text-align:center" id="gist-id-meta">Your iPhone Shortcut forwards ADCB alerts into this Gist</div>
     </div>
+    <div class="s-item" onclick="window.open('setup.html','_blank')">
+      <span class="s-icon s-i-blue">🛠</span>
+      <div class="s-label">Setup Assistant<div class="s-sub">Creates the Gist and walks through the iPhone Shortcut</div></div>
+      <span class="s-chev">›</span>
+    </div>
   </div>
 
   <div class="s-section-title">Budget &amp; Categories</div>
@@ -752,6 +757,10 @@ function fixApp() {
   if (!APP.accounts.debit) APP.accounts.debit = { balance: null, balanceDate: null, lastUploadTo: null };
   if (!APP.accounts.cc) APP.accounts.cc = { lastUploadTo: null };
   if (!APP.smsSync) APP.smsSync = { gistId: null, processed: [], lastSync: null };
+  // setup.html stores the gist id here when the app hadn't been opened yet
+  if (!APP.smsSync.gistId) {
+    try { var pg = localStorage.getItem("bgt_gist_pending"); if (pg) { APP.smsSync.gistId = pg; localStorage.removeItem("bgt_gist_pending"); } } catch (e) {}
+  }
   // Pre-accounts transactions were all credit card statement imports
   for (var i = 0; i < APP.transactions.length; i++) {
     if (!APP.transactions[i].acct) APP.transactions[i].acct = "cc";
