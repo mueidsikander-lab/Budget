@@ -507,6 +507,12 @@ body {
   <div class="page-sub">Paste ADCB SMS alerts to import instantly, or upload your credit card CSV/PDF.</div>
 
   <div class="sms-import-section">
+    <div class="sms-import-title">📲 Auto-Sync from Phone</div>
+    <div class="sms-import-sub" id="sms-sync-sub">Pulls new ADCB alerts forwarded by your iPhone Shortcut.</div>
+    <button class="btn btn-blue" style="width:100%" id="sms-sync-btn" onclick="syncSMSFromGist()">Sync New Alerts</button>
+  </div>
+
+  <div class="sms-import-section">
     <div class="sms-import-title">💬 Paste ADCB Message Alerts</div>
     <div class="sms-import-sub">Copy SMS alerts from your phone and paste them all here at once. Each alert is parsed automatically.</div>
     <textarea id="sms-input" class="sms-textarea" placeholder="Your ADCB Credit Card ending 1234 has been charged AED 85.50 at SPINNEYS ABU DHABI ARE on 12/06/2026. Available limit AED 3,500.00.&#10;&#10;Your ADCB Credit Card ending 1234 has been charged AED 120.00 at NOON.COM ARE on 11/06/2026..."></textarea>
@@ -577,6 +583,15 @@ body {
     <div class="s-item" style="cursor:default">
       <span class="s-icon s-i-red">💳</span>
       <div class="s-label">Credit card statement<div class="s-sub" id="cc-upload-sub">No uploads yet</div></div>
+    </div>
+  </div>
+
+  <div class="s-section-title">SMS Auto-Sync</div>
+  <div class="s-section">
+    <div class="s-inflow" style="padding-bottom:6px">
+      <div style="font-size:11px;color:var(--text-2);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">GitHub Gist ID</div>
+      <input type="text" id="gist-id-input" placeholder="e.g. a1b2c3d4e5f6..." autocapitalize="off" autocorrect="off" spellcheck="false" style="font-size:13px">
+      <div style="font-size:11px;color:var(--text-3);margin-top:8px;text-align:center" id="gist-id-meta">Your iPhone Shortcut forwards ADCB alerts into this Gist</div>
     </div>
   </div>
 
@@ -736,6 +751,7 @@ function fixApp() {
   if (!APP.accounts) APP.accounts = {};
   if (!APP.accounts.debit) APP.accounts.debit = { balance: null, balanceDate: null, lastUploadTo: null };
   if (!APP.accounts.cc) APP.accounts.cc = { lastUploadTo: null };
+  if (!APP.smsSync) APP.smsSync = { gistId: null, processed: [], lastSync: null };
   // Pre-accounts transactions were all credit card statement imports
   for (var i = 0; i < APP.transactions.length; i++) {
     if (!APP.transactions[i].acct) APP.transactions[i].acct = "cc";
@@ -2010,6 +2026,7 @@ var importAcct = "cc";
 
 function setupDateDefaults(force) {
   var fromEl = document.getElementById("date-from"); var toEl = document.getElementById("date-to");
+  updateSmsSyncUI();
   if (!force && fromEl.value && toEl.value) return;
   var now = new Date();
   // Continue from the day after the selected account's last upload to avoid overlap
@@ -2085,11 +2102,7 @@ function parseSMSMessages(text) {
   return { txns: txns, periodFrom: null, periodTo: null };
 }
 
-function parseSMSText() {
-  var text = document.getElementById("sms-input").value.trim();
-  if (!text) { toast("Paste SMS messages first", "warn"); return; }
-  var parsed = parseSMSMessages(text);
-  if (!parsed.txns.length) { toast("No ADCB transactions found — check format", "warn"); return; }
+function previewSMSTxns(parsed) {
   // Auto-set date range to span all detected transactions
   var dates = parsed.txns.map(function(t) { return t.date; });
   var minD = dates.reduce(function(a,b) { return a < b ? a : b; });
@@ -2097,6 +2110,73 @@ function parseSMSText() {
   document.getElementById("date-from").value = ymd(minD);
   document.getElementById("date-to").value = ymd(maxD);
   processStatement(parsed);
+}
+
+function parseSMSText() {
+  var text = document.getElementById("sms-input").value.trim();
+  if (!text) { toast("Paste SMS messages first", "warn"); return; }
+  var parsed = parseSMSMessages(text);
+  if (!parsed.txns.length) { toast("No ADCB transactions found — check format", "warn"); return; }
+  previewSMSTxns(parsed);
+}
+
+// --- SMS auto-sync: iPhone Shortcut appends each ADCB alert as a file in a
+// secret GitHub Gist; we fetch the gist and run new files through the parser.
+var pendingSmsFiles = [];
+
+function updateSmsSyncUI() {
+  var sub = document.getElementById("sms-sync-sub");
+  if (!sub) return;
+  if (!APP.smsSync || !APP.smsSync.gistId) {
+    sub.textContent = "Not set up yet — add your Gist ID in Settings";
+  } else if (APP.smsSync.lastSync) {
+    sub.textContent = "Last sync: " + new Date(APP.smsSync.lastSync).toLocaleString("en-GB");
+  } else {
+    sub.textContent = "Pulls new ADCB alerts forwarded by your iPhone Shortcut.";
+  }
+}
+
+function syncSMSFromGist() {
+  var gid = APP.smsSync && APP.smsSync.gistId;
+  if (!gid) { toast("Set your Gist ID in Settings first", "warn"); return; }
+  var btn = document.getElementById("sms-sync-btn");
+  btn.disabled = true; btn.textContent = "Syncing...";
+  fetch("https://api.github.com/gists/" + encodeURIComponent(gid) + "?t=" + Date.now())
+    .then(function(r) {
+      if (r.status === 404) throw new Error("Gist not found — check the ID in Settings");
+      if (!r.ok) throw new Error("GitHub returned " + r.status);
+      return r.json();
+    })
+    .then(function(g) {
+      var processed = APP.smsSync.processed || [];
+      var names = Object.keys(g.files || {}).filter(function(n) {
+        return n.indexOf("sms-") === 0 && processed.indexOf(n) === -1;
+      });
+      APP.smsSync.lastSync = new Date().toISOString();
+      pendingSmsFiles = [];
+      var allTxns = [];
+      for (var i = 0; i < names.length; i++) {
+        var f = g.files[names[i]];
+        var parsed = parseSMSMessages(f.content || "");
+        if (!parsed.txns.length) {
+          // Nothing usable in this alert; don't re-fetch it forever
+          APP.smsSync.processed.push(names[i]);
+          continue;
+        }
+        pendingSmsFiles.push(names[i]);
+        allTxns = allTxns.concat(parsed.txns);
+      }
+      if (APP.smsSync.processed.length > 500) APP.smsSync.processed = APP.smsSync.processed.slice(-500);
+      saveData(); updateSmsSyncUI();
+      btn.disabled = false; btn.textContent = "Sync New Alerts";
+      if (!allTxns.length) { toast(names.length ? "No transactions found in new alerts" : "No new alerts"); return; }
+      toast(allTxns.length + " new transaction(s) found");
+      previewSMSTxns({ txns: allTxns, periodFrom: null, periodTo: null });
+    })
+    .catch(function(err) {
+      btn.disabled = false; btn.textContent = "Sync New Alerts";
+      toast(err.message || "Sync failed — check connection", "err");
+    });
 }
 
 function parseCSV(text) {
@@ -2380,6 +2460,14 @@ document.getElementById("btn-apply").addEventListener("click", function () {
     APP.accounts.debit.balance = pendingBalance.bal;
     APP.accounts.debit.balanceDate = ymd(pendingBalance.date);
   }
+  // Synced gist alerts were reviewed and applied; don't fetch them again
+  if (pendingSmsFiles.length && APP.smsSync) {
+    for (var i = 0; i < pendingSmsFiles.length; i++) {
+      if (APP.smsSync.processed.indexOf(pendingSmsFiles[i]) === -1) APP.smsSync.processed.push(pendingSmsFiles[i]);
+    }
+    if (APP.smsSync.processed.length > 500) APP.smsSync.processed = APP.smsSync.processed.slice(-500);
+    pendingSmsFiles = [];
+  }
   var prevCs = {};
   for (var i = 0; i < APP.budget.length; i++) if (sums[APP.budget[i].c] !== undefined) prevCs[APP.budget[i].c] = APP.budget[i].cs !== undefined ? APP.budget[i].cs : null;
   APP.lastImportDelta = { categories: JSON.parse(JSON.stringify(sums)), keys: appliedKeys.slice(), txnIds: appliedTxns.map(function (t) { return t.id; }), date: new Date().toISOString(), month: APP.currentMonth, prevCs: prevCs };
@@ -2401,6 +2489,7 @@ document.getElementById("btn-apply").addEventListener("click", function () {
 
 function cancelImport() {
   pendingTxns = [];
+  pendingSmsFiles = []; // cancelled alerts stay unprocessed and reappear next sync
   document.getElementById("import-preview").style.display = "none";
   document.getElementById("txn-list").style.display = "";
   document.getElementById("import-summary").style.display = "none";
@@ -2671,6 +2760,13 @@ function drawSettings() {
     document.getElementById("cc-upload-sub").textContent =
       (acc.cc && acc.cc.lastUploadTo) ? "Covered through " + acc.cc.lastUploadTo : "No uploads yet";
   }
+  var gistInp = document.getElementById("gist-id-input");
+  if (gistInp) {
+    gistInp.value = (APP.smsSync && APP.smsSync.gistId) || "";
+    document.getElementById("gist-id-meta").textContent = (APP.smsSync && APP.smsSync.gistId)
+      ? "Connected · " + (APP.smsSync.processed ? APP.smsSync.processed.length : 0) + " alerts processed"
+      : "Your iPhone Shortcut forwards ADCB alerts into this Gist";
+  }
   var undoRow = document.getElementById("undo-import-row");
   if (undoRow) {
     if (APP.lastImportDelta) {
@@ -2685,6 +2781,14 @@ function drawSettings() {
 document.getElementById("inflow-input").addEventListener("change", function () {
   var v = parseFloat(this.value);
   if (!isNaN(v) && v > 0) { APP.inflow = v; saveData(); drawBudgetSettings(); toast("Inflow updated"); }
+});
+document.getElementById("gist-id-input").addEventListener("change", function () {
+  var v = this.value.trim();
+  // Accept a bare ID or a full gist URL (gist.github.com/user/ID)
+  var m = v.match(/([a-f0-9]{16,})\s*$/i);
+  APP.smsSync.gistId = m ? m[1] : (v || null);
+  saveData(); drawSettings(); updateSmsSyncUI();
+  toast(APP.smsSync.gistId ? "Gist connected" : "Gist ID cleared");
 });
 document.getElementById("debit-balance-input").addEventListener("change", function () {
   if (this.value.trim() === "") {
