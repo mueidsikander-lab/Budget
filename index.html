@@ -2321,7 +2321,9 @@ function processStatement(parsed) {
   var fromVal = document.getElementById("date-from").value;
   var toVal = document.getElementById("date-to").value;
   if (!fromVal || !toVal) { toast("Set date range first", "warn"); return; }
-  var fromDate = new Date(fromVal); var toDate = new Date(toVal); toDate.setHours(23, 59, 59);
+  // Parse date strings as local midnight (new Date("YYYY-MM-DD") is UTC in Safari)
+  function localDate(s) { var p = s.split('-'); return new Date(+p[0], +p[1]-1, +p[2]); }
+  var fromDate = localDate(fromVal); var toDate = localDate(toVal); toDate.setHours(23, 59, 59);
 
   pendingTxns = []; var inRangeTxns = [];
   pendingAcct = importAcct; pendingMaxDate = null; pendingBalance = null;
