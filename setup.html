@@ -17,7 +17,7 @@ h1 { font-size:24px; font-weight:800; margin:0 0 4px; }
 .step-n.done { background:var(--green); }
 .step-t { font-size:15px; font-weight:700; display:inline; vertical-align:middle; }
 .step p { font-size:13px; color:var(--text-2); line-height:1.55; margin:10px 0; }
-.step ol { font-size:13px; color:var(--text-2); line-height:1.7; padding-left:20px; margin:10px 0; }
+.step ol, .step ul { font-size:13px; color:var(--text-2); line-height:1.7; padding-left:20px; margin:10px 0; }
 .step li { margin-bottom:6px; }
 .btn { display:block; width:100%; padding:13px; border-radius:12px; border:none; font-size:14px; font-weight:600; font-family:inherit; cursor:pointer; text-align:center; text-decoration:none; margin-top:10px; }
 .btn-blue { background:var(--blue); color:#fff; }
@@ -26,7 +26,7 @@ h1 { font-size:24px; font-weight:800; margin:0 0 4px; }
 input[type=text], input[type=password] { width:100%; padding:12px; border-radius:10px; border:1px solid var(--hair); background:var(--bg); color:var(--text); font-size:14px; font-family:inherit; outline:none; }
 input:focus { border-color:var(--blue); }
 .copyrow { display:flex; align-items:center; gap:8px; background:var(--bg); border:1px solid var(--hair); border-radius:10px; padding:10px 12px; margin-top:8px; }
-.copyrow .lbl { font-size:10px; color:var(--text-3); text-transform:uppercase; letter-spacing:0.5px; display:block; margin-top:10px; }
+.lbl { font-size:10px; color:var(--text-3); text-transform:uppercase; letter-spacing:0.5px; display:block; margin-top:12px; }
 .copyrow code { flex:1; font-size:12px; word-break:break-all; color:var(--text); font-family:ui-monospace,Menlo,monospace; }
 .copyrow button { flex-shrink:0; background:var(--card2); border:none; color:var(--blue); font-size:12px; font-weight:600; padding:7px 12px; border-radius:8px; font-family:inherit; cursor:pointer; }
 .status { font-size:13px; border-radius:10px; padding:10px 12px; margin-top:10px; display:none; line-height:1.5; }
@@ -34,8 +34,8 @@ input:focus { border-color:var(--blue); }
 .status.err { display:block; background:rgba(255,69,58,0.12); color:var(--red); }
 .status.info { display:block; background:rgba(10,132,255,0.12); color:var(--blue); }
 .warn { font-size:12px; color:var(--orange); background:rgba(255,159,10,0.1); border-radius:10px; padding:10px 12px; line-height:1.5; margin-top:10px; }
-.kv { background:var(--bg); border:1px solid var(--hair); border-radius:10px; padding:10px 12px; margin-top:8px; font-size:12.5px; line-height:1.7; color:var(--text-2); }
-.kv b { color:var(--text); }
+.img-step { background:var(--card2); border-radius:10px; padding:12px; margin:10px 0; font-size:12.5px; line-height:1.6; color:var(--text-2); }
+.img-step b { color:var(--text); }
 </style>
 </head>
 <body>
@@ -43,53 +43,66 @@ input:focus { border-color:var(--blue); }
 <h1>📲 SMS Auto-Sync Setup</h1>
 <p class="sub">One-time setup, about 5 minutes. <b>Open this page in Safari on your iPhone</b> so you can copy values straight into the Shortcuts app. Your token never leaves this page — it is only sent to GitHub.</p>
 
+<!-- STEP 1 -->
 <div class="step" id="step1">
   <span class="step-n" id="n1">1</span><span class="step-t">Create a GitHub token</span>
-  <p>The token lets your iPhone write alerts into a private inbox. The link below pre-selects the <b>gist</b> permission — don't add any others. Scroll down, tap <b>Generate token</b>, then copy the <code>ghp_…</code> value.</p>
+  <p>The token lets your iPhone post alerts to the inbox. The link below pre-selects the <b>gist</b> permission only. Scroll down on GitHub, tap <b>Generate token</b>, then copy the <code>ghp_…</code> value.</p>
   <a class="btn btn-blue" href="https://github.com/settings/tokens/new?scopes=gist&description=ADCB+SMS+forwarder" target="_blank" rel="noopener">Open GitHub token page ↗</a>
 </div>
 
+<!-- STEP 2 -->
 <div class="step" id="step2">
   <span class="step-n" id="n2">2</span><span class="step-t">Create your SMS inbox (secret Gist)</span>
-  <p>Paste the token here and I'll create the unlisted Gist for you and connect it to the Budget app automatically.</p>
+  <p>Paste the token here and this page will create a private Gist as your SMS inbox and connect it to the Budget app automatically.</p>
   <input type="password" id="token" placeholder="ghp_..." autocapitalize="off" autocorrect="off" spellcheck="false">
   <button class="btn btn-blue" id="create-btn" onclick="createGist()">Create inbox &amp; connect app</button>
   <div class="status" id="s2"></div>
 </div>
 
+<!-- STEP 3 -->
 <div class="step locked" id="step3">
-  <span class="step-n" id="n3">3</span><span class="step-t">Build the Shortcut on your iPhone</span>
-  <p>Open the <b>Shortcuts</b> app → <b>+</b> → name it <b>Forward ADCB SMS</b>. Add these two actions:</p>
-  <ol>
-    <li>Action <b>“Format Date”</b> — Date: <b>Current Date</b>, Format: <b>Custom</b>, type: <code>yyyyMMddHHmmss</code></li>
-    <li>Action <b>“Get Contents of URL”</b> — paste the URL below, tap <b>Show More</b>, set Method to <b>PATCH</b>, add the two headers, then set Request Body to <b>JSON</b> and build:
-      <br>• field <b>Dictionary</b> named <code>files</code>
-      <br>• inside it, field <b>Dictionary</b> — for its key type <code>sms-</code>, insert the <b>Formatted Date</b> variable, type <code>.txt</code>
-      <br>• inside that, field <b>Text</b> named <code>content</code> with value = <b>Shortcut Input</b></li>
-  </ol>
-  <span class="copyrow lbl">URL</span>
+  <span class="step-n" id="n3">3</span><span class="step-t">Build the Shortcut — just one action</span>
+  <p>Open the <b>Shortcuts</b> app → <b>+</b> → name it <b>Forward ADCB SMS</b>. Add one action: <b>"Get Contents of URL"</b>.</p>
+
+  <span class="lbl">URL — tap to copy, paste into the action</span>
   <div class="copyrow"><code id="v-url">—</code><button onclick="cp('v-url',this)">Copy</button></div>
-  <span class="copyrow lbl">Header 1 — key <b style="color:#fff">Authorization</b>, value:</span>
+
+  <p style="margin-top:14px">Tap <b>Show More</b> inside the action and fill in:</p>
+  <ul>
+    <li><b>Method:</b> POST</li>
+    <li><b>Headers:</b> add two:
+      <ul>
+        <li>Key <code>Authorization</code> → value below</li>
+        <li>Key <code>Accept</code> → <code>application/vnd.github+json</code></li>
+      </ul>
+    </li>
+  </ul>
+  <span class="lbl">Authorization header value</span>
   <div class="copyrow"><code id="v-auth">—</code><button onclick="cp('v-auth',this)">Copy</button></div>
-  <span class="copyrow lbl">Header 2 — key <b style="color:#fff">Accept</b>, value:</span>
-  <div class="copyrow"><code id="v-accept">application/vnd.github+json</code><button onclick="cp('v-accept',this)">Copy</button></div>
-  <div class="warn">⚠️ The Authorization value contains your token. Don't screenshot or share it.</div>
-  <p style="margin-top:14px"><b style="color:#fff">Then make it automatic:</b></p>
+  <div class="warn">⚠️ This contains your token. Don't screenshot or share it.</div>
+  <ul style="margin-top:14px">
+    <li><b>Request Body:</b> JSON</li>
+    <li>Tap <b>Add new field</b> → choose <b>Text</b></li>
+    <li>Key: <code>body</code> · Value: tap the variable token (coloured pill) → pick <b>Shortcut Input</b></li>
+  </ul>
+
+  <p>That's the whole Shortcut — just one action, one JSON field. Now make it automatic:</p>
   <ol>
     <li>Shortcuts → <b>Automation</b> tab → <b>+</b> → <b>Message</b></li>
     <li><i>Message Contains:</i> <code>ADCB</code> · leave <i>From</i> empty</li>
-    <li>Select <b>Run Immediately</b> (iOS 17+), then choose <b>Forward ADCB SMS</b></li>
+    <li>Select <b>Run Immediately</b> (iOS 17+) → choose <b>Forward ADCB SMS</b></li>
   </ol>
 </div>
 
+<!-- STEP 4 -->
 <div class="step locked" id="step4">
   <span class="step-n" id="n4">4</span><span class="step-t">Test it end-to-end</span>
-  <p><b>A.</b> First, simulate the phone side — this sends a fake ADCB alert into your inbox the same way the Shortcut will:</p>
-  <button class="btn btn-grey" onclick="sendTest()">Send a test alert</button>
-  <p><b>B.</b> Then check what's in the inbox:</p>
+  <p><b>A.</b> Simulate the phone side — this posts a fake ADCB alert into the inbox exactly as the Shortcut will:</p>
+  <button class="btn btn-grey" id="test-btn" onclick="sendTest()">Send a test alert</button>
+  <p><b>B.</b> Check what's in the inbox:</p>
   <button class="btn btn-grey" onclick="checkInbox()">Check inbox</button>
   <div class="status" id="s4"></div>
-  <p><b>C.</b> Finally, test the real Shortcut: send yourself an SMS/iMessage containing <code>ADCB … charged AED 10.00 at TEST CAFE on 01/06/2026</code>, wait a few seconds, and tap <b>Check inbox</b> again — a second file should appear.</p>
+  <p><b>C.</b> Test the real Shortcut — run it manually by tapping <b>▶</b> in Shortcuts, paste an ADCB message when prompted, then tap Check inbox again. A new comment should appear.</p>
   <a class="btn btn-blue" href="index.html">Open Budget app → Import → Sync New Alerts</a>
 </div>
 
@@ -97,7 +110,6 @@ input:focus { border-color:var(--blue); }
 var CACHE_KEY = "bgt_v7";
 var gistId = null, token = null;
 
-// If the app already has a gist connected, restore state so this page can re-test
 try {
   var raw = localStorage.getItem(CACHE_KEY);
   if (raw) { var app = JSON.parse(raw); if (app.smsSync && app.smsSync.gistId) { gistId = app.smsSync.gistId; } }
@@ -108,14 +120,17 @@ function unlock(n) { document.getElementById("step"+n).classList.remove("locked"
 function markDone(n) { var el = document.getElementById("n"+n); el.classList.add("done"); el.textContent = "✓"; }
 function cp(id, btn) {
   var txt = document.getElementById(id).textContent;
-  (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(function(){ btn.textContent = "Copied"; setTimeout(function(){ btn.textContent = "Copy"; }, 1500); }).catch(function(){
+  (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(function(){
+    btn.textContent = "Copied"; setTimeout(function(){ btn.textContent = "Copy"; }, 1500);
+  }).catch(function(){
     var ta = document.createElement("textarea"); ta.value = txt; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); document.body.removeChild(ta);
     btn.textContent = "Copied"; setTimeout(function(){ btn.textContent = "Copy"; }, 1500);
   });
 }
 
 function fillStep3() {
-  document.getElementById("v-url").textContent = "https://api.github.com/gists/" + gistId;
+  // Comments API endpoint — the Shortcut POSTs here; one JSON field: body = SMS text
+  document.getElementById("v-url").textContent = "https://api.github.com/gists/" + gistId + "/comments";
   document.getElementById("v-auth").textContent = token ? ("Bearer " + token) : "Bearer <your ghp_… token>";
   unlock(3); unlock(4);
 }
@@ -131,7 +146,6 @@ function saveGistIdToApp(id) {
       return true;
     }
   } catch(e) {}
-  // App hasn't been opened in this browser yet; it adopts this on first load
   try { localStorage.setItem("bgt_gist_pending", id); } catch(e) {}
   return false;
 }
@@ -144,7 +158,7 @@ function gh(method, path, body) {
   }).then(function(r) {
     if (r.status === 401) throw new Error("Token rejected — check you copied the full ghp_… value");
     if (r.status === 403) throw new Error("Token lacks the gist permission — recreate it with only the gist scope");
-    if (!r.ok) throw new Error("GitHub returned " + r.status);
+    if (!r.ok) throw new Error("GitHub returned " + r.status + " — " + r.statusText);
     return r.json();
   });
 }
@@ -153,7 +167,6 @@ function createGist() {
   token = document.getElementById("token").value.trim();
   if (!token) { show("s2", "err", "Paste your token first"); return; }
   var btn = document.getElementById("create-btn");
-  // Reuse an existing inbox instead of creating a duplicate
   if (gistId) {
     gh("GET", "/gists/" + gistId).then(function() {
       show("s2", "ok", "✓ Existing inbox found and reused.<br>Gist ID: <b>" + gistId + "</b>");
@@ -164,11 +177,11 @@ function createGist() {
   btn.disabled = true; btn.textContent = "Creating…";
   gh("POST", "/gists", {
     description: "ADCB SMS inbox (Budget app)", public: false,
-    files: { "inbox.md": { content: "ADCB SMS inbox — files named sms-*.txt are picked up by the Budget app." } }
+    files: { "readme.md": { content: "ADCB SMS inbox. The Budget app reads comments on this gist; each comment is one SMS alert posted by the iPhone Shortcut." } }
   }).then(function(g) {
     gistId = g.id;
     var direct = saveGistIdToApp(gistId);
-    show("s2", "ok", "✓ Secret gist created and connected to the app" + (direct ? "" : " (will connect when you next open it)") + ".<br>Gist ID: <b>" + gistId + "</b>");
+    show("s2", "ok", "✓ Inbox created and connected to the app" + (direct ? "" : " (will connect when you next open the app)") + ".<br>Gist ID: <b>" + gistId + "</b>");
     btn.disabled = false; btn.textContent = "Create inbox & connect app";
     markDone(1); markDone(2); fillStep3();
   }).catch(function(err) {
@@ -182,30 +195,34 @@ function sendTest() {
   if (!gistId || !token) { show("s4", "err", "Complete step 2 first"); return; }
   var now = new Date();
   var ds = String(now.getDate()).padStart(2,"0") + "/" + String(now.getMonth()+1).padStart(2,"0") + "/" + now.getFullYear();
-  var stamp = now.toISOString().replace(/\D/g, "").slice(0, 14);
-  var files = {};
-  files["sms-" + stamp + ".txt"] = { content: "Your ADCB Credit Card ending 0000 has been charged AED 10.00 at SETUP TEST CAFE ABU DHABI ARE on " + ds + ". Available limit AED 1,000.00." };
-  gh("PATCH", "/gists/" + gistId, { files: files }).then(function() {
-    show("s4", "ok", "✓ Test alert delivered to the inbox. Now open the Budget app → Import → <b>Sync New Alerts</b> — you should see a 10.00 charge at SETUP TEST CAFE (skip it instead of applying).");
+  var btn = document.getElementById("test-btn");
+  btn.disabled = true; btn.textContent = "Sending…";
+  gh("POST", "/gists/" + gistId + "/comments", {
+    body: "Your ADCB Credit Card ending 0000 has been charged AED 10.00 at SETUP TEST CAFE ABU DHABI ARE on " + ds + ". Available limit AED 1,000.00."
+  }).then(function() {
+    btn.disabled = false; btn.textContent = "Send a test alert";
+    show("s4", "ok", "✓ Test alert posted. Now open the Budget app → Import → <b>Sync New Alerts</b> — a AED 10.00 charge at SETUP TEST CAFE should appear (skip it, don't apply).");
     markDone(4);
-  }).catch(function(err) { show("s4", "err", err.message); });
+  }).catch(function(err) { btn.disabled = false; btn.textContent = "Send a test alert"; show("s4", "err", err.message); });
 }
 
 function checkInbox() {
   if (!gistId) { show("s4", "err", "Complete step 2 first"); return; }
-  fetch("https://api.github.com/gists/" + gistId + "?t=" + Date.now()).then(function(r) {
-    if (!r.ok) throw new Error("GitHub returned " + r.status);
-    return r.json();
-  }).then(function(g) {
-    var names = Object.keys(g.files || {}).filter(function(n) { return n.indexOf("sms-") === 0; });
-    if (!names.length) { show("s4", "info", "Inbox is connected but empty — no sms-*.txt files yet."); return; }
-    var list = names.sort().slice(-5).map(function(n) { return "• " + n; }).join("<br>");
-    show("s4", "ok", "✓ " + names.length + " alert(s) in the inbox. Latest:<br>" + list);
-  }).catch(function(err) { show("s4", "err", err.message); });
+  fetch("https://api.github.com/gists/" + encodeURIComponent(gistId) + "/comments?per_page=10&t=" + Date.now())
+    .then(function(r) {
+      if (!r.ok) throw new Error("GitHub returned " + r.status);
+      return r.json();
+    }).then(function(comments) {
+      if (!comments.length) { show("s4", "info", "Inbox connected but no comments yet — send a test alert first."); return; }
+      var list = comments.slice(-5).map(function(c) {
+        return "• " + new Date(c.created_at).toLocaleString("en-GB") + ": " + (c.body || "").slice(0, 60) + "…";
+      }).join("<br>");
+      show("s4", "ok", "✓ " + comments.length + " alert(s) in inbox. Latest:<br>" + list);
+    }).catch(function(err) { show("s4", "err", err.message); });
 }
 
 if (gistId) {
-  show("s2", "info", "An inbox is already connected (Gist ID: <b>" + gistId + "</b>). Paste your token to reuse it for testing, or continue to step 3.");
+  show("s2", "info", "Inbox already connected (Gist ID: <b>" + gistId + "</b>). Paste your token to reuse it for testing, or skip to step 3.");
   fillStep3();
 }
 </script>

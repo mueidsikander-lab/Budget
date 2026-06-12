@@ -2150,42 +2150,44 @@ function syncSMSFromGist() {
   if (!gid) { toast("Set your Gist ID in Settings first", "warn"); return; }
   var btn = document.getElementById("sms-sync-btn");
   btn.disabled = true; btn.textContent = "Syncing...";
-  fetch("https://api.github.com/gists/" + encodeURIComponent(gid) + "?t=" + Date.now())
-    .then(function(r) {
-      if (r.status === 404) throw new Error("Gist not found — check the ID in Settings");
-      if (!r.ok) throw new Error("GitHub returned " + r.status);
-      return r.json();
-    })
-    .then(function(g) {
-      var processed = APP.smsSync.processed || [];
-      var names = Object.keys(g.files || {}).filter(function(n) {
-        return n.indexOf("sms-") === 0 && processed.indexOf(n) === -1;
+  // Use the Gist Comments API — each SMS alert is posted as a comment by the
+  // iPhone Shortcut (POST /gists/{id}/comments with body: "SMS text").
+  // Comments are readable without auth since we know the secret gist ID.
+  function fetchPage(page, acc) {
+    return fetch("https://api.github.com/gists/" + encodeURIComponent(gid) + "/comments?per_page=100&page=" + page + "&t=" + Date.now())
+      .then(function(r) {
+        if (r.status === 404) throw new Error("Gist not found — check the ID in Settings");
+        if (!r.ok) throw new Error("GitHub returned " + r.status);
+        return r.json();
+      })
+      .then(function(comments) {
+        var combined = acc.concat(comments);
+        return comments.length === 100 ? fetchPage(page + 1, combined) : combined;
       });
-      APP.smsSync.lastSync = new Date().toISOString();
-      pendingSmsFiles = [];
-      var allTxns = [];
-      for (var i = 0; i < names.length; i++) {
-        var f = g.files[names[i]];
-        var parsed = parseSMSMessages(f.content || "");
-        if (!parsed.txns.length) {
-          // Nothing usable in this alert; don't re-fetch it forever
-          APP.smsSync.processed.push(names[i]);
-          continue;
-        }
-        pendingSmsFiles.push(names[i]);
-        allTxns = allTxns.concat(parsed.txns);
-      }
-      if (APP.smsSync.processed.length > 500) APP.smsSync.processed = APP.smsSync.processed.slice(-500);
-      saveData(); updateSmsSyncUI();
-      btn.disabled = false; btn.textContent = "Sync New Alerts";
-      if (!allTxns.length) { toast(names.length ? "No transactions found in new alerts" : "No new alerts"); return; }
-      toast(allTxns.length + " new transaction(s) found");
-      previewSMSTxns({ txns: allTxns, periodFrom: null, periodTo: null });
-    })
-    .catch(function(err) {
-      btn.disabled = false; btn.textContent = "Sync New Alerts";
-      toast(err.message || "Sync failed — check connection", "err");
-    });
+  }
+  fetchPage(1, []).then(function(comments) {
+    var processed = APP.smsSync.processed || [];
+    var newComments = comments.filter(function(c) { return processed.indexOf(String(c.id)) === -1; });
+    APP.smsSync.lastSync = new Date().toISOString();
+    pendingSmsFiles = [];
+    var allTxns = [];
+    for (var i = 0; i < newComments.length; i++) {
+      var c = newComments[i];
+      var parsed = parseSMSMessages(c.body || "");
+      if (!parsed.txns.length) { APP.smsSync.processed.push(String(c.id)); continue; }
+      pendingSmsFiles.push(String(c.id));
+      allTxns = allTxns.concat(parsed.txns);
+    }
+    if (APP.smsSync.processed.length > 1000) APP.smsSync.processed = APP.smsSync.processed.slice(-1000);
+    saveData(); updateSmsSyncUI();
+    btn.disabled = false; btn.textContent = "Sync New Alerts";
+    if (!allTxns.length) { toast(newComments.length ? "No transactions found in new alerts" : "No new alerts"); return; }
+    toast(allTxns.length + " new transaction(s) found");
+    previewSMSTxns({ txns: allTxns, periodFrom: null, periodTo: null });
+  }).catch(function(err) {
+    btn.disabled = false; btn.textContent = "Sync New Alerts";
+    toast(err.message || "Sync failed — check connection", "err");
+  });
 }
 
 function parseCSV(text) {
