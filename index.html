@@ -2,15 +2,16 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="color-scheme" content="dark">
 <title>Budget</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Budget">
 <meta name="theme-color" content="#000000">
-<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png">
 <style>
 :root {
   --bg: #000;
@@ -124,14 +125,14 @@ body {
 .cbk-name { flex: 0 0 38%; font-size: 12px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cbk-bar { flex: 1; height: 8px; border-radius: 4px; background: rgba(255,255,255,0.06); overflow: hidden; }
 .cbk-fill { height: 100%; border-radius: 4px; transition: width 0.35s ease-out; }
-.cbk-amt { flex: 0 0 62px; text-align: right; font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.cbk-amt { flex: 0 1 auto; min-width: 62px; text-align: right; font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .cbk-delta { flex: 0 0 52px; text-align: right; font-size: 10.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .cbk-delta.up { color: var(--red); } .cbk-delta.down { color: var(--green); } .cbk-delta.flat { color: var(--text-3); }
-.sms-import-section { background: var(--card); border: 1px solid var(--hair); border-radius: 14px; padding: 14px; margin-bottom: 14px; }
-.sms-import-title { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
-.sms-import-sub { font-size: 12px; color: var(--text-2); margin-bottom: 10px; line-height: 1.4; }
-.sms-textarea { width: 100%; min-height: 90px; background: var(--bg); border: 1px solid var(--hair); border-radius: 10px; padding: 10px; font-family: inherit; font-size: 12px; color: var(--text); resize: vertical; box-sizing: border-box; outline: none; }
-.sms-textarea:focus { border-color: var(--blue); }
+.alert-import-section { background: var(--card); border: 1px solid var(--hair); border-radius: 14px; padding: 14px; margin-bottom: 14px; }
+.alert-import-title { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+.alert-import-sub { font-size: 12px; color: var(--text-2); margin-bottom: 10px; line-height: 1.4; }
+.alert-textarea { width: 100%; min-height: 90px; background: var(--bg); border: 1px solid var(--hair); border-radius: 10px; padding: 10px; font-family: inherit; font-size: 12px; color: var(--text); resize: vertical; box-sizing: border-box; outline: none; }
+.alert-textarea:focus { border-color: var(--blue); }
 .import-or-divider { display: flex; align-items: center; gap: 10px; margin: 0 0 14px; color: var(--text-3); font-size: 12px; font-weight: 500; }
 .import-or-divider::before, .import-or-divider::after { content: ''; flex: 1; height: 1px; background: var(--hair); }
 .sec-head { display: flex; justify-content: space-between; align-items: baseline; padding: 18px 4px 8px; }
@@ -487,8 +488,8 @@ body {
       <div class="h-month-sub" id="month-sub">Active cycle</div>
     </div>
     <div class="h-actions">
-      <button class="icon-btn" onclick="openShareModal()" title="Share">↗</button>
-      <button class="icon-btn" onclick="openConcludeModal()" title="Conclude month">✓</button>
+      <button class="icon-btn" onclick="openShareModal()" title="Share" aria-label="Share budget">↗</button>
+      <button class="icon-btn" onclick="openConcludeModal()" title="Conclude month" aria-label="Conclude month">✓</button>
     </div>
   </div>
 
@@ -504,19 +505,19 @@ body {
 
 <div class="page" id="pg-upload">
   <div class="page-h">Import Statement</div>
-  <div class="page-sub">Paste ADCB SMS alerts to import instantly, or upload your credit card CSV/PDF.</div>
+  <div class="page-sub">Paste ADCB email alerts to import instantly, or upload your credit card CSV/PDF.</div>
 
-  <div class="sms-import-section">
-    <div class="sms-import-title">📲 Auto-Sync from Phone</div>
-    <div class="sms-import-sub" id="sms-sync-sub">Pulls new ADCB alerts forwarded by your iPhone Shortcut.</div>
-    <button class="btn btn-blue" style="width:100%" id="sms-sync-btn" onclick="syncSMSFromGist()">Sync New Alerts</button>
+  <div class="alert-import-section">
+    <div class="alert-import-title">📧 Auto-Sync from Email</div>
+    <div class="alert-import-sub" id="alert-sync-sub">Pulls new ADCB alerts forwarded by your iPhone Shortcut.</div>
+    <button class="btn btn-blue" style="width:100%" id="alert-sync-btn" onclick="syncAlertsFromGist()">Sync New Alerts</button>
   </div>
 
-  <div class="sms-import-section">
-    <div class="sms-import-title">💬 Paste ADCB Message Alerts</div>
-    <div class="sms-import-sub">Copy SMS alerts from your phone and paste them all here at once. Each alert is parsed automatically.</div>
-    <textarea id="sms-input" class="sms-textarea" placeholder="Your ADCB Credit Card ending 1234 has been charged AED 85.50 at SPINNEYS ABU DHABI ARE on 12/06/2026. Available limit AED 3,500.00.&#10;&#10;Your ADCB Credit Card ending 1234 has been charged AED 120.00 at NOON.COM ARE on 11/06/2026..."></textarea>
-    <button class="btn btn-blue" style="width:100%;margin-top:10px" onclick="parseSMSText()">Parse &amp; Preview</button>
+  <div class="alert-import-section">
+    <div class="alert-import-title">💬 Paste ADCB Email Alerts</div>
+    <div class="alert-import-sub">Copy email alerts from your phone and paste them all here at once. Each alert is parsed automatically.</div>
+    <textarea id="alert-input" class="alert-textarea" placeholder="Your ADCB Credit Card ending 1234 has been charged AED 85.50 at SPINNEYS ABU DHABI ARE on 12/06/2026. Available limit AED 3,500.00.&#10;&#10;Your ADCB Credit Card ending 1234 has been charged AED 120.00 at NOON.COM ARE on 11/06/2026..."></textarea>
+    <button class="btn btn-blue" style="width:100%;margin-top:10px" onclick="parseAlertText()">Parse &amp; Preview</button>
   </div>
 
   <div class="import-or-divider"><span>or upload a file</span></div>
@@ -524,9 +525,9 @@ body {
   <div class="date-range">
     <div class="date-range-title">Date Range</div>
     <div class="date-range-row">
-      <input type="date" class="date-input" id="date-from">
+      <input type="date" class="date-input" id="date-from" aria-label="From date">
       <span class="date-sep">to</span>
-      <input type="date" class="date-input" id="date-to">
+      <input type="date" class="date-input" id="date-to" aria-label="To date">
     </div>
     <div class="date-presets">
       <button class="date-preset" data-preset="7">Last 7 days</button>
@@ -562,7 +563,7 @@ body {
 <div class="page" id="pg-settings">
   <div class="page-h">Settings</div>
 
-  <div class="s-section-title">Monthly Inflow</div>
+  <label class="s-section-title" for="inflow-input" style="display:block">Monthly Inflow</label>
   <div class="s-section">
     <div class="s-inflow">
       <input type="number" id="inflow-input" inputmode="decimal">
@@ -572,7 +573,7 @@ body {
   <div class="s-section-title">Accounts</div>
   <div class="s-section">
     <div class="s-inflow" style="padding-bottom:6px">
-      <div style="font-size:11px;color:var(--text-2);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Debit Account Balance</div>
+      <label for="debit-balance-input" style="font-size:11px;color:var(--text-2);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;display:block">Debit Account Balance</label>
       <input type="number" id="debit-balance-input" inputmode="decimal" placeholder="Enter balance">
       <div style="font-size:11px;color:var(--text-3);margin-top:8px;text-align:center" id="debit-balance-meta"></div>
     </div>
@@ -586,12 +587,12 @@ body {
     </div>
   </div>
 
-  <div class="s-section-title">SMS Auto-Sync</div>
+  <div class="s-section-title">Email Auto-Sync</div>
   <div class="s-section">
     <div class="s-inflow" style="padding-bottom:6px">
-      <div style="font-size:11px;color:var(--text-2);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">GitHub Gist ID</div>
+      <label for="gist-id-input" style="font-size:11px;color:var(--text-2);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;display:block">GitHub Gist ID</label>
       <input type="text" id="gist-id-input" placeholder="e.g. a1b2c3d4e5f6..." autocapitalize="off" autocorrect="off" spellcheck="false" style="font-size:13px">
-      <div style="font-size:11px;color:var(--text-3);margin-top:8px;text-align:center" id="gist-id-meta">Your iPhone Shortcut forwards ADCB alerts into this Gist</div>
+      <div style="font-size:11px;color:var(--text-3);margin-top:8px;text-align:center" id="gist-id-meta">Your iPhone Shortcut forwards ADCB email alerts into this Gist</div>
     </div>
     <div class="s-item" onclick="window.open('setup.html','_blank')">
       <span class="s-icon s-i-blue">🛠</span>
@@ -675,6 +676,20 @@ function fm(n) { return Math.round(n).toLocaleString("en"); }
 function fd(n) { return (n || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
 function escHtml(s) { return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
 function uid(prefix) { return (prefix || "x") + Date.now().toString(36) + Math.floor(Math.random() * 1e6).toString(36); }
+var _scriptCache = {};
+// Injects a <script> on first use and caches the load promise, so html2canvas/
+// pdf.js (large, rarely-used libraries) only cost bytes when actually invoked.
+function loadScript(src) {
+  if (_scriptCache[src]) return _scriptCache[src];
+  _scriptCache[src] = new Promise(function (resolve, reject) {
+    var s = document.createElement("script");
+    s.src = src;
+    s.onload = function () { resolve(); };
+    s.onerror = function () { delete _scriptCache[src]; reject(new Error("Failed to load " + src)); };
+    document.head.appendChild(s);
+  });
+  return _scriptCache[src];
+}
 function getSpent(r) { if (r.p) return r.b; if (r.cs !== undefined && r.cs !== null) return r.cs; return r.s || 0; }
 function pctCls(p) { return p >= 75 ? "g" : (p >= 40 ? "y" : "r"); }
 
@@ -739,6 +754,14 @@ function defaultAcctForCat(cat) {
 function loadCache() { try { var r = localStorage.getItem(CACHE_KEY); if (r) return JSON.parse(r); } catch (e) {} return null; }
 function saveCache() { try { localStorage.setItem(CACHE_KEY, JSON.stringify(APP)); } catch (e) {} }
 function saveData() { saveCache(); }
+var _debouncedSaveTimer = null;
+// Free-text inputs (reimbursement/outflow desc & amount) fire on every
+// keystroke; debounce the full-APP localStorage write so typing doesn't
+// re-serialize the whole object per character.
+function debouncedSaveCache() {
+  clearTimeout(_debouncedSaveTimer);
+  _debouncedSaveTimer = setTimeout(saveCache, 400);
+}
 
 function fixApp() {
   if (!APP.mappings) APP.mappings = {};
@@ -756,10 +779,13 @@ function fixApp() {
   if (!APP.accounts) APP.accounts = {};
   if (!APP.accounts.debit) APP.accounts.debit = { balance: null, balanceDate: null, lastUploadTo: null };
   if (!APP.accounts.cc) APP.accounts.cc = { lastUploadTo: null };
-  if (!APP.smsSync) APP.smsSync = { gistId: null, processed: [], lastSync: null };
+  // Migrate the old SMS-relay field name to the email-relay one, keeping any
+  // already-connected gist/processed-history so existing users aren't reset.
+  if (!APP.alertSync && APP.smsSync) { APP.alertSync = APP.smsSync; delete APP.smsSync; }
+  if (!APP.alertSync) APP.alertSync = { gistId: null, processed: [], lastSync: null };
   // setup.html stores the gist id here when the app hadn't been opened yet
-  if (!APP.smsSync.gistId) {
-    try { var pg = localStorage.getItem("bgt_gist_pending"); if (pg) { APP.smsSync.gistId = pg; localStorage.removeItem("bgt_gist_pending"); } } catch (e) {}
+  if (!APP.alertSync.gistId) {
+    try { var pg = localStorage.getItem("bgt_gist_pending"); if (pg) { APP.alertSync.gistId = pg; localStorage.removeItem("bgt_gist_pending"); } } catch (e) {}
   }
   // Pre-accounts transactions were all credit card statement imports
   for (var i = 0; i < APP.transactions.length; i++) {
@@ -878,7 +904,7 @@ function drawBudgetSettings() {
     html += '<div style="font-size:11px;color:var(--text-2);margin-top:1px">' + (r.g === 'fixed' ? 'Fixed' : 'Variable') + (r.custom ? ' · custom' : '') + '</div>';
     html += '</div>';
     html += '<div class="bgt-amt-val" data-act="bgt-edit" data-cat="' + escHtml(r.c) + '">AED ' + fm(r.b) + '</div>';
-    if (r.custom) html += '<button class="map-del" data-act="bgt-del" data-cat="' + escHtml(r.c) + '">✕</button>';
+    if (r.custom) html += '<button class="map-del" data-act="bgt-del" data-cat="' + escHtml(r.c) + '" aria-label="Delete ' + escHtml(r.c) + ' category">✕</button>';
     html += '</div>';
     if (isEditing) {
       html += '<div class="bgt-edit">';
@@ -1047,20 +1073,43 @@ for (var i = 0; i < navBtns.length; i++) {
   });
 }
 
-function drawBudget() {
-  var data = APP.budget; if (!data) return;
-  var INFLOW = getTotalInflow();
-  var fixB = 0, fixS = 0, varB = 0, varS = 0, totalS = 0, fixedIdx = [], varIdx = [];
+// Single source of truth for budget totals/savings, consumed by every
+// render path (live Budget page, conclude-month modal/history, share text,
+// share-card images) so they can never independently drift out of sync.
+function computeBudgetTotals() {
+  var data = APP.budget;
+  var BASE = APP.inflow || DEFAULT_INFLOW;
+  var REIMB = reimbTotal();
+  var OUT = outflowTotal();
+  var INFLOW = BASE + REIMB;
+  var fixB = 0, fixS = 0, varB = 0, varS = 0, totalS = 0;
+  var fixedIdx = [], varIdx = [], fixedItems = [], varItems = [];
   for (var i = 0; i < data.length; i++) {
     var sp = getSpent(data[i]);
     totalS += sp;
-    if (data[i].g === "fixed") { fixedIdx.push(i); fixB += data[i].b; fixS += sp; }
-    else { varIdx.push(i); varB += data[i].b; varS += sp; }
+    if (data[i].g === "fixed") { fixedIdx.push(i); fixedItems.push(data[i]); fixB += data[i].b; fixS += sp; }
+    else { varIdx.push(i); varItems.push(data[i]); varB += data[i].b; varS += sp; }
   }
-  var OUT = outflowTotal();
   var fixDisplay = Math.max(fixB, fixS);
   var varDisplay = Math.max(varB, varS) + OUT;
-  var savActual = INFLOW - fixDisplay - varDisplay;
+  var savings = INFLOW - fixDisplay - varDisplay;
+  var savingsPct = INFLOW > 0 ? Math.round(savings / INFLOW * 100) : 0;
+  return {
+    BASE: BASE, REIMB: REIMB, OUT: OUT, INFLOW: INFLOW,
+    fixB: fixB, fixS: fixS, varB: varB, varS: varS, totalS: totalS,
+    fixedIdx: fixedIdx, varIdx: varIdx, fixedItems: fixedItems, varItems: varItems,
+    fixDisplay: fixDisplay, varDisplay: varDisplay,
+    savings: savings, savingsPct: savingsPct
+  };
+}
+
+function drawBudget() {
+  var data = APP.budget; if (!data) return;
+  var t = computeBudgetTotals();
+  var INFLOW = t.INFLOW, fixB = t.fixB, fixS = t.fixS, varB = t.varB, varS = t.varS;
+  var fixedIdx = t.fixedIdx, varIdx = t.varIdx;
+  var OUT = t.OUT;
+  var fixDisplay = t.fixDisplay, varDisplay = t.varDisplay, savActual = t.savings;
 
   document.getElementById("month-display").textContent = APP.currentMonth;
   document.getElementById("month-sub").textContent = APP.history.length > 0 ? APP.history.length + " month" + (APP.history.length > 1 ? "s" : "") + " in history" : "Active cycle";
@@ -1388,7 +1437,7 @@ function renderRow(i) {
 
   var h = '<div class="row' + (r.p ? ' paid' : '') + (isOpen ? ' open' : '') + '" data-cat="' + escHtml(r.c) + '">';
   h += '<div class="row-top">';
-  h += '<input type="checkbox" class="cb-paid" data-cat="' + escHtml(r.c) + '"' + (r.p ? ' checked' : '') + '>';
+  h += '<input type="checkbox" class="cb-paid" data-cat="' + escHtml(r.c) + '" aria-label="Mark ' + escHtml(r.c) + ' as paid"' + (r.p ? ' checked' : '') + '>';
   h += '<span class="row-cat-dot" style="background:' + catColor(r.c) + '"></span>';
   h += '<div class="row-name">' + escHtml(r.c) + '</div>';
   h += '<div class="row-vals">';
@@ -1455,7 +1504,7 @@ function renderTxnList(cat) {
     h += '</select>';
     h += '</div>';
     h += '<div class="txn-amt">' + fd(t.amount) + '</div>';
-    h += '<button class="txn-del" data-act="del-txn" data-id="' + escHtml(t.id) + '" data-cat="' + escHtml(cat) + '" title="Remove">✕</button>';
+    h += '<button class="txn-del" data-act="del-txn" data-id="' + escHtml(t.id) + '" data-cat="' + escHtml(cat) + '" title="Remove" aria-label="Remove transaction: ' + escHtml(t.desc || cat) + '">✕</button>';
     h += '</div>';
   }
   h += '</div>';
@@ -1490,7 +1539,7 @@ function drawReimbursements() {
       html += '<div class="reimb-row">';
       html += '<input type="text" class="reimb-desc" data-id="' + escHtml(entry.id) + '" data-act="reimb-desc" placeholder="Description" value="' + escHtml(entry.desc) + '">';
       html += '<input type="number" inputmode="decimal" class="reimb-amt" data-id="' + escHtml(entry.id) + '" data-act="reimb-amt" placeholder="0.00" step="0.01" min="0" value="' + escHtml(amt) + '">';
-      html += '<button class="reimb-del" data-id="' + escHtml(entry.id) + '" data-act="reimb-del">✕</button>';
+      html += '<button class="reimb-del" data-id="' + escHtml(entry.id) + '" data-act="reimb-del" aria-label="Delete reimbursement">✕</button>';
       html += '</div>';
     }
     html += '<button class="reimb-add" data-act="reimb-add">+ Add Reimbursement</button>';
@@ -1522,7 +1571,7 @@ function drawOutflows() {
       html += '<div class="reimb-row">';
       html += '<input type="text" class="reimb-desc" data-id="' + escHtml(entry.id) + '" data-act="outflow-desc" placeholder="Description" value="' + escHtml(entry.desc) + '">';
       html += '<input type="number" inputmode="decimal" class="reimb-amt" data-id="' + escHtml(entry.id) + '" data-act="outflow-amt" placeholder="0.00" step="0.01" min="0" value="' + escHtml(amt) + '">';
-      html += '<button class="reimb-del" data-id="' + escHtml(entry.id) + '" data-act="outflow-del">✕</button>';
+      html += '<button class="reimb-del" data-id="' + escHtml(entry.id) + '" data-act="outflow-del" aria-label="Delete outflow">✕</button>';
       html += '</div>';
     }
     html += '<button class="reimb-add outflow-add" data-act="outflow-add">+ Add Outflow</button>';
@@ -1696,7 +1745,7 @@ function bindBudgetEvents() {
     var act = t.getAttribute && t.getAttribute("data-act");
     if (act === "reimb-desc") {
       var id = t.getAttribute("data-id");
-      var entry = findReimb(id); if (entry) { entry.desc = t.value; saveCache(); }
+      var entry = findReimb(id); if (entry) { entry.desc = t.value; debouncedSaveCache(); }
       return;
     }
     if (act === "reimb-amt") {
@@ -1704,7 +1753,7 @@ function bindBudgetEvents() {
       var entry = findReimb(id); if (entry) {
         var v = parseFloat(t.value);
         entry.amount = isNaN(v) ? "" : v;
-        saveCache();
+        debouncedSaveCache();
         recalcHeader();
         var tot = reimbTotal();
         var totEl = document.querySelector("#reimb-section .reimb-total");
@@ -1714,7 +1763,7 @@ function bindBudgetEvents() {
     }
     if (act === "outflow-desc") {
       var id = t.getAttribute("data-id");
-      var entry = findOutflow(id); if (entry) { entry.desc = t.value; saveCache(); }
+      var entry = findOutflow(id); if (entry) { entry.desc = t.value; debouncedSaveCache(); }
       return;
     }
     if (act === "outflow-amt") {
@@ -1722,7 +1771,7 @@ function bindBudgetEvents() {
       var entry = findOutflow(id); if (entry) {
         var v = parseFloat(t.value);
         entry.amount = isNaN(v) ? "" : v;
-        saveCache();
+        debouncedSaveCache();
         recalcHeader();
         var tot = outflowTotal();
         var totEl = document.querySelector("#outflow-section .reimb-total");
@@ -1766,20 +1815,10 @@ function findOutflow(id) { var o = APP.outflows || []; for (var i = 0; i < o.len
 
 function recalcHeader() {
   var data = APP.budget; if (!data) return;
-  var INFLOW = getTotalInflow();
-  var fixB = 0, fixS = 0, varB = 0, varS = 0;
-  for (var i = 0; i < data.length; i++) {
-    var sp = getSpent(data[i]);
-    if (data[i].g === "fixed") { fixB += data[i].b; fixS += sp; }
-    else { varB += data[i].b; varS += sp; }
-  }
-  var OUT = outflowTotal();
-  var fixDisplay = Math.max(fixB, fixS);
-  var varDisplay = Math.max(varB, varS) + OUT;
-  var savActual = INFLOW - fixDisplay - varDisplay;
-  document.getElementById("hero-card").innerHTML = renderHero(fixS, varS + OUT, savActual, INFLOW, fixDisplay, varDisplay);
-  document.getElementById("stat-row").innerHTML = renderStats(fixB, fixS, varB, varS);
-  renderForecast(INFLOW, OUT);
+  var t = computeBudgetTotals();
+  document.getElementById("hero-card").innerHTML = renderHero(t.fixS, t.varS + t.OUT, t.savings, t.INFLOW, t.fixDisplay, t.varDisplay);
+  document.getElementById("stat-row").innerHTML = renderStats(t.fixB, t.fixS, t.varB, t.varS);
+  renderForecast(t.INFLOW, t.OUT);
   renderDashboard();
 }
 
@@ -1849,44 +1888,29 @@ function recategorizeTxn(id, newCat) {
 function openConcludeModal() {
   if (editingCat) editingCat = null;
   var BASE = APP.inflow || DEFAULT_INFLOW;
-  var REIMB = reimbTotal();
-  var OUT = outflowTotal();
-  var INFLOW = BASE + REIMB;
-  var totalS = 0, fixB = 0, fixS = 0, varB = 0, varS = 0;
-  for (var i = 0; i < APP.budget.length; i++) {
-    var sp = getSpent(APP.budget[i]); totalS += sp;
-    if (APP.budget[i].g === "fixed") { fixB += APP.budget[i].b; fixS += sp; }
-    else { varB += APP.budget[i].b; varS += sp; }
-  }
-  var sav = INFLOW - Math.max(fixB, fixS) - Math.max(varB, varS) - OUT;
-  var savPct = INFLOW > 0 ? Math.round(sav / INFLOW * 100) : 0;
-  var html = '<div class="modal-row"><span style="color:var(--text-2)">' + APP.currentMonth + '</span><span></span></div>';
+  var t = computeBudgetTotals();
+  var REIMB = t.REIMB, OUT = t.OUT, totalS = t.totalS;
+  var sav = t.savings, savPct = t.savingsPct;
+  var html = '<div class="modal-row"><span style="color:var(--text-2)">' + escHtml(APP.currentMonth) + '</span><span></span></div>';
   html += '<div class="modal-row"><span>Inflow</span><span>' + fm(BASE) + '</span></div>';
   if (REIMB > 0) html += '<div class="modal-row"><span style="color:var(--green)">Reimbursements</span><span style="color:var(--green)">+' + fm(REIMB) + '</span></div>';
   html += '<div class="modal-row"><span>Spent</span><span>' + fm(totalS) + '</span></div>';
   if (OUT > 0) html += '<div class="modal-row"><span style="color:var(--orange)">Outflows (extra spend)</span><span style="color:var(--orange)">+' + fm(OUT) + '</span></div>';
   html += '<div class="modal-row tot"><span>Savings</span><span style="color:' + (sav >= 0 ? 'var(--green)' : 'var(--red)') + '">' + fm(sav) + ' · ' + savPct + '%</span></div>';
-  html += '<div style="font-size:12px;color:var(--text-2);margin-top:12px">Next month: <strong style="color:var(--text)">' + nextMonthYear(APP.currentMonth) + '</strong></div>';
+  html += '<div style="font-size:12px;color:var(--text-2);margin-top:12px">Next month: <strong style="color:var(--text)">' + escHtml(nextMonthYear(APP.currentMonth)) + '</strong></div>';
   document.getElementById("conclude-summary").innerHTML = html;
   openModal("conclude-modal");
 }
 
 function confirmConclude() {
-  var BASE = APP.inflow || DEFAULT_INFLOW;
-  var REIMB = reimbTotal();
-  var OUT = outflowTotal();
-  var INFLOW = BASE + REIMB;
-  var totalS = 0, fixB = 0, fixS = 0, varB = 0, varS = 0;
+  var t = computeBudgetTotals();
+  var BASE = t.BASE, REIMB = t.REIMB, OUT = t.OUT, INFLOW = t.INFLOW;
+  var fixS = t.fixS, varS = t.varS + OUT, totalS = t.totalS + OUT;
+  var savAmt = t.savings;
   var snapshotBudget = [];
   for (var i = 0; i < APP.budget.length; i++) {
-    var sp = getSpent(APP.budget[i]);
-    totalS += sp;
-    if (APP.budget[i].g === "fixed") { fixB += APP.budget[i].b; fixS += sp; }
-    else { varB += APP.budget[i].b; varS += sp; }
-    snapshotBudget.push({ c: APP.budget[i].c, b: APP.budget[i].b, s: sp, g: APP.budget[i].g, p: APP.budget[i].p });
+    snapshotBudget.push({ c: APP.budget[i].c, b: APP.budget[i].b, s: getSpent(APP.budget[i]), g: APP.budget[i].g, p: APP.budget[i].p });
   }
-  totalS += OUT; varS += OUT;
-  var savAmt = INFLOW - Math.max(fixB, fixS) - Math.max(varB, varS - OUT) - OUT;
   var sortedSpend = snapshotBudget.slice().sort(function (a, b) { return b.s - a.s; });
   var topCats = sortedSpend.slice(0, 3).filter(function (c) { return c.s > 0; }).map(function (c) { return { c: c.c, s: c.s }; });
   var overCats = snapshotBudget.filter(function (c) { return c.s > c.b && c.b > 0; }).map(function (c) { return { c: c.c, over: c.s - c.b }; });
@@ -1969,7 +1993,7 @@ function drawHistory() {
     var topCatStr = h.topCategories && h.topCategories.length > 0 ? h.topCategories[0].c : "—";
     html += '<div class="month-card" data-i="' + i + '">';
     html += '<div class="mc-header">';
-    html += '<div><div class="mc-month">' + h.month + '</div><div class="mc-meta">Concluded ' + new Date(h.concludedAt).toLocaleDateString("en-GB") + '</div></div>';
+    html += '<div><div class="mc-month">' + escHtml(h.month) + '</div><div class="mc-meta">Concluded ' + new Date(h.concludedAt).toLocaleDateString("en-GB") + '</div></div>';
     html += '<div style="text-align:right"><div class="mc-savings ' + (h.savings >= 0 ? 'g' : 'r') + '">' + fm(h.savings) + '</div><div class="mc-meta">' + h.savingsPct + '% saved</div></div>';
     html += '</div>';
     html += '<div class="mc-bar">';
@@ -1978,7 +2002,7 @@ function drawHistory() {
     html += '</div>';
     html += '<div class="mc-stats">';
     html += '<div><span style="color:var(--text)">Spent:</span> ' + fm(h.totalSpent) + '</div>';
-    html += '<div><span style="color:var(--text)">Top:</span> ' + topCatStr + '</div>';
+    html += '<div><span style="color:var(--text)">Top:</span> ' + escHtml(topCatStr) + '</div>';
     if (h.overBudget && h.overBudget.length > 0) html += '<div style="color:var(--red)">⚠ ' + h.overBudget.length + ' over</div>';
     html += '</div>';
     html += '</div>';
@@ -2005,7 +2029,7 @@ function drawHistory() {
           if (b.s === 0 && !b.p) continue;
           var pct = b.b > 0 ? Math.round(b.s / b.b * 100) : 0;
           var color = b.g === "fixed" ? "var(--blue)" : "var(--orange)";
-          dh += '<div class="md-row"><div class="md-cat"><span class="md-cat-dot" style="background:' + color + '"></span>' + b.c + '</div><div>' + fm(b.s) + ' / ' + fm(b.b) + ' <span style="color:var(--text-2)">(' + pct + '%)</span></div></div>';
+          dh += '<div class="md-row"><div class="md-cat"><span class="md-cat-dot" style="background:' + color + '"></span>' + escHtml(b.c) + '</div><div>' + fm(b.s) + ' / ' + fm(b.b) + ' <span style="color:var(--text-2)">(' + pct + '%)</span></div></div>';
         }
         if (h.reimbursementsTotal && h.reimbursementsTotal > 0) {
           dh += '<div class="md-row"><span style="color:var(--green)">Reimbursements (' + (h.reimbursements ? h.reimbursements.length : 0) + ')</span><span style="color:var(--green)">+' + fm(h.reimbursementsTotal) + '</span></div>';
@@ -2035,7 +2059,7 @@ var importAcct = "cc";
 
 function setupDateDefaults(force) {
   var fromEl = document.getElementById("date-from"); var toEl = document.getElementById("date-to");
-  updateSmsSyncUI();
+  updateAlertSyncUI();
   if (!force && fromEl.value && toEl.value) return;
   var now = new Date();
   // Continue from the day after the selected account's last upload to avoid overlap
@@ -2065,7 +2089,7 @@ for (var i = 0; i < presets.length; i++) {
   });
 }
 
-function parseSMSMessages(text) {
+function parseAlertMessages(text) {
   // Split pasted text into individual messages (blank-line or new-message delimiters)
   var lines = text.split('\n');
   var msgs = [], cur = '';
@@ -2088,8 +2112,9 @@ function parseSMSMessages(text) {
     if (!dateM) continue;
     var dateStr = dateM[1];
 
-    // Amount: first AED figure is the transaction amount
-    var amtM = msg.match(/AED\s+([\d,]+\.\d{2})/i);
+    // Amount: first AED figure is the transaction amount. Decimals are
+    // optional and may be 1 or 2 digits ("AED 100", "AED 100.5", "AED 100.50").
+    var amtM = msg.match(/AED\s+([\d,]+(?:\.\d{1,2})?)/i);
     if (!amtM) continue;
     var amt = parseFloat(amtM[1].replace(/,/g, ''));
     if (isNaN(amt) || amt <= 0) continue;
@@ -2101,17 +2126,17 @@ function parseSMSMessages(text) {
     // Strip trailing 2-3 letter country codes (e.g. ARE, GBR, PAK)
     desc = desc.replace(/\s+[A-Z]{2,3}$/, '').trim();
 
-    var key = dateStr + '|' + desc + '|' + amt;
+    var key = dateStr + '|' + normalizeDescKey(desc) + '|' + amt;
     if (seenKeys[key]) continue;
     seenKeys[key] = true;
 
     var dp = dateStr.split('/');
-    txns.push({ date: new Date(parseInt(dp[2]), parseInt(dp[1])-1, parseInt(dp[0])), dateStr: dateStr, desc: desc, crdr: 'DR', amount: amt, card: 'Primary', source: 'sms' });
+    txns.push({ date: new Date(parseInt(dp[2]), parseInt(dp[1])-1, parseInt(dp[0])), dateStr: dateStr, desc: desc, crdr: 'DR', amount: amt, card: 'Primary', source: 'email' });
   }
   return { txns: txns, periodFrom: null, periodTo: null };
 }
 
-function previewSMSTxns(parsed) {
+function previewAlertTxns(parsed) {
   // Auto-set date range to span all detected transactions
   var dates = parsed.txns.map(function(t) { return t.date; });
   var minD = dates.reduce(function(a,b) { return a < b ? a : b; });
@@ -2121,37 +2146,38 @@ function previewSMSTxns(parsed) {
   processStatement(parsed);
 }
 
-function parseSMSText() {
-  var text = document.getElementById("sms-input").value.trim();
-  if (!text) { toast("Paste SMS messages first", "warn"); return; }
-  var parsed = parseSMSMessages(text);
+function parseAlertText() {
+  var text = document.getElementById("alert-input").value.trim();
+  if (!text) { toast("Paste email alerts first", "warn"); return; }
+  var parsed = parseAlertMessages(text);
   if (!parsed.txns.length) { toast("No ADCB transactions found — check format", "warn"); return; }
-  previewSMSTxns(parsed);
+  previewAlertTxns(parsed);
 }
 
-// --- SMS auto-sync: iPhone Shortcut appends each ADCB alert as a file in a
-// secret GitHub Gist; we fetch the gist and run new files through the parser.
-var pendingSmsFiles = [];
+// --- Email auto-sync: an iPhone Shortcut triggered on incoming ADCB email
+// posts each alert's plain-text body as a comment on a secret GitHub Gist;
+// we fetch the gist and run new comments through the parser.
+var pendingAlertFiles = [];
 
-function updateSmsSyncUI() {
-  var sub = document.getElementById("sms-sync-sub");
+function updateAlertSyncUI() {
+  var sub = document.getElementById("alert-sync-sub");
   if (!sub) return;
-  if (!APP.smsSync || !APP.smsSync.gistId) {
+  if (!APP.alertSync || !APP.alertSync.gistId) {
     sub.textContent = "Not set up yet — add your Gist ID in Settings";
-  } else if (APP.smsSync.lastSync) {
-    sub.textContent = "Last sync: " + new Date(APP.smsSync.lastSync).toLocaleString("en-GB");
+  } else if (APP.alertSync.lastSync) {
+    sub.textContent = "Last sync: " + new Date(APP.alertSync.lastSync).toLocaleString("en-GB");
   } else {
     sub.textContent = "Pulls new ADCB alerts forwarded by your iPhone Shortcut.";
   }
 }
 
-function syncSMSFromGist() {
-  var gid = APP.smsSync && APP.smsSync.gistId;
+function syncAlertsFromGist() {
+  var gid = APP.alertSync && APP.alertSync.gistId;
   if (!gid) { toast("Set your Gist ID in Settings first", "warn"); return; }
-  var btn = document.getElementById("sms-sync-btn");
+  var btn = document.getElementById("alert-sync-btn");
   btn.disabled = true; btn.textContent = "Syncing...";
-  // Use the Gist Comments API — each SMS alert is posted as a comment by the
-  // iPhone Shortcut (POST /gists/{id}/comments with body: "SMS text").
+  // Use the Gist Comments API — each email alert is posted as a comment by
+  // the iPhone Shortcut (POST /gists/{id}/comments with body: alert text).
   // Comments are readable without auth since we know the secret gist ID.
   function fetchPage(page, acc) {
     return fetch("https://api.github.com/gists/" + encodeURIComponent(gid) + "/comments?per_page=100&page=" + page + "&t=" + Date.now())
@@ -2166,24 +2192,28 @@ function syncSMSFromGist() {
       });
   }
   fetchPage(1, []).then(function(comments) {
-    var processed = APP.smsSync.processed || [];
+    var processed = APP.alertSync.processed || [];
     var newComments = comments.filter(function(c) { return processed.indexOf(String(c.id)) === -1; });
-    APP.smsSync.lastSync = new Date().toISOString();
-    pendingSmsFiles = [];
+    APP.alertSync.lastSync = new Date().toISOString();
+    pendingAlertFiles = [];
     var allTxns = [];
+    var skipped = 0;
     for (var i = 0; i < newComments.length; i++) {
       var c = newComments[i];
-      var parsed = parseSMSMessages(c.body || "");
-      if (!parsed.txns.length) { APP.smsSync.processed.push(String(c.id)); continue; }
-      pendingSmsFiles.push(String(c.id));
+      var parsed = parseAlertMessages(c.body || "");
+      if (!parsed.txns.length) { APP.alertSync.processed.push(String(c.id)); skipped++; continue; }
+      pendingAlertFiles.push(String(c.id));
       allTxns = allTxns.concat(parsed.txns);
     }
-    if (APP.smsSync.processed.length > 1000) APP.smsSync.processed = APP.smsSync.processed.slice(-1000);
-    saveData(); updateSmsSyncUI();
+    if (APP.alertSync.processed.length > 1000) APP.alertSync.processed = APP.alertSync.processed.slice(-1000);
+    saveData(); updateAlertSyncUI();
     btn.disabled = false; btn.textContent = "Sync New Alerts";
-    if (!allTxns.length) { toast(newComments.length ? "No transactions found in new alerts" : "No new alerts"); return; }
-    toast(allTxns.length + " new transaction(s) found");
-    previewSMSTxns({ txns: allTxns, periodFrom: null, periodTo: null });
+    if (!allTxns.length) {
+      toast(skipped ? skipped + " alert(s) skipped — unrecognized format" : "No new alerts");
+      return;
+    }
+    toast(allTxns.length + " new transaction(s) found" + (skipped ? " · " + skipped + " skipped" : ""));
+    previewAlertTxns({ txns: allTxns, periodFrom: null, periodTo: null });
   }).catch(function(err) {
     btn.disabled = false; btn.textContent = "Sync New Alerts";
     toast(err.message || "Sync failed — check connection", "err");
@@ -2215,6 +2245,10 @@ function parseCSV(text) {
 }
 function matchCat(d) { var l = d.toLowerCase(); var k = Object.keys(APP.mappings); for (var i = 0; i < k.length; i++) { if (l.indexOf(k[i]) > -1) return APP.mappings[k[i]]; } return null; }
 function cleanDesc(d) { return d.replace(/\s+(DUBAI|ABU DHABI|ABUDHABI|LONDON|ISLAMABAD)\s+(ARE|GBR|PAK|IRL).*$/i, "").replace(/\s+ARE$/, "").replace(/\s+WWW\..+$/, "").trim(); }
+// Canonical identity for dedup keys, shared by every import channel (email-sync,
+// CSV, PDF) so the same real-world charge produces the same key regardless of
+// how differently each channel formats the raw description text.
+function normalizeDescKey(d) { return cleanDesc(d || "").toUpperCase().replace(/\s+/g, ' ').trim(); }
 
 function parsePDFLines(lines) {
   var txns = [], cc = "Primary", periodFrom = null, periodTo = null;
@@ -2253,41 +2287,45 @@ function parsePDFLines(lines) {
 }
 
 function processPDFFile(file) {
-  if (typeof pdfjsLib === 'undefined') { toast('PDF library not loaded', 'err'); return; }
-  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-  toast('Reading PDF...');
-  var reader = new FileReader();
-  reader.onload = function(e) {
-    var data = new Uint8Array(e.target.result);
-    pdfjsLib.getDocument({ data: data }).promise.then(function(pdf) {
-      var pageNums = [];
-      for (var p = 1; p <= pdf.numPages; p++) pageNums.push(p);
-      return Promise.all(pageNums.map(function(p) { return pdf.getPage(p).then(function(pg) { return pg.getTextContent(); }); }));
-    }).then(function(pages) {
-      var allLines = [];
-      for (var pi = 0; pi < pages.length; pi++) {
-        var items = pages[pi].items;
-        var byY = {};
-        for (var ii = 0; ii < items.length; ii++) {
-          var item = items[ii];
-          if (!item.str || !item.str.trim()) continue;
-          var y = Math.round(item.transform[5]);
-          if (!byY[y]) byY[y] = [];
-          byY[y].push({ x: item.transform[4], str: item.str });
+  toast('Loading PDF reader...');
+  loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js').then(function () {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    toast('Reading PDF...');
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var data = new Uint8Array(e.target.result);
+      pdfjsLib.getDocument({ data: data }).promise.then(function(pdf) {
+        var pageNums = [];
+        for (var p = 1; p <= pdf.numPages; p++) pageNums.push(p);
+        return Promise.all(pageNums.map(function(p) { return pdf.getPage(p).then(function(pg) { return pg.getTextContent(); }); }));
+      }).then(function(pages) {
+        var allLines = [];
+        for (var pi = 0; pi < pages.length; pi++) {
+          var items = pages[pi].items;
+          var byY = {};
+          for (var ii = 0; ii < items.length; ii++) {
+            var item = items[ii];
+            if (!item.str || !item.str.trim()) continue;
+            var y = Math.round(item.transform[5]);
+            if (!byY[y]) byY[y] = [];
+            byY[y].push({ x: item.transform[4], str: item.str });
+          }
+          var ys = Object.keys(byY).map(Number).sort(function(a, b) { return b - a; });
+          for (var yi = 0; yi < ys.length; yi++) {
+            var row = byY[ys[yi]].sort(function(a, b) { return a.x - b.x; });
+            allLines.push(row.map(function(i) { return i.str; }).join(' '));
+          }
         }
-        var ys = Object.keys(byY).map(Number).sort(function(a, b) { return b - a; });
-        for (var yi = 0; yi < ys.length; yi++) {
-          var row = byY[ys[yi]].sort(function(a, b) { return a.x - b.x; });
-          allLines.push(row.map(function(i) { return i.str; }).join(' '));
-        }
-      }
-      processStatement(parsePDFLines(allLines));
-    }).catch(function(err) {
-      toast('Could not read PDF', 'err');
-      console.error('PDF parse error:', err);
-    });
-  };
-  reader.readAsArrayBuffer(file);
+        processStatement(parsePDFLines(allLines));
+      }).catch(function(err) {
+        toast('Could not read PDF', 'err');
+        console.error('PDF parse error:', err);
+      });
+    };
+    reader.readAsArrayBuffer(file);
+  }).catch(function () {
+    toast('Could not load PDF reader — check your connection', 'err');
+  });
 }
 function detectPredominantMonth(txns) {
   var counts = {};
@@ -2338,7 +2376,7 @@ function processStatement(parsed) {
     if (t.crdr !== "DR") continue;
     if (t.desc.indexOf("PAYMENT RECEIVED") > -1 || t.desc.indexOf("FOREIGN TRANSACTION FEE") > -1 || t.desc.indexOf("VAT ON FOREIGN") > -1) continue;
     inRangeTxns.push(t);
-    var key = t.dateStr + "|" + t.desc + "|" + t.amount;
+    var key = t.dateStr + "|" + normalizeDescKey(t.desc) + "|" + t.amount;
     var isDup = APP.imported && APP.imported.indexOf(key) > -1;
     t.key = key; t.cleanDesc = cleanDesc(t.desc); t.category = matchCat(t.desc);
     t.isDup = isDup; t.skip = isDup; t.acct = pendingAcct;
@@ -2348,9 +2386,9 @@ function processStatement(parsed) {
   var detectedMonth = detectPredominantMonth(inRangeTxns);
   var banner = document.getElementById("detected-month-banner");
   if (detectedMonth && detectedMonth !== APP.currentMonth) {
-    banner.innerHTML = '<div class="detected-month">📅 These transactions are mostly from <strong>' + detectedMonth + '</strong>. Current cycle is <strong>' + APP.currentMonth + '</strong>.</div>';
+    banner.innerHTML = '<div class="detected-month">📅 These transactions are mostly from <strong>' + escHtml(detectedMonth) + '</strong>. Current cycle is <strong>' + escHtml(APP.currentMonth) + '</strong>.</div>';
   } else if (detectedMonth) {
-    banner.innerHTML = '<div class="detected-month">📅 Transactions from <strong>' + detectedMonth + '</strong> · matches current cycle</div>';
+    banner.innerHTML = '<div class="detected-month">📅 Transactions from <strong>' + escHtml(detectedMonth) + '</strong> · matches current cycle</div>';
   } else { banner.innerHTML = ''; }
 
   if (!pendingTxns.length) {
@@ -2425,7 +2463,7 @@ function updatePreviewSummary() {
     document.getElementById("btn-apply").disabled = true;
     document.getElementById("btn-apply").textContent = "Categorize transactions"; return;
   }
-  var html = '<div class="preview-summary"><div class="preview-summary-title">Will be added to ' + APP.currentMonth + '</div>';
+  var html = '<div class="preview-summary"><div class="preview-summary-title">Will be added to ' + escHtml(APP.currentMonth) + '</div>';
   var keys = Object.keys(sums); var total = 0;
   for (var i = 0; i < keys.length; i++) { html += '<div class="preview-row"><span class="preview-row-cat">' + keys[i] + '</span><span>+' + fd(sums[keys[i]]) + '</span></div>'; total += sums[keys[i]]; }
   html += '<div class="preview-row tot"><span class="preview-row-cat">Total</span><span>' + fd(total) + '</span></div>';
@@ -2475,12 +2513,12 @@ document.getElementById("btn-apply").addEventListener("click", function () {
     APP.accounts.debit.balanceDate = ymd(pendingBalance.date);
   }
   // Synced gist alerts were reviewed and applied; don't fetch them again
-  if (pendingSmsFiles.length && APP.smsSync) {
-    for (var i = 0; i < pendingSmsFiles.length; i++) {
-      if (APP.smsSync.processed.indexOf(pendingSmsFiles[i]) === -1) APP.smsSync.processed.push(pendingSmsFiles[i]);
+  if (pendingAlertFiles.length && APP.alertSync) {
+    for (var i = 0; i < pendingAlertFiles.length; i++) {
+      if (APP.alertSync.processed.indexOf(pendingAlertFiles[i]) === -1) APP.alertSync.processed.push(pendingAlertFiles[i]);
     }
-    if (APP.smsSync.processed.length > 500) APP.smsSync.processed = APP.smsSync.processed.slice(-500);
-    pendingSmsFiles = [];
+    if (APP.alertSync.processed.length > 500) APP.alertSync.processed = APP.alertSync.processed.slice(-500);
+    pendingAlertFiles = [];
   }
   var prevCs = {};
   for (var i = 0; i < APP.budget.length; i++) if (sums[APP.budget[i].c] !== undefined) prevCs[APP.budget[i].c] = APP.budget[i].cs !== undefined ? APP.budget[i].cs : null;
@@ -2503,7 +2541,7 @@ document.getElementById("btn-apply").addEventListener("click", function () {
 
 function cancelImport() {
   pendingTxns = [];
-  pendingSmsFiles = []; // cancelled alerts stay unprocessed and reappear next sync
+  pendingAlertFiles = []; // cancelled alerts stay unprocessed and reappear next sync
   document.getElementById("import-preview").style.display = "none";
   document.getElementById("txn-list").style.display = "";
   document.getElementById("import-summary").style.display = "none";
@@ -2538,20 +2576,11 @@ function undoLastImport() {
 function openShareModal() { openModal("share-modal"); }
 
 function buildSnapshotText() {
-  var BASE = APP.inflow || DEFAULT_INFLOW;
-  var REIMB = reimbTotal();
-  var OUT = outflowTotal();
-  var INFLOW = BASE + REIMB;
-  var data = APP.budget;
-  var fixB = 0, fixS = 0, varB = 0, varS = 0, totalS = 0, fixedItems = [], varItems = [];
-  for (var i = 0; i < data.length; i++) {
-    var sp = getSpent(data[i]); totalS += sp;
-    if (data[i].g === "fixed") { fixedItems.push(data[i]); fixB += data[i].b; fixS += sp; }
-    else { varItems.push(data[i]); varB += data[i].b; varS += sp; }
-  }
-  var savActual = INFLOW - Math.max(fixB, fixS) - Math.max(varB, varS) - OUT;
-  var savPct = INFLOW > 0 ? Math.round(savActual / INFLOW * 100) : 0;
-  varS += OUT; totalS += OUT;
+  var tot = computeBudgetTotals();
+  var BASE = tot.BASE, REIMB = tot.REIMB, OUT = tot.OUT, INFLOW = tot.INFLOW;
+  var fixB = tot.fixB, fixS = tot.fixS, varB = tot.varB, fixedItems = tot.fixedItems, varItems = tot.varItems;
+  var savActual = tot.savings, savPct = tot.savingsPct;
+  var varS = tot.varS + OUT, totalS = tot.totalS + OUT;
   var fixPct = fixB > 0 ? Math.round(fixS / fixB * 100) : 0;
   var varPct = varB > 0 ? Math.round(varS / varB * 100) : 0;
   var today = new Date();
@@ -2601,25 +2630,16 @@ function copyToClipboard(text) {
 }
 
 function buildShareCardAll() {
-  var BASE = APP.inflow || DEFAULT_INFLOW;
-  var REIMB = reimbTotal();
-  var OUT = outflowTotal();
-  var INFLOW = BASE + REIMB;
-  var data = APP.budget;
-  var fixB = 0, fixS = 0, varB = 0, varS = 0, totalS = 0, fixedItems = [], varItems = [];
-  for (var i = 0; i < data.length; i++) {
-    var sp = getSpent(data[i]); totalS += sp;
-    if (data[i].g === "fixed") { fixedItems.push(data[i]); fixB += data[i].b; fixS += sp; }
-    else { varItems.push(data[i]); varB += data[i].b; varS += sp; }
-  }
-  varS += OUT; totalS += OUT;
-  var sav = INFLOW - totalS;
-  var savPct = INFLOW > 0 ? Math.round(sav / INFLOW * 100) : 0;
+  var t = computeBudgetTotals();
+  var REIMB = t.REIMB, OUT = t.OUT, INFLOW = t.INFLOW;
+  var fixB = t.fixB, fixS = t.fixS, varB = t.varB, fixedItems = t.fixedItems, varItems = t.varItems;
+  var varS = t.varS + OUT, totalS = t.totalS + OUT;
+  var sav = t.savings, savPct = t.savingsPct;
   var today = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
   var h = '<div class="share-card">';
   h += '<div class="sc-month">Budget · ' + today + '</div>';
-  h += '<div class="sc-month-name">' + APP.currentMonth + '</div>';
+  h += '<div class="sc-month-name">' + escHtml(APP.currentMonth) + '</div>';
   h += '<div class="sc-hero">';
   h += '<div class="sc-hero-label">Available</div>';
   h += '<div class="sc-hero-amt ' + (sav < 0 ? 'r' : 'g') + '">AED ' + fm(sav) + '</div>';
@@ -2665,7 +2685,7 @@ function buildShareCardCat(cat) {
   var today = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
   var h = '<div class="share-card">';
-  h += '<div class="sc-month">' + APP.currentMonth + ' · ' + today + '</div>';
+  h += '<div class="sc-month">' + escHtml(APP.currentMonth) + ' · ' + today + '</div>';
   h += '<div class="sc-month-name">' + escHtml(cat) + (r.p ? ' ✓' : '') + '</div>';
   h += '<div class="sc-hero">';
   h += '<div class="sc-hero-label">Spent</div>';
@@ -2692,7 +2712,11 @@ function buildShareCardCat(cat) {
 }
 
 async function renderAndShare(html, filename) {
-  if (!window.html2canvas) { toast("Screenshot library not ready", "err"); return; }
+  if (!window.html2canvas) {
+    toast("Loading screenshot library...");
+    try { await loadScript("https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"); }
+    catch (e) { toast("Could not load screenshot library — check your connection", "err"); return; }
+  }
   var holder = document.getElementById("share-render");
   holder.innerHTML = html;
   var card = holder.querySelector(".share-card");
@@ -2752,11 +2776,38 @@ function openCategoryPicker() {
   openModal("catpick-modal");
 }
 
-function openModal(id) { document.getElementById(id).style.display = "flex"; }
-function closeModal(id) { document.getElementById(id).style.display = "none"; }
+var modalStack = [];
+function openModal(id) {
+  var el = document.getElementById(id);
+  el.style.display = "flex";
+  el.setAttribute("role", "dialog");
+  el.setAttribute("aria-modal", "true");
+  modalStack.push({ id: id, prevFocus: document.activeElement });
+  var box = el.querySelector(".modal-box");
+  if (box) { box.setAttribute("tabindex", "-1"); box.focus(); }
+}
+function closeModal(id) {
+  document.getElementById(id).style.display = "none";
+  for (var i = modalStack.length - 1; i >= 0; i--) {
+    if (modalStack[i].id === id) {
+      var prev = modalStack[i].prevFocus;
+      modalStack.splice(i, 1);
+      if (prev && prev.focus) prev.focus();
+      break;
+    }
+  }
+}
+// Some modals (e.g. prepare-modal) need extra cleanup beyond hiding the
+// overlay, so dismiss-by-outside-tap/Escape goes through the same close
+// function the modal's own Cancel/Done button uses.
+var modalCloseFns = { "prepare-modal": closePrepareModal };
+function dismissModal(id) { (modalCloseFns[id] || closeModal)(id); }
+document.addEventListener("keydown", function (e) {
+  if (e.key === "Escape" && modalStack.length) dismissModal(modalStack[modalStack.length - 1].id);
+});
 var overlays = document.querySelectorAll(".modal-overlay");
 for (var i = 0; i < overlays.length; i++) {
-  (function(el){ el.addEventListener("click", function (e) { if (e.target === el) closeModal(el.id); }); })(overlays[i]);
+  (function(el){ el.addEventListener("click", function (e) { if (e.target === el) dismissModal(el.id); }); })(overlays[i]);
 }
 
 function drawSettings() {
@@ -2776,10 +2827,10 @@ function drawSettings() {
   }
   var gistInp = document.getElementById("gist-id-input");
   if (gistInp) {
-    gistInp.value = (APP.smsSync && APP.smsSync.gistId) || "";
-    document.getElementById("gist-id-meta").textContent = (APP.smsSync && APP.smsSync.gistId)
-      ? "Connected · " + (APP.smsSync.processed ? APP.smsSync.processed.length : 0) + " alerts processed"
-      : "Your iPhone Shortcut forwards ADCB alerts into this Gist";
+    gistInp.value = (APP.alertSync && APP.alertSync.gistId) || "";
+    document.getElementById("gist-id-meta").textContent = (APP.alertSync && APP.alertSync.gistId)
+      ? "Connected · " + (APP.alertSync.processed ? APP.alertSync.processed.length : 0) + " alerts processed"
+      : "Your iPhone Shortcut forwards ADCB email alerts into this Gist";
   }
   var undoRow = document.getElementById("undo-import-row");
   if (undoRow) {
@@ -2800,9 +2851,9 @@ document.getElementById("gist-id-input").addEventListener("change", function () 
   var v = this.value.trim();
   // Accept a bare ID or a full gist URL (gist.github.com/user/ID)
   var m = v.match(/([a-f0-9]{16,})\s*$/i);
-  APP.smsSync.gistId = m ? m[1] : (v || null);
-  saveData(); drawSettings(); updateSmsSyncUI();
-  toast(APP.smsSync.gistId ? "Gist connected" : "Gist ID cleared");
+  APP.alertSync.gistId = m ? m[1] : (v || null);
+  saveData(); drawSettings(); updateAlertSyncUI();
+  toast(APP.alertSync.gistId ? "Gist connected" : "Gist ID cleared");
 });
 document.getElementById("debit-balance-input").addEventListener("change", function () {
   if (this.value.trim() === "") {
@@ -2837,7 +2888,7 @@ function drawMappings() {
   var host = document.getElementById("mappings-list");
   if (!keys.length) { host.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-3);font-size:13px">No mappings.</div>'; return; }
   var h = "";
-  for (var i = 0; i < keys.length; i++) h += '<div class="map-item"><span class="map-merchant">' + escHtml(keys[i]) + '</span><span class="map-cat">' + escHtml(APP.mappings[keys[i]]) + '</span><button class="map-del" data-k="' + escHtml(keys[i]) + '">✕</button></div>';
+  for (var i = 0; i < keys.length; i++) h += '<div class="map-item"><span class="map-merchant">' + escHtml(keys[i]) + '</span><span class="map-cat">' + escHtml(APP.mappings[keys[i]]) + '</span><button class="map-del" data-k="' + escHtml(keys[i]) + '" aria-label="Delete mapping for ' + escHtml(keys[i]) + '">✕</button></div>';
   host.innerHTML = h;
   var dels = host.querySelectorAll(".map-del");
   for (var j = 0; j < dels.length; j++) dels[j].addEventListener("click", function () { delete APP.mappings[this.getAttribute("data-k")]; saveData(); drawMappings(); toast("Mapping removed"); });
@@ -2907,6 +2958,11 @@ function confirmAdj() {
 
 drawBudget();
 setupDateDefaults();
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", function () {
+    navigator.serviceWorker.register("sw.js").catch(function () {});
+  });
+}
 </script>
 </body>
 </html>

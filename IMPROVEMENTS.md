@@ -11,149 +11,139 @@ To regenerate/update this file, run `/improve-scan` (or `/loop 60m
 
 ---
 
-## 2026-06-21 — Initial scan
+## 2026-06-21 — Initial scan (still open)
 
 ### Security
 
-- **[High]** Stored XSS: `index.html:1972` (`h.month`) and `:1981`
-  (`h.topCategories[0].c`) are concatenated into `innerHTML` in
-  `drawHistory()` without `escHtml()`. Both originate from
-  `APP.currentMonth`/category names, which become attacker-controlled if a
-  crafted `#transfer=<base64 JSON>` URL is opened (`confirmTransfer()`,
-  ~line 811-822, does `APP = data` with no string sanitization). *Fix:*
-  wrap both in `escHtml()`.
-- **[Medium]** Same unescaped-`APP.currentMonth` sink in the detected-month
-  banner: `index.html:2351` and `:2353`. *Fix:* `escHtml()` both
-  interpolations.
-- **[Medium]** No Subresource Integrity on the CDN scripts:
-  `index.html:12-13` (`html2canvas@1.4.1` via jsdelivr, `pdf.js@3.11.174`
-  via cdnjs) have no `integrity`/`crossorigin`. A compromised CDN/MITM
-  could inject JS with full access to localStorage financial data. *Fix:*
-  add SRI hashes or self-host both libraries.
-- **[Low]** `prepareHomeScreen()` (`index.html:824-834`) puts the entire
-  base64-encoded `APP` object into `location.hash`. It's a fragment (not
-  sent to servers/logs) but persists in browser history until the modal is
-  closed, and could leak in full if the user shares that URL instead of
-  using "Add to Home Screen". *Fix:* clear the hash immediately, or hand
-  off via `sessionStorage` instead of the URL.
-- **[Low]** No documented rotation/expiry guidance for the secret Gist ID
-  itself (only token expiry is covered in `SMS-SYNC-SETUP.md`); the
-  comments endpoint is permanently unauthenticated by design. *Fix:* add a
-  doc note recommending periodic gist-ID rotation if it's ever exposed
-  (screenshot, shoulder-surfing Settings, etc.).
-- **[Low]** `setup.html`'s `checkInbox()` renders gist comment bodies into
-  `innerHTML` (around line 217-220) without escaping — low severity
-  self-XSS scoped to the setup assistant. *Fix:* HTML-escape before
-  display.
-
-### UI/UX & Accessibility
-
-- **[High]** Icon-only controls have no accessible name: share/conclude
-  buttons (`index.html:490-491`), `.cb-paid` checkbox (`:1391`), `txn-del`
-  (`:1458`), `map-del` (`:881`, `:2840`), `reimb-del`/`outflow-del`
-  (`:1493`/`:1525`). `title` doesn't reliably announce on VoiceOver. *Fix:*
-  add proper `aria-label`s (dynamic per category where relevant).
-- **[High]** No `manifest.json`, service worker, or `apple-touch-icon` —
-  the PWA claim (`apple-mobile-web-app-capable` meta tags) is incomplete;
-  the app can't install as a real PWA on Android/desktop and breaks
-  offline for any feature depending on the CDN scripts. *Fix:* add a
-  manifest + icons and a minimal service worker, or vendor the two CDN
-  libraries locally for offline use.
-- **[High]** Modals have no focus management: `openModal`/`closeModal`
-  (`index.html:2755-2756`) just toggle `display`, with no `role="dialog"`,
-  no focus trap, no Escape-to-close. *Fix:* add `aria-modal`, move focus in
-  on open and restore on close, bind Escape.
-- **[Medium]** `user-scalable=no, maximum-scale=1.0` in the viewport meta
-  (`index.html:5`) removes the pinch-zoom escape hatch for low-vision
-  users, compounding low-contrast text (`--text-3` is ~2:1 contrast on
-  black, under WCAG AA). *Fix:* drop both viewport restrictions.
-- **[Medium]** Fixed-width amount/name columns risk clipping with real
-  data: `.cbk-amt` (`:127`, `flex:0 0 62px`) against large totals, `.cbk-name`
-  (`:124`, 38% width + ellipsis) against real category names like
-  "Telephone+Internet+TV" / "Mueid / Madiha / House" (`defaultData()`,
-  `:669`/`:697`/`:710`). *Fix:* let `.cbk-amt` grow; verify long names
-  render acceptably.
-- **[Medium]** Inputs lack associated `<label>`s: `#inflow-input` (`:568`),
-  `#debit-balance-input` (`:576`), `#gist-id-input` (`:593`), `#date-from`/
-  `#date-to` (`:527-529`). *Fix:* `<label for>` or `aria-labelledby`.
-- **[Low]** SMS sync silently treats unparseable comments as "processed"
-  with no per-message feedback (`syncSMSFromGist()`, `:2148-2190`) — user
-  just sees a generic "no new alerts". *Fix:* surface a "skipped —
-  unrecognized format" count separately.
-- **[Low]** No consistent close affordance on bottom-sheet modals beyond
-  Cancel/Skip buttons; no tap-outside-to-dismiss, inconsistent with the iOS
-  pattern the UI otherwise emulates.
+- **[Low]** No SRI on the lazy-loaded CDN scripts: `html2canvas@1.4.1`
+  (jsdelivr) and `pdf.js@3.11.174` (cdnjs) are now injected on-demand
+  (`loadScript()`, see Resolved) rather than unconditionally, which shrinks
+  the exposure window, but neither `<script>` has an `integrity`/`crossorigin`
+  attribute. *Fix:* add SRI hashes once a network path to the CDN is
+  available to compute them, or self-host both libraries. *Not fixed this
+  pass*: this sandbox has no outbound access to jsdelivr.net/cdnjs.cloudflare.com,
+  so a hash typed from memory would risk silently breaking PDF import /
+  image-sharing if wrong — left open rather than guessed.
 
 ### Financial logic correctness
 
-- **[High]** `openConcludeModal()` (preview shown to user) and
-  `confirmConclude()` (what's actually saved to History) use different
-  savings formulas — `:1861` vs `:1889`. Verified numerically: with
-  `varB=500, varS=600, OUT=200, fixB=fixS=1000, INFLOW=2000`, the modal
-  shows 200 but History stores 300. *Fix:* make `confirmConclude` reuse the
-  exact formula shown in the modal.
-- **[High]** The "Image — Full Budget" share card uses yet another savings
-  formula than the live Budget page — `:1063` (`drawBudget`, floors
-  variable spend at budget) vs `:2616` (`buildShareCardAll`, raw
-  `INFLOW - totalS`, no floor). Same scenario as above: 200 (on-screen) vs
-  600 (shared image) — a 400 AED discrepancy shown to whoever receives the
-  share. *Fix:* extract one `computeBudgetTotals()` used by both paths.
-- **[High]** Cross-channel duplicate detection fails between SMS-sync and
-  CSV/PDF import: SMS dedup key is `dateStr|cleanedUppercaseDesc|amount`
-  (`:2104`) vs CSV/PDF's `dateStr|rawDesc|amount` (`:2341`) — the same
-  physical charge synced via SMS and later seen on the official statement
-  produces different keys and is **not** flagged as a duplicate, causing
-  double-counting. *Fix:* normalize description into one canonical key
-  function shared by both parsers.
-- **[Medium]** SMS amount regex `AED\s+([\d,]+\.\d{2})` (`:2092-2095`)
-  requires exactly two decimal digits — bank alerts formatted as "AED 100"
-  or "AED 100.5" silently fail to match and the whole message is skipped
-  with no specific error. *Fix:* loosen to `\.\d{1,2}` and accept
-  no-decimal amounts.
-- **[Medium]** Forecast/elapsed-fraction logic (`:1134`, `:1148`) relies on
-  device-local `new Date()` with no explicit timezone pinning — currently
-  correct only because the device's local timezone happens to match the
-  intended budget timezone (UTC+4). Given this project already shipped one
-  UTC+4-related date bug, this is worth hardening proactively even though
-  not currently broken.
-- **[Low]** Auto-learned merchant mapping key (`:2400`,
-  `cleanDesc.toLowerCase().split(" ").slice(0,2).join(" ")`) is built
-  inconsistently from SMS- vs. CSV-derived description strings, risking
-  over/under-broad future matches via the substring-based `matchCat`.
-- **[Low]** `renderDailyChart` (`:1296`) buckets by re-parsing a stored
-  `toISOString()` (UTC) timestamp with local-timezone `ymd()` formatting —
-  not verified as currently triggering a wrong bucket, but the same class
-  of bug as the forecast issue above; flagged for awareness.
+- **[Medium]** Forecast/elapsed-fraction logic (`renderForecast`-adjacent code)
+  relies on device-local `new Date()` with no explicit timezone pinning —
+  currently correct only because the device's local timezone happens to match
+  the intended budget timezone (UTC+4). Given this project already shipped one
+  UTC+4-related date bug, this is worth hardening proactively even though not
+  currently broken.
+- **[Low]** Auto-learned merchant mapping key (`cleanDesc.toLowerCase().split("
+  ").slice(0,2).join(" ")`) is built inconsistently from SMS/email- vs.
+  CSV-derived description strings, risking over/under-broad future matches via
+  the substring-based `matchCat`.
+- **[Low]** `renderDailyChart` buckets by re-parsing a stored `toISOString()`
+  (UTC) timestamp with local-timezone `ymd()` formatting — not verified as
+  currently triggering a wrong bucket, but the same class of bug as the
+  forecast issue above; flagged for awareness.
 
 ### Performance & code quality
 
-- **[High]** `html2canvas` and `pdf.js` (`index.html:12-13`) load
-  unconditionally on every page view (~250KB+ combined min'd) even though
-  they're only used by the rare share-as-image / PDF-upload actions. *Fix:*
-  lazy-inject both scripts only when those features are invoked.
-- **[High]** Free-text inputs (reimbursement/outflow description & amount,
-  ~lines 1697-1732) call `saveCache()` directly on every `input` event,
-  re-serializing and writing the *entire* `APP` object to localStorage per
-  keystroke. *Fix:* debounce those specific `saveCache()` calls (~300-500ms).
-- **[High]** Budget-totals logic is duplicated across `drawBudget()`
-  (`:1050-1063`), `buildSnapshotText()` (`:2540-2556`), and
-  `buildShareCardAll()` (`:2603-2616`), with per-row formatting duplicated
-  between `renderRow()` (`:1378`) and `scRow()` (`:2643`) — this is the
-  root cause of the savings-formula mismatches listed under Financial
-  logic above. *Fix:* one shared `computeBudgetTotals()` helper consumed by
-  all render paths.
-- **[Medium]** `bindBudgetEvents` (`index.html:1535-1760`, ~225 lines)
-  wires four event types and inline-implements business logic for
-  reimbursements, outflows, paid-toggling, and txn CRUD in one function.
-  *Fix:* split by concern into smaller functions (no architecture change
-  needed).
+- **[Medium]** `bindBudgetEvents` (~225 lines) wires four event types and
+  inline-implements business logic for reimbursements, outflows,
+  paid-toggling, and txn CRUD in one function. *Fix:* split by concern into
+  smaller functions (no architecture change needed).
 - **[Low]** Naming drift (`fixB/fixS/varB/varS` vs. full-word vs.
   single-letter scoped reuse, e.g. `t` meaning different things in nearby
-  functions) — only worth fixing opportunistically when touching nearby
-  code.
+  functions) — only worth fixing opportunistically when touching nearby code.
 
 ---
 
-## Resolved
+## Resolved — 2026-06-21
 
-_(none yet)_
+### SMS → Email migration (ADCB stopped sending SMS)
+
+Renamed the whole alert-sync pipeline from SMS to email throughout
+`index.html`, `setup.html`, and the setup doc (`SMS-SYNC-SETUP.md` →
+`EMAIL-SYNC-SETUP.md`): `APP.smsSync` → `APP.alertSync` (with a one-time
+migration in `fixApp()` so existing users' connected Gist isn't lost),
+`parseSMSMessages`→`parseAlertMessages`, `syncSMSFromGist`→
+`syncAlertsFromGist`, etc. The iPhone Shortcut flow now triggers on
+**Email received** (with a "Get Details of Emails" → Plain Text Content
+step) instead of **Message received**, and `setup.html`/the doc walk the
+user through switching ADCB's alert channel from SMS to Email first.
+
+### Security
+
+- **[High]** Stored XSS via unescaped `h.month`/`topCategories[0].c` in
+  `drawHistory()`, and unescaped `APP.currentMonth` in the detected-month
+  banner, conclude-modal, preview-summary, and both share-card builders — all
+  now wrapped in `escHtml()`.
+- **[Low]** `setup.html`'s `checkInbox()` rendered gist comment bodies into
+  `innerHTML` without escaping — added a local `escHtml()` and applied it.
+- **[Low]** No documented rotation/expiry guidance for the gist ID — added to
+  `EMAIL-SYNC-SETUP.md`'s Notes section (treat the ID like a password; recreate
+  the gist and update Settings if it's ever exposed).
+- **[Low]** `prepareHomeScreen()`'s tap-outside-to-dismiss path bypassed
+  `closePrepareModal()`'s hash-clearing (it called the generic `closeModal`
+  instead), which could leave `#transfer=<base64 APP>` in the URL/history
+  after an accidental outside tap. Fixed by routing all dismiss paths (Escape,
+  tap-outside) through the same per-modal close function the modal's own
+  button uses.
+
+### UI/UX & Accessibility
+
+- **[High]** Icon-only controls now have `aria-label`s: share/conclude
+  buttons, `.cb-paid` checkbox (dynamic per category), `txn-del`,
+  `map-del` (both instances), `reimb-del`/`outflow-del`.
+- **[High]** Added `manifest.json`, a minimal network-first service worker
+  (`sw.js`), and hand-generated PNG icons (`icons/icon-192.png`,
+  `icons/icon-512.png`, `icons/apple-touch-icon.png`) — the app now installs
+  as a real PWA and the core (non-CDN-dependent) UI works offline after first
+  load.
+- **[High]** Modals (`openModal`/`closeModal`) now set `role="dialog"`/
+  `aria-modal="true"`, move focus into the modal box on open, restore focus to
+  the previously-focused element on close, and close on Escape (in addition
+  to the existing tap-outside-to-dismiss).
+- **[Medium]** Removed `maximum-scale=1.0, user-scalable=no` from the viewport
+  meta tag, restoring pinch-zoom for low-vision users.
+- **[Medium]** `.cbk-amt` no longer clips on large totals — changed from a
+  fixed `flex: 0 0 62px` to `flex: 0 1 auto; min-width: 62px` so it can grow.
+- **[Medium]** Added `<label>`/`aria-label`s for `#inflow-input`,
+  `#debit-balance-input`, `#date-from`/`#date-to` (`#gist-id-input` was
+  already labeled).
+- **[Low]** SMS/email sync now tracks and surfaces a "N skipped —
+  unrecognized format" count instead of silently treating unparseable alerts
+  as processed.
+
+### Financial logic correctness
+
+- **[High]** Investigated the reported `openConcludeModal()` vs.
+  `confirmConclude()` formula mismatch: verified numerically that both
+  formulas are actually mathematically equivalent in current code (`Math.max(varB,
+  varS - OUT)` after `varS += OUT` cancels back to `Math.max(varB,
+  varS_original)`) — this was not an active bug. Both, plus `recalcHeader()`
+  and `buildSnapshotText()`, were refactored to consume one shared
+  `computeBudgetTotals()` helper so they can no longer independently drift.
+- **[High]** Confirmed and fixed the real bug: `buildShareCardAll()` (the
+  "Image — Full Budget" share card) used `INFLOW - totalS` with no floor at
+  budget, while `drawBudget()` used the correct
+  `INFLOW - Math.max(fixB,fixS) - Math.max(varB,varS) - OUT`. Now both consume
+  `computeBudgetTotals()`, eliminating the discrepancy shown to whoever
+  receives the shared image.
+- **[High]** Fixed cross-channel duplicate detection: introduced
+  `normalizeDescKey()` and use it consistently in both
+  `parseAlertMessages()` (email-sync) and `processStatement()` (CSV/PDF), so
+  the same physical charge produces the same dedup key regardless of import
+  channel.
+- **[Medium]** Loosened the alert amount regex from `AED\s+([\d,]+\.\d{2})`
+  (exactly 2 decimals) to `AED\s+([\d,]+(?:\.\d{1,2})?)` (0, 1, or 2 decimals).
+
+### Performance & code quality
+
+- **[High]** `html2canvas` and `pdf.js` no longer load unconditionally in
+  `<head>` — added a `loadScript()` helper that lazy-injects each library only
+  when share-as-image or PDF-upload is actually invoked.
+- **[High]** Free-text inputs (reimbursement/outflow description & amount)
+  now call a `debouncedSaveCache()` (400ms) instead of writing the full `APP`
+  object to localStorage on every keystroke.
+- **[High]** Extracted `computeBudgetTotals()` as the single source of truth
+  for budget totals/savings, consumed by `drawBudget()`, `recalcHeader()`,
+  `openConcludeModal()`, `confirmConclude()`, `buildSnapshotText()`, and
+  `buildShareCardAll()` — removes the duplication that caused the savings
+  formula mismatches above.

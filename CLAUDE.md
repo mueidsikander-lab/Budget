@@ -11,9 +11,9 @@ pipeline, and localStorage persistence.
   state lives in one `APP` object, persisted to `localStorage` (`bgt_v7`).
   Rendering is whole-section `innerHTML` replacement, not a framework.
 - `setup.html` — one-time assistant that creates a secret GitHub Gist and
-  walks the user through an iPhone Shortcut that forwards bank SMS alerts
+  walks the user through an iPhone Shortcut that forwards ADCB email alerts
   into it as comments.
-- `SMS-SYNC-SETUP.md` — user-facing setup docs for the above.
+- `EMAIL-SYNC-SETUP.md` — user-facing setup docs for the above.
 
 ## Conventions worth preserving
 
