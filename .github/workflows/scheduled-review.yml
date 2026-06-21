@@ -1,0 +1,50 @@
+name: Scheduled Claude Review
+
+on:
+  schedule:
+    # Every Monday at 09:00 UTC
+    - cron: "0 9 * * 1"
+  workflow_dispatch: {}
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Claude review
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_args: |
+            --agents security-auditor,parser-reliability-auditor,frontend-ui-reviewer,code-reviewer,performance-auditor
+          prompt: |
+            This is a single-file, no-build, no-backend personal finance PWA
+            (index.html) with a companion onboarding page (setup.html). Run a
+            review pass using the project's subagents in .claude/agents/:
+
+            - security-auditor: token/PAT handling, XSS from untrusted bank
+              SMS/gist text, gist-as-secret exposure.
+            - parser-reliability-auditor: parseSMSMessages / processStatement /
+              pdf.js parsing — malformed input, ReDoS, date/timezone bugs,
+              dedup correctness.
+            - frontend-ui-reviewer: UI consistency, iOS Safari quirks,
+              accessibility, dead/orphaned selectors.
+            - code-reviewer: state-migration correctness (fixApp), drifted
+              constants, dead references, stale docs.
+            - performance-auditor: localStorage growth, gist sync re-fetch
+              cost, DOM rendering cost at realistic scale.
+
+            Only report concrete, file:line-specific findings with realistic
+            impact — skip theoretical issues with no real trigger in this
+            single-user, no-backend app. Do not propose introducing a build
+            step, framework, or test runner.
+
+            Open one GitHub issue titled "Weekly Claude review — <date>"
+            summarizing findings grouped by agent, each with file:line,
+            severity, and a suggested minimal fix. If there are no findings
+            worth raising, do not open an issue.
