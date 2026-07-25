@@ -1092,14 +1092,32 @@ function computeBudgetTotals() {
   }
   var fixDisplay = Math.max(fixB, fixS);
   var varDisplay = Math.max(varB, varS) + OUT;
+  // Two different questions, two different numbers — do not conflate them:
+  //
+  // savings ("Available", live in-month view): treats un-spent budget as still
+  // committed, so it never over-promises money you have merely not spent yet.
+  // Floors each group's spend at its budget via fixDisplay/varDisplay.
+  //
+  // savingsActual (month conclusion / history): what actually stayed in the
+  // account = inflow minus money genuinely spent. Budget that was never
+  // utilised counts towards this. Matches how confirmAdj() recomputes a
+  // concluded month (inflow - totalSpent), so the two can never disagree.
   var savings = INFLOW - fixDisplay - varDisplay;
   var savingsPct = INFLOW > 0 ? Math.round(savings / INFLOW * 100) : 0;
+  var spentTotal = Math.round((totalS + OUT) * 100) / 100;
+  var savingsActual = Math.round((INFLOW - spentTotal) * 100) / 100;
+  var savingsActualPct = INFLOW > 0 ? Math.round(savingsActual / INFLOW * 100) : 0;
+  // Budget allocated but never spent — the gap between the two figures above.
+  var unusedBudget = Math.round((savingsActual - savings) * 100) / 100;
   return {
     BASE: BASE, REIMB: REIMB, OUT: OUT, INFLOW: INFLOW,
     fixB: fixB, fixS: fixS, varB: varB, varS: varS, totalS: totalS,
     fixedIdx: fixedIdx, varIdx: varIdx, fixedItems: fixedItems, varItems: varItems,
     fixDisplay: fixDisplay, varDisplay: varDisplay,
-    savings: savings, savingsPct: savingsPct
+    savings: savings, savingsPct: savingsPct,
+    spentTotal: spentTotal,
+    savingsActual: savingsActual, savingsActualPct: savingsActualPct,
+    unusedBudget: unusedBudget
   };
 }
 
@@ -1890,13 +1908,16 @@ function openConcludeModal() {
   var BASE = APP.inflow || DEFAULT_INFLOW;
   var t = computeBudgetTotals();
   var REIMB = t.REIMB, OUT = t.OUT, totalS = t.totalS;
-  var sav = t.savings, savPct = t.savingsPct;
+  // Concluding a cycle books ACTUAL savings — budget left unspent is money saved.
+  var sav = t.savingsActual, savPct = t.savingsActualPct;
   var html = '<div class="modal-row"><span style="color:var(--text-2)">' + escHtml(APP.currentMonth) + '</span><span></span></div>';
   html += '<div class="modal-row"><span>Inflow</span><span>' + fm(BASE) + '</span></div>';
   if (REIMB > 0) html += '<div class="modal-row"><span style="color:var(--green)">Reimbursements</span><span style="color:var(--green)">+' + fm(REIMB) + '</span></div>';
   html += '<div class="modal-row"><span>Spent</span><span>' + fm(totalS) + '</span></div>';
   if (OUT > 0) html += '<div class="modal-row"><span style="color:var(--orange)">Outflows (extra spend)</span><span style="color:var(--orange)">+' + fm(OUT) + '</span></div>';
+  if (t.unusedBudget > 0) html += '<div class="modal-row"><span style="color:var(--green)">Budget not utilised</span><span style="color:var(--green)">+' + fm(t.unusedBudget) + '</span></div>';
   html += '<div class="modal-row tot"><span>Savings</span><span style="color:' + (sav >= 0 ? 'var(--green)' : 'var(--red)') + '">' + fm(sav) + ' · ' + savPct + '%</span></div>';
+  if (t.unusedBudget > 0) html += '<div style="font-size:12px;color:var(--text-2);margin-top:8px">Planned savings were ' + fm(t.savings) + ' — you came in ' + fm(t.unusedBudget) + ' under budget.</div>';
   html += '<div style="font-size:12px;color:var(--text-2);margin-top:12px">Next month: <strong style="color:var(--text)">' + escHtml(nextMonthYear(APP.currentMonth)) + '</strong></div>';
   document.getElementById("conclude-summary").innerHTML = html;
   openModal("conclude-modal");
@@ -1905,8 +1926,8 @@ function openConcludeModal() {
 function confirmConclude() {
   var t = computeBudgetTotals();
   var BASE = t.BASE, REIMB = t.REIMB, OUT = t.OUT, INFLOW = t.INFLOW;
-  var fixS = t.fixS, varS = t.varS + OUT, totalS = t.totalS + OUT;
-  var savAmt = t.savings;
+  var fixS = t.fixS, varS = t.varS + OUT, totalS = t.spentTotal;
+  var savAmt = t.savingsActual;
   var snapshotBudget = [];
   for (var i = 0; i < APP.budget.length; i++) {
     snapshotBudget.push({ c: APP.budget[i].c, b: APP.budget[i].b, s: getSpent(APP.budget[i]), g: APP.budget[i].g, p: APP.budget[i].p });
@@ -1927,6 +1948,7 @@ function confirmConclude() {
     debitBalanceAtClose: (APP.accounts && APP.accounts.debit) ? APP.accounts.debit.balance : null,
     savings: savAmt,
     savingsPct: INFLOW > 0 ? Math.round(savAmt / INFLOW * 100) : 0,
+    plannedSavings: t.savings, unusedBudget: t.unusedBudget,
     topCategories: topCats, overBudget: overCats
   };
   APP.history.unshift(entry);
@@ -2041,6 +2063,7 @@ function drawHistory() {
         }
         dh += '<div class="md-row"><span style="color:var(--text-2)">Inflow</span><span>' + fm(h.inflow) + '</span></div>';
         dh += '<div class="md-row tot"><span>Total Spent</span><span>' + fm(h.totalSpent) + '</span></div>';
+        if (h.unusedBudget > 0) dh += '<div class="md-row"><span style="color:var(--green)">Budget not utilised</span><span style="color:var(--green)">+' + fm(h.unusedBudget) + '</span></div>';
         dh += '<div class="md-row tot"><span>Savings</span><span style="color:' + (h.savings >= 0 ? 'var(--green)' : 'var(--red)') + '">' + fm(h.savings) + '</span></div>';
         dh += '<div style="display:flex;gap:8px;margin-top:12px">';
         dh += '<button class="btn btn-secondary" style="flex:1;font-size:13px;padding:10px" onclick="openAdjModal(\'reimb\',' + idx + ')">+ Reimbursement</button>';
@@ -2950,6 +2973,10 @@ function confirmAdj() {
   }
   h.savings = Math.round((h.inflow - h.totalSpent) * 100) / 100;
   h.savingsPct = h.inflow > 0 ? Math.round(h.savings / h.inflow * 100) : 0;
+  // Unused budget is unchanged by either adjustment (a reimbursement lifts
+  // inflow, an outflow lifts spend — both move planned and actual alike),
+  // so keep the planned figure in step with the new actual.
+  if (h.unusedBudget > 0) h.plannedSavings = Math.round((h.savings - h.unusedBudget) * 100) / 100;
   closeModal('adj-modal');
   saveData();
   drawHistory();
