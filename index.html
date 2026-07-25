@@ -835,6 +835,54 @@ function fixApp() {
   for (var i = 0; i < APP.transactions.length; i++) {
     if (!APP.transactions[i].acct) APP.transactions[i].acct = "cc";
   }
+  backfillHistory();
+}
+
+// One-time migration for months concluded before savings moved to an
+// actual-spend basis. Those entries stored inflow - max(budget, spent), so a
+// month that came in under budget was recorded at its planned savings and the
+// trend chart ended up comparing two different definitions.
+//
+// Everything needed is already in the snapshot: `totalSpent` was always real
+// spend (it sums getSpent() plus outflows), so savings is recomputed from it,
+// and the per-row budget snapshot gives the unused-budget split and the target
+// the auto rule would have set for that month.
+//
+// Idempotent — an entry carrying savingsTarget has already been migrated. The
+// superseded figure is kept in savingsBefore rather than silently discarded.
+function backfillHistory() {
+  var hist = APP.history || [];
+  for (var i = 0; i < hist.length; i++) {
+    var e = hist[i];
+    if (e.savingsTarget !== undefined && e.savingsTarget !== null) continue;
+
+    var rows = e.budget || [];
+    var fixB = 0, fixS = 0, varB = 0, varS = 0;
+    for (var j = 0; j < rows.length; j++) {
+      var r = rows[j];
+      if (r.g === "fixed") { fixB += (r.b || 0); fixS += (r.s || 0); }
+      else { varB += (r.b || 0); varS += (r.s || 0); }
+    }
+
+    var inflow = e.inflow || 0;
+    // baseInflow is the planned salary before reimbursements; older entries
+    // predate the field, so back it out of the recorded totals.
+    var base = (e.baseInflow != null) ? e.baseInflow
+      : Math.round((inflow - (e.reimbursementsTotal || 0)) * 100) / 100;
+    var spent = (e.totalSpent != null) ? e.totalSpent
+      : Math.round((fixS + varS + (e.outflowsTotal || 0)) * 100) / 100;
+
+    // Entries predating the field rendered "Spent: NaN" on the history card.
+    if (e.totalSpent == null) e.totalSpent = spent;
+
+    var savings = Math.round((inflow - spent) * 100) / 100;
+    if (e.savings !== savings) e.savingsBefore = e.savings;
+    e.savings = savings;
+    e.savingsPct = inflow > 0 ? Math.round(savings / inflow * 100) : 0;
+    e.unusedBudget = Math.round((Math.max(0, fixB - fixS) + Math.max(0, varB - varS)) * 100) / 100;
+    e.savingsTarget = Math.round((base - (fixB + varB)) * 100) / 100;
+    e.savingsTargetDelta = Math.round((savings - e.savingsTarget) * 100) / 100;
+  }
 }
 
 var APP = loadCache() || defaultData();
@@ -2162,6 +2210,9 @@ function drawHistory() {
         if (h.savingsTarget > 0) {
           var tDelta = h.savingsTargetDelta != null ? h.savingsTargetDelta : Math.round((h.savings - h.savingsTarget) * 100) / 100;
           dh += '<div class="md-row"><span style="color:var(--text-2)">Target ' + fm(h.savingsTarget) + '</span><span style="color:' + (tDelta >= 0 ? 'var(--green)' : 'var(--orange)') + '">' + (tDelta >= 0 ? '✓ +' + fm(tDelta) : fm(tDelta)) + '</span></div>';
+        }
+        if (h.savingsBefore != null) {
+          dh += '<div style="font-size:11px;color:var(--text-3);margin-top:6px">Recorded as ' + fm(h.savingsBefore) + ' before savings switched to an actual-spend basis (unspent budget now counts as saved).</div>';
         }
         dh += '<div style="display:flex;gap:8px;margin-top:12px">';
         dh += '<button class="btn btn-secondary" style="flex:1;font-size:13px;padding:10px" onclick="openAdjModal(\'reimb\',' + idx + ')">+ Reimbursement</button>';
