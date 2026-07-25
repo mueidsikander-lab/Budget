@@ -26,6 +26,17 @@ pipeline, and localStorage persistence.
   budget row (it resolves paid-override / custom-spent-override / raw sum).
   Any new code that needs spent-amount must call it rather than reading
   `r.s` directly.
+- `getSpent(r)` applies to forecasting too. Summing `APP.transactions` to work
+  out spend silently drops every paid-override and custom-spent row (rent,
+  tuition), which is what made the old savings forecast read ~34k. Derive
+  spend from `computeBudgetTotals()`, never from the transaction list alone.
+- Savings is always `inflow − everything actually spent`, so unspent budget
+  counts as saved. `computeBudgetTotals()` owns that arithmetic (and the
+  `committed`/`unusedBudget` split); `confirmAdj()` must stay on the same
+  basis when it recomputes a concluded month.
+- `savingsTarget()` is the single source of truth for the goal. It derives
+  `inflow − budgetTotal()` unless `APP.savingsTargetMode === "custom"`, so
+  editing any category budget moves the target by the same amount.
 - Date/timezone handling has already caused one shipped bug (see git log:
   "Fix date range filter for UTC+4 timezone"). Be deliberate about local vs.
   UTC dates in any new date logic.

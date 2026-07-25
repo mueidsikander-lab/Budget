@@ -67,6 +67,15 @@ body {
 .hero-bar-seg { height: 100%; transition: width 0.35s ease-out; }
 .hb-fixed { background: var(--blue); } .hb-variable { background: var(--orange); } .hb-saved { background: var(--green); }
 .hero-legend { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-2); flex-wrap: wrap; gap: 8px; font-variant-numeric: tabular-nums; }
+.hero-target { margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.08); }
+.ht-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 7px; }
+.ht-label { font-size: 12px; color: var(--text-2); font-weight: 500; }
+.ht-val { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.ht-val.g { color: var(--green); }
+.ht-bar { height: 5px; border-radius: 3px; overflow: hidden; background: rgba(255,255,255,0.08); }
+.ht-fill { height: 100%; background: var(--purple); border-radius: 3px; transition: width 0.35s ease-out; }
+.ht-fill.g { background: var(--green); }
+.ht-note { font-size: 11px; color: var(--text-2); margin-top: 6px; font-variant-numeric: tabular-nums; }
 .hero-legend-item { display: flex; align-items: center; gap: 6px; }
 .legend-dot { width: 8px; height: 8px; border-radius: 2px; }
 .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
@@ -570,6 +579,17 @@ body {
     </div>
   </div>
 
+  <label class="s-section-title" for="target-input" style="display:block">Savings Target</label>
+  <div class="s-section">
+    <div class="s-inflow" style="padding-bottom:6px">
+      <input type="number" id="target-input" inputmode="decimal">
+    </div>
+    <div style="padding:0 16px 14px;display:flex;align-items:flex-start;gap:12px">
+      <div id="target-meta" style="flex:1;min-width:0;font-size:12px;color:var(--text-2);line-height:1.45"></div>
+      <button class="btn btn-secondary" id="target-auto-btn" style="font-size:12px;padding:7px 12px;white-space:nowrap;flex-shrink:0" onclick="resetSavingsTarget()">Use auto</button>
+    </div>
+  </div>
+
   <div class="s-section-title">Accounts</div>
   <div class="s-section">
     <div class="s-inflow" style="padding-bottom:6px">
@@ -667,6 +687,8 @@ body {
 <script>
 var CACHE_KEY = "bgt_v7";
 var DEFAULT_INFLOW = 42150;
+// Monthly savings goal: inflow (42,150) less the total budgeted spend (31,704).
+var DEFAULT_SAVINGS_TARGET = 10446;
 var CATS = ["Rent","Car Payments","Telephone+Internet+TV","Electric+Water","Chiller","Gas","Fuel","Tuition","Money to Pakistan","Groceries","Dining / Entertainment","Mueid / Madiha / House","Incidental"];
 var MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
@@ -691,12 +713,32 @@ function loadScript(src) {
   return _scriptCache[src];
 }
 function getSpent(r) { if (r.p) return r.b; if (r.cs !== undefined && r.cs !== null) return r.cs; return r.s || 0; }
+// Single source of truth for the savings goal.
+//
+// In "auto" mode (the default) the target is whatever the plan implies:
+// monthly inflow less everything budgeted across fixed + variable. Raise a
+// category's budget and the target drops by the same amount; trim one and it
+// rises. Reimbursements are deliberately excluded — they are unplanned income,
+// so they should beat the target rather than silently raise the bar.
+//
+// A manual value set in Settings pins the goal instead, so it stays put when
+// budgets move. 0 is a legitimate target ("no goal"), hence the explicit
+// null/NaN checks rather than a falsy test.
+function savingsTarget() {
+  if (APP.savingsTargetMode === "custom") {
+    var t = APP.savingsTarget;
+    if (t !== undefined && t !== null && !isNaN(t)) return t;
+  }
+  return Math.round(((APP.inflow || DEFAULT_INFLOW) - budgetTotal()) * 100) / 100;
+}
 function pctCls(p) { return p >= 75 ? "g" : (p >= 40 ? "y" : "r"); }
 
 function defaultData() {
   return {
     currentMonth: nowMonthYear(),
     inflow: DEFAULT_INFLOW,
+    savingsTargetMode: "auto",
+    savingsTarget: DEFAULT_SAVINGS_TARGET,
     budget: [
       {c:"Rent",b:10937,s:0,p:false,g:"fixed"},
       {c:"Car Payments",b:2268,s:0,p:false,g:"fixed"},
@@ -773,6 +815,8 @@ function fixApp() {
   if (!APP.history) APP.history = [];
   if (!APP.currentMonth) APP.currentMonth = nowMonthYear();
   if (!APP.inflow) APP.inflow = DEFAULT_INFLOW;
+  if (APP.savingsTargetMode !== "custom" && APP.savingsTargetMode !== "auto") APP.savingsTargetMode = "auto";
+  if (APP.savingsTarget === undefined || APP.savingsTarget === null || isNaN(APP.savingsTarget)) APP.savingsTarget = DEFAULT_SAVINGS_TARGET;
   for (var i = 0; i < APP.budget.length; i++) {
     if (APP.budget[i].c === "Fuel" && APP.budget[i].g !== "variable") APP.budget[i].g = "variable";
   }
@@ -879,6 +923,8 @@ function budgetTotal() {
 function drawBudgetSettings() {
   var host = document.getElementById('budget-cat-list');
   if (!host) return;
+  // An auto target is derived from these budgets, so keep it in step with edits.
+  drawTargetSetting();
   var INFLOW = getTotalInflow();
   var totalB = budgetTotal();
   var isOver = totalB > INFLOW;
@@ -1092,32 +1138,30 @@ function computeBudgetTotals() {
   }
   var fixDisplay = Math.max(fixB, fixS);
   var varDisplay = Math.max(varB, varS) + OUT;
-  // Two different questions, two different numbers — do not conflate them:
-  //
-  // savings ("Available", live in-month view): treats un-spent budget as still
-  // committed, so it never over-promises money you have merely not spent yet.
-  // Floors each group's spend at its budget via fixDisplay/varDisplay.
-  //
-  // savingsActual (month conclusion / history): what actually stayed in the
-  // account = inflow minus money genuinely spent. Budget that was never
-  // utilised counts towards this. Matches how confirmAdj() recomputes a
-  // concluded month (inflow - totalSpent), so the two can never disagree.
-  var savings = INFLOW - fixDisplay - varDisplay;
-  var savingsPct = INFLOW > 0 ? Math.round(savings / INFLOW * 100) : 0;
+  // Savings is money in minus money out, full stop: inflow (+ reimbursements)
+  // less everything actually spent, including outflows. Budget that was never
+  // utilised therefore lands in savings instead of being written off, and
+  // fixS + varS + OUT + savings === INFLOW exactly. Same basis confirmAdj()
+  // uses for concluded months (inflow - totalSpent), so they cannot disagree.
   var spentTotal = Math.round((totalS + OUT) * 100) / 100;
-  var savingsActual = Math.round((INFLOW - spentTotal) * 100) / 100;
-  var savingsActualPct = INFLOW > 0 ? Math.round(savingsActual / INFLOW * 100) : 0;
-  // Budget allocated but never spent — the gap between the two figures above.
-  var unusedBudget = Math.round((savingsActual - savings) * 100) / 100;
+  var savings = Math.round((INFLOW - spentTotal) * 100) / 100;
+  var savingsPct = INFLOW > 0 ? Math.round(savings / INFLOW * 100) : 0;
+  // Conservative counterpart: what savings would be if every remaining dirham
+  // of budget were spent. Only used to quantify the un-utilised budget.
+  var committed = INFLOW - fixDisplay - varDisplay;
+  var unusedBudget = Math.round((savings - committed) * 100) / 100;
+  // Progress against the savings goal.
+  var target = savingsTarget();
+  var targetDelta = Math.round((savings - target) * 100) / 100;
+  var targetPct = target > 0 ? Math.round(savings / target * 100) : 0;
   return {
     BASE: BASE, REIMB: REIMB, OUT: OUT, INFLOW: INFLOW,
     fixB: fixB, fixS: fixS, varB: varB, varS: varS, totalS: totalS,
     fixedIdx: fixedIdx, varIdx: varIdx, fixedItems: fixedItems, varItems: varItems,
     fixDisplay: fixDisplay, varDisplay: varDisplay,
     savings: savings, savingsPct: savingsPct,
-    spentTotal: spentTotal,
-    savingsActual: savingsActual, savingsActualPct: savingsActualPct,
-    unusedBudget: unusedBudget
+    spentTotal: spentTotal, committed: committed, unusedBudget: unusedBudget,
+    target: target, targetDelta: targetDelta, targetPct: targetPct
   };
 }
 
@@ -1131,9 +1175,9 @@ function drawBudget() {
 
   document.getElementById("month-display").textContent = APP.currentMonth;
   document.getElementById("month-sub").textContent = APP.history.length > 0 ? APP.history.length + " month" + (APP.history.length > 1 ? "s" : "") + " in history" : "Active cycle";
-  document.getElementById("hero-card").innerHTML = renderHero(fixS, varS + OUT, savActual, INFLOW, fixDisplay, varDisplay);
+  document.getElementById("hero-card").innerHTML = renderHero(fixS, varS + OUT, savActual, INFLOW, t);
   document.getElementById("stat-row").innerHTML = renderStats(fixB, fixS, varB, varS);
-  renderForecast(INFLOW, OUT);
+  renderForecast(t);
   renderDashboard();
 
   drawReimbursements();
@@ -1154,24 +1198,24 @@ function drawBudget() {
   bindBudgetEvents();
 }
 
-function renderHero(fixS, varS, savActual, INFLOW, fixDisplay, varDisplay) {
-  if (fixDisplay === undefined) fixDisplay = fixS;
-  if (varDisplay === undefined) varDisplay = varS;
+// savActual is inflow minus everything spent, so the three bar segments
+// (fixed / variable+outflows / saved) tile the full inflow with no remainder.
+function renderHero(fixS, varS, savActual, INFLOW, t) {
   var savNeg = savActual < 0;
-  var totalDisplay = fixDisplay + varDisplay;
+  var spent = fixS + varS;
   var fixW, varW, savW;
   if (savActual >= 0) {
-    fixW = (fixDisplay / INFLOW * 100).toFixed(1);
-    varW = (varDisplay / INFLOW * 100).toFixed(1);
+    fixW = (fixS / INFLOW * 100).toFixed(1);
+    varW = (varS / INFLOW * 100).toFixed(1);
     savW = (savActual / INFLOW * 100).toFixed(1);
   } else {
-    fixW = (fixDisplay / totalDisplay * 100).toFixed(1);
-    varW = (varDisplay / totalDisplay * 100).toFixed(1);
+    fixW = (fixS / spent * 100).toFixed(1);
+    varW = (varS / spent * 100).toFixed(1);
     savW = 0;
   }
-  return '<div class="hero-label">Available</div>' +
+  return '<div class="hero-label">Saved</div>' +
     '<div class="hero-amt ' + (savNeg ? 'r' : 'g') + '">AED ' + fm(savActual) + '</div>' +
-    '<div class="hero-sub">' + (savActual < 0 ? Math.abs(Math.round(savActual / INFLOW * 100)) + '% over · ' : Math.round(savActual / INFLOW * 100) + '% saved · ') + fm(INFLOW) + ' inflow</div>' +
+    '<div class="hero-sub">' + (savActual < 0 ? Math.abs(Math.round(savActual / INFLOW * 100)) + '% over · ' : Math.round(savActual / INFLOW * 100) + '% of ') + fm(INFLOW) + ' inflow · spent ' + fm(spent) + '</div>' +
     '<div class="hero-bar">' +
     '<div class="hero-bar-seg hb-fixed" style="width:' + fixW + '%"></div>' +
     '<div class="hero-bar-seg hb-variable" style="width:' + varW + '%"></div>' +
@@ -1181,6 +1225,25 @@ function renderHero(fixS, varS, savActual, INFLOW, fixDisplay, varDisplay) {
     '<div class="hero-legend-item"><span class="legend-dot" style="background:var(--blue)"></span>Fixed ' + fm(fixS) + '</div>' +
     '<div class="hero-legend-item"><span class="legend-dot" style="background:var(--orange)"></span>Variable ' + fm(varS) + '</div>' +
     '<div class="hero-legend-item"><span class="legend-dot" style="background:' + (savNeg ? 'var(--red)' : 'var(--green)') + '"></span>' + (savNeg ? 'Over ' + fm(Math.abs(savActual)) : 'Saved ' + fm(savActual)) + '</div>' +
+    '</div>' +
+    renderTargetRow(t);
+}
+
+// Progress toward the savings goal, shown directly under the hero figure.
+function renderTargetRow(t) {
+  if (!t || !t.target || t.target <= 0) return '';
+  var pct = Math.max(0, Math.min(100, t.targetPct));
+  var hit = t.targetDelta >= 0;
+  var note = hit
+    ? fm(t.targetDelta) + ' above target'
+    : fm(Math.abs(t.targetDelta)) + ' to go';
+  return '<div class="hero-target">' +
+    '<div class="ht-head">' +
+      '<span class="ht-label">Savings target</span>' +
+      '<span class="ht-val ' + (hit ? 'g' : '') + '">' + fm(t.savings) + ' / ' + fm(t.target) + '</span>' +
+    '</div>' +
+    '<div class="ht-bar"><div class="ht-fill' + (hit ? ' g' : '') + '" style="width:' + pct.toFixed(1) + '%"></div></div>' +
+    '<div class="ht-note">' + (hit ? '✓ ' : '') + note + ' · ' + t.targetPct + '% of target</div>' +
     '</div>';
 }
 
@@ -1208,7 +1271,20 @@ function getElapsedFraction() {
 // Forecast:
 //  - payday projection: weekly average spend extrapolated to the 25th (next payday)
 //  - cash position: debit balance + reimbursements - CC payable
-function computeForecast(data, INFLOW, OUT) {
+// Projects where savings land by payday. Built from three parts so the number
+// is auditable:
+//
+//   already spent    — every budget row via getSpent() (NOT just imported
+//                      transactions: rows marked paid or given a manual
+//                      spent-override have no transactions behind them, and
+//                      counting only transactions understated spend badly),
+//                      plus outflows
+//   fixed still due  — the unpaid remainder of each fixed row; rent and
+//                      tuition are going out whether or not they have landed
+//   variable to come — the variable run-rate so far, extended to payday
+//
+// projected spend = the three summed; projected savings = inflow - that.
+function computeForecast(t) {
   var elapsed = getElapsedFraction();
 
   // Days elapsed since start of current cycle month
@@ -1218,13 +1294,19 @@ function computeForecast(data, INFLOW, OUT) {
   var monthStart = (mi >= 0 && !isNaN(yr)) ? new Date(yr, mi, 1) : new Date(now.getFullYear(), now.getMonth(), 1);
   var daysElapsed = Math.max(1, Math.round((now - monthStart) / 86400000));
 
-  // Total spend from actual transactions this cycle
-  var txnTotal = 0;
-  for (var i = 0; i < APP.transactions.length; i++) {
-    var a = parseFloat(APP.transactions[i].amount);
-    if (!isNaN(a)) txnTotal += a;
+  var spentToDate = t.spentTotal;
+
+  // Fixed commitments not yet paid — still going out before the cycle ends.
+  var fixedDue = 0;
+  for (var i = 0; i < t.fixedItems.length; i++) {
+    var r = t.fixedItems[i];
+    fixedDue += Math.max(0, r.b - getSpent(r));
   }
-  var dailyAvg = txnTotal / daysElapsed;
+  fixedDue = Math.round(fixedDue * 100) / 100;
+
+  // Discretionary run-rate comes from variable spend only; fixed costs are
+  // lumpy monthly debits and would wildly inflate a per-day average.
+  var dailyAvg = t.varS / daysElapsed;
   var weeklyAvg = dailyAvg * 7;
 
   // Days remaining until next payday (25th of current or next month)
@@ -1237,9 +1319,9 @@ function computeForecast(data, INFLOW, OUT) {
     daysToPayday = (daysInMonth - todayDate) + 25;
   }
 
-  var projectedAdditional = dailyAvg * daysToPayday;
-  var paydaySpend = txnTotal + projectedAdditional + OUT;
-  var paydaySavings = INFLOW - paydaySpend;
+  var projectedAdditional = Math.round(dailyAvg * daysToPayday * 100) / 100;
+  var paydaySpend = Math.round((spentToDate + fixedDue + projectedAdditional) * 100) / 100;
+  var paydaySavings = Math.round((t.INFLOW - paydaySpend) * 100) / 100;
 
   // Cash position: what you'll actually have after paying the CC bill
   var acc = APP.accounts || {};
@@ -1250,20 +1332,22 @@ function computeForecast(data, INFLOW, OUT) {
 
   return {
     elapsed: elapsed, daysElapsed: daysElapsed, daysToPayday: daysToPayday,
-    txnTotal: txnTotal, weeklyAvg: weeklyAvg, projectedAdditional: projectedAdditional,
+    spentToDate: spentToDate, fixedDue: fixedDue,
+    weeklyAvg: weeklyAvg, projectedAdditional: projectedAdditional,
     paydaySpend: paydaySpend, paydaySavings: paydaySavings,
     cashPosition: cashPosition, debitBal: debitBal, reimb: reimb, ccPayable: sp.cc
   };
 }
 
-function renderForecast(INFLOW, OUT) {
-  var f = computeForecast(APP.budget, INFLOW, OUT);
+function renderForecast(t) {
+  var INFLOW = t.INFLOW;
+  var f = computeForecast(t);
   function amtCls(v) { return v < 0 ? "r" : "g"; }
 
   var paydayTitle = f.daysToPayday === 0 ? "Payday is today!" : "Till payday · " + f.daysToPayday + "d left";
-  var paydayPct = INFLOW > 0 ? Math.round(f.paydaySavings / INFLOW * 100) : 0;
-  var paydaySub = (f.paydaySavings < 0 ? Math.abs(paydayPct) + "% over" : paydayPct + "% saved") +
-    " · AED " + fm(f.weeklyAvg) + "/wk avg";
+  var paydaySub = t.target > 0
+    ? (f.paydaySavings >= t.target ? "on track · " : fm(t.target - f.paydaySavings) + " under · ") + "target " + fm(t.target)
+    : (f.paydaySavings < 0 ? Math.abs(Math.round(f.paydaySavings / INFLOW * 100)) + "% over" : Math.round(f.paydaySavings / INFLOW * 100) + "% saved");
 
   var cashCol;
   if (f.cashPosition != null) {
@@ -1282,8 +1366,11 @@ function renderForecast(INFLOW, OUT) {
       '</div>';
   }
 
-  var note = "Weekly avg AED " + fm(f.weeklyAvg) + " based on " + f.daysElapsed + " days of spend" +
-    (f.daysToPayday > 0 ? " · projecting AED " + fm(f.projectedAdditional) + " more before the 25th" : " · payday reached") + ".";
+  // Spell out the arithmetic — a forecast you cannot check is not much use.
+  var note = "Spent " + fm(f.spentToDate) +
+    (f.fixedDue > 0 ? " + " + fm(f.fixedDue) + " fixed still due" : "") +
+    (f.daysToPayday > 0 ? " + " + fm(f.projectedAdditional) + " variable projected (" + fm(f.weeklyAvg) + "/wk over " + f.daysElapsed + "d, " + f.daysToPayday + "d left)" : "") +
+    " = " + fm(f.paydaySpend) + " of " + fm(INFLOW) + " inflow.";
 
   document.getElementById("forecast-section").innerHTML =
     '<div class="forecast">' +
@@ -1834,9 +1921,9 @@ function findOutflow(id) { var o = APP.outflows || []; for (var i = 0; i < o.len
 function recalcHeader() {
   var data = APP.budget; if (!data) return;
   var t = computeBudgetTotals();
-  document.getElementById("hero-card").innerHTML = renderHero(t.fixS, t.varS + t.OUT, t.savings, t.INFLOW, t.fixDisplay, t.varDisplay);
+  document.getElementById("hero-card").innerHTML = renderHero(t.fixS, t.varS + t.OUT, t.savings, t.INFLOW, t);
   document.getElementById("stat-row").innerHTML = renderStats(t.fixB, t.fixS, t.varB, t.varS);
-  renderForecast(t.INFLOW, t.OUT);
+  renderForecast(t);
   renderDashboard();
 }
 
@@ -1908,8 +1995,7 @@ function openConcludeModal() {
   var BASE = APP.inflow || DEFAULT_INFLOW;
   var t = computeBudgetTotals();
   var REIMB = t.REIMB, OUT = t.OUT, totalS = t.totalS;
-  // Concluding a cycle books ACTUAL savings — budget left unspent is money saved.
-  var sav = t.savingsActual, savPct = t.savingsActualPct;
+  var sav = t.savings, savPct = t.savingsPct;
   var html = '<div class="modal-row"><span style="color:var(--text-2)">' + escHtml(APP.currentMonth) + '</span><span></span></div>';
   html += '<div class="modal-row"><span>Inflow</span><span>' + fm(BASE) + '</span></div>';
   if (REIMB > 0) html += '<div class="modal-row"><span style="color:var(--green)">Reimbursements</span><span style="color:var(--green)">+' + fm(REIMB) + '</span></div>';
@@ -1917,7 +2003,14 @@ function openConcludeModal() {
   if (OUT > 0) html += '<div class="modal-row"><span style="color:var(--orange)">Outflows (extra spend)</span><span style="color:var(--orange)">+' + fm(OUT) + '</span></div>';
   if (t.unusedBudget > 0) html += '<div class="modal-row"><span style="color:var(--green)">Budget not utilised</span><span style="color:var(--green)">+' + fm(t.unusedBudget) + '</span></div>';
   html += '<div class="modal-row tot"><span>Savings</span><span style="color:' + (sav >= 0 ? 'var(--green)' : 'var(--red)') + '">' + fm(sav) + ' · ' + savPct + '%</span></div>';
-  if (t.unusedBudget > 0) html += '<div style="font-size:12px;color:var(--text-2);margin-top:8px">Planned savings were ' + fm(t.savings) + ' — you came in ' + fm(t.unusedBudget) + ' under budget.</div>';
+  if (t.target > 0) {
+    html += '<div class="modal-row"><span style="color:var(--text-2)">Target</span><span style="color:var(--text-2)">' + fm(t.target) + '</span></div>';
+    html += '<div style="font-size:12px;color:' + (t.targetDelta >= 0 ? 'var(--green)' : 'var(--text-2)') + ';margin-top:8px">' +
+      (t.targetDelta >= 0
+        ? '✓ Target beaten by ' + fm(t.targetDelta) + ' (' + t.targetPct + '% of target)'
+        : fm(Math.abs(t.targetDelta)) + ' short of target (' + t.targetPct + '%)') +
+      (t.unusedBudget > 0 ? ' · includes ' + fm(t.unusedBudget) + ' of budget left unspent' : '') + '</div>';
+  }
   html += '<div style="font-size:12px;color:var(--text-2);margin-top:12px">Next month: <strong style="color:var(--text)">' + escHtml(nextMonthYear(APP.currentMonth)) + '</strong></div>';
   document.getElementById("conclude-summary").innerHTML = html;
   openModal("conclude-modal");
@@ -1927,7 +2020,7 @@ function confirmConclude() {
   var t = computeBudgetTotals();
   var BASE = t.BASE, REIMB = t.REIMB, OUT = t.OUT, INFLOW = t.INFLOW;
   var fixS = t.fixS, varS = t.varS + OUT, totalS = t.spentTotal;
-  var savAmt = t.savingsActual;
+  var savAmt = t.savings;
   var snapshotBudget = [];
   for (var i = 0; i < APP.budget.length; i++) {
     snapshotBudget.push({ c: APP.budget[i].c, b: APP.budget[i].b, s: getSpent(APP.budget[i]), g: APP.budget[i].g, p: APP.budget[i].p });
@@ -1948,7 +2041,8 @@ function confirmConclude() {
     debitBalanceAtClose: (APP.accounts && APP.accounts.debit) ? APP.accounts.debit.balance : null,
     savings: savAmt,
     savingsPct: INFLOW > 0 ? Math.round(savAmt / INFLOW * 100) : 0,
-    plannedSavings: t.savings, unusedBudget: t.unusedBudget,
+    unusedBudget: t.unusedBudget,
+    savingsTarget: t.target, savingsTargetDelta: t.targetDelta,
     topCategories: topCats, overBudget: overCats
   };
   APP.history.unshift(entry);
@@ -2065,6 +2159,10 @@ function drawHistory() {
         dh += '<div class="md-row tot"><span>Total Spent</span><span>' + fm(h.totalSpent) + '</span></div>';
         if (h.unusedBudget > 0) dh += '<div class="md-row"><span style="color:var(--green)">Budget not utilised</span><span style="color:var(--green)">+' + fm(h.unusedBudget) + '</span></div>';
         dh += '<div class="md-row tot"><span>Savings</span><span style="color:' + (h.savings >= 0 ? 'var(--green)' : 'var(--red)') + '">' + fm(h.savings) + '</span></div>';
+        if (h.savingsTarget > 0) {
+          var tDelta = h.savingsTargetDelta != null ? h.savingsTargetDelta : Math.round((h.savings - h.savingsTarget) * 100) / 100;
+          dh += '<div class="md-row"><span style="color:var(--text-2)">Target ' + fm(h.savingsTarget) + '</span><span style="color:' + (tDelta >= 0 ? 'var(--green)' : 'var(--orange)') + '">' + (tDelta >= 0 ? '✓ +' + fm(tDelta) : fm(tDelta)) + '</span></div>';
+        }
         dh += '<div style="display:flex;gap:8px;margin-top:12px">';
         dh += '<button class="btn btn-secondary" style="flex:1;font-size:13px;padding:10px" onclick="openAdjModal(\'reimb\',' + idx + ')">+ Reimbursement</button>';
         dh += '<button class="btn btn-secondary" style="flex:1;font-size:13px;padding:10px" onclick="openAdjModal(\'outflow\',' + idx + ')">+ Outflow</button>';
@@ -2611,6 +2709,7 @@ function buildSnapshotText() {
   var t = "📊 *" + APP.currentMonth + " Budget* · " + dateStr + "\n";
   t += "━━━━━━━━━━━━━━━\n";
   t += (savActual >= 0 ? "💰" : "⚠️") + " *Savings: AED " + fm(savActual) + "* (" + savPct + "%)\n";
+  if (tot.target > 0) t += (tot.targetDelta >= 0 ? "🎯 " + fm(tot.targetDelta) + " above" : "🎯 " + fm(Math.abs(tot.targetDelta)) + " below") + " target of " + fm(tot.target) + "\n";
   if (REIMB > 0) t += "Inflow: " + fm(BASE) + " + " + fm(REIMB) + " reimb = " + fm(INFLOW) + " · Spent: " + fm(totalS) + "\n\n";
   else t += "Inflow: " + fm(INFLOW) + " · Spent: " + fm(totalS) + "\n\n";
   t += "🔵 *Fixed* " + fm(fixS) + " / " + fm(fixB) + " (" + fixPct + "%)\n";
@@ -2664,9 +2763,10 @@ function buildShareCardAll() {
   h += '<div class="sc-month">Budget · ' + today + '</div>';
   h += '<div class="sc-month-name">' + escHtml(APP.currentMonth) + '</div>';
   h += '<div class="sc-hero">';
-  h += '<div class="sc-hero-label">Available</div>';
+  h += '<div class="sc-hero-label">Saved</div>';
   h += '<div class="sc-hero-amt ' + (sav < 0 ? 'r' : 'g') + '">AED ' + fm(sav) + '</div>';
   h += '<div class="sc-hero-sub">' + savPct + '% of ' + fm(INFLOW) + ' inflow · Spent ' + fm(totalS) + '</div>';
+  if (t.target > 0) h += '<div class="sc-hero-sub">Target ' + fm(t.target) + ' · ' + (t.targetDelta >= 0 ? '+' + fm(t.targetDelta) : fm(t.targetDelta)) + '</div>';
   h += '</div>';
   h += '<div class="sc-cat-head">Fixed · ' + fm(fixS) + ' / ' + fm(fixB) + '</div>';
   h += '<div class="sc-grid">';
@@ -2837,6 +2937,7 @@ function drawSettings() {
   drawMappings();
   drawBudgetSettings();
   document.getElementById("inflow-input").value = APP.inflow || DEFAULT_INFLOW;
+  drawTargetSetting();
   var acc = APP.accounts || {};
   var balInp = document.getElementById("debit-balance-input");
   if (balInp) {
@@ -2866,9 +2967,37 @@ function drawSettings() {
     }
   }
 }
+function drawTargetSetting() {
+  var inp = document.getElementById("target-input");
+  if (!inp) return;
+  var auto = APP.savingsTargetMode !== "custom";
+  inp.value = savingsTarget();
+  document.getElementById("target-meta").textContent = auto
+    ? "Auto · inflow " + fm(APP.inflow || DEFAULT_INFLOW) + " − budget " + fm(budgetTotal()) + ". Changes with your category budgets."
+    : "Custom · fixed at " + fm(savingsTarget()) + " regardless of budget changes. Auto would be " + fm(Math.round(((APP.inflow || DEFAULT_INFLOW) - budgetTotal()) * 100) / 100) + ".";
+  document.getElementById("target-auto-btn").style.display = auto ? "none" : "";
+}
+
+function resetSavingsTarget() {
+  APP.savingsTargetMode = "auto";
+  saveData(); drawTargetSetting(); drawBudget();
+  toast("Target follows your budget again");
+}
+
 document.getElementById("inflow-input").addEventListener("change", function () {
   var v = parseFloat(this.value);
-  if (!isNaN(v) && v > 0) { APP.inflow = v; saveData(); drawBudgetSettings(); toast("Inflow updated"); }
+  if (!isNaN(v) && v > 0) { APP.inflow = v; saveData(); drawBudgetSettings(); drawTargetSetting(); drawBudget(); toast("Inflow updated"); }
+});
+document.getElementById("target-input").addEventListener("change", function () {
+  var v = parseFloat(this.value);
+  if (isNaN(v) || v < 0) { drawTargetSetting(); toast("Enter a valid target", "warn"); return; }
+  // Typing the number the auto rule already produces means "keep it automatic"
+  // rather than pinning that value forever.
+  var auto = Math.round(((APP.inflow || DEFAULT_INFLOW) - budgetTotal()) * 100) / 100;
+  APP.savingsTargetMode = (v === auto) ? "auto" : "custom";
+  APP.savingsTarget = v;
+  saveData(); drawTargetSetting(); drawBudget();
+  toast(APP.savingsTargetMode === "auto" ? "Target follows your budget" : "Savings target updated");
 });
 document.getElementById("gist-id-input").addEventListener("change", function () {
   var v = this.value.trim();
@@ -2973,10 +3102,9 @@ function confirmAdj() {
   }
   h.savings = Math.round((h.inflow - h.totalSpent) * 100) / 100;
   h.savingsPct = h.inflow > 0 ? Math.round(h.savings / h.inflow * 100) : 0;
-  // Unused budget is unchanged by either adjustment (a reimbursement lifts
-  // inflow, an outflow lifts spend — both move planned and actual alike),
-  // so keep the planned figure in step with the new actual.
-  if (h.unusedBudget > 0) h.plannedSavings = Math.round((h.savings - h.unusedBudget) * 100) / 100;
+  // The target is a fixed goal for the month, so an adjustment moves the
+  // savings figure against it rather than moving the goal.
+  if (h.savingsTarget > 0) h.savingsTargetDelta = Math.round((h.savings - h.savingsTarget) * 100) / 100;
   closeModal('adj-modal');
   saveData();
   drawHistory();
