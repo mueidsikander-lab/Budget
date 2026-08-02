@@ -37,6 +37,17 @@ pipeline, and localStorage persistence.
 - `savingsTarget()` is the single source of truth for the goal. It derives
   `inflow − budgetTotal()` unless `APP.savingsTargetMode === "custom"`, so
   editing any category budget moves the target by the same amount.
+- The forecast horizon is the end of the cycle month, never payday. Inflow,
+  budget rows and `savingsTarget()` are all whole-calendar-month figures, so
+  projecting spend to the 25th and subtracting it from a month of inflow
+  compares two different spans. `getCycleDays()` owns elapsed/remaining days
+  and must stay consistent with `getElapsedFraction()`.
+- A raw run-rate must never be extrapolated across a cycle on its own. Days
+  elapsed is the day-of-month, not the difference from the 1st (that
+  off-by-one alone doubles the rate), and early in a cycle the run-rate is
+  noise — `computeForecast()` blends it against the unspent variable budget,
+  weighted by elapsed fraction, so the weight moves onto actuals as the cycle
+  runs. Unbounded extrapolation is what made the forecast read −63k on day 2.
 - Date/timezone handling has already caused one shipped bug (see git log:
   "Fix date range filter for UTC+4 timezone"). Be deliberate about local vs.
   UTC dates in any new date logic.

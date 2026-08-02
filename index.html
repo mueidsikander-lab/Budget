@@ -1316,11 +1316,30 @@ function getElapsedFraction() {
   return Math.min(1, now.getDate() / daysInMonth);
 }
 
+// Whole-day counterpart of getElapsedFraction(): how far through the current
+// cycle month we are, in days. Both must agree — the forecast divides by
+// elapsed days and weights by the fraction, so a day counted by one and not
+// the other skews the run-rate. Elapsed is the day-of-month (on the 2nd, two
+// days of the cycle have gone), NOT the difference from the 1st, which is the
+// off-by-one that used to halve the denominator and double the run-rate.
+function getCycleDays() {
+  var parts = (APP.currentMonth || "").split(" ");
+  var mi = MONTHS.indexOf(parts[0]), yr = parseInt(parts[1]);
+  var now = new Date(), cy = now.getFullYear(), cm = now.getMonth();
+  if (mi < 0 || isNaN(yr)) { mi = cm; yr = cy; }
+  var total = new Date(yr, mi + 1, 0).getDate();
+  var elapsed;
+  if (yr < cy || (yr === cy && mi < cm)) elapsed = total;              // past cycle: over
+  else if (yr > cy || (yr === cy && mi > cm)) elapsed = 0;             // future cycle: not begun
+  else elapsed = Math.min(total, now.getDate());
+  return { total: total, elapsed: elapsed, remaining: total - elapsed };
+}
+
 // Forecast:
-//  - payday projection: weekly average spend extrapolated to the 25th (next payday)
+//  - cycle projection: where spend lands by the end of the current cycle
 //  - cash position: debit balance + reimbursements - CC payable
-// Projects where savings land by payday. Built from three parts so the number
-// is auditable:
+// Projects where savings land at cycle end. Built from three parts so the
+// number is auditable:
 //
 //   already spent    — every budget row via getSpent() (NOT just imported
 //                      transactions: rows marked paid or given a manual
@@ -1329,18 +1348,19 @@ function getElapsedFraction() {
 //                      plus outflows
 //   fixed still due  — the unpaid remainder of each fixed row; rent and
 //                      tuition are going out whether or not they have landed
-//   variable to come — the variable run-rate so far, extended to payday
+//   variable to come — the variable run-rate so far and the unspent variable
+//                      budget, blended by how much of the cycle has elapsed
 //
 // projected spend = the three summed; projected savings = inflow - that.
+//
+// The horizon is the END OF THE CYCLE, not the 25th. Inflow, every budget row
+// and savingsTarget() are all whole-calendar-month figures, so extrapolating
+// spend to payday and then subtracting it from a full month of inflow compared
+// two different spans and made the projection meaningless near a boundary.
 function computeForecast(t) {
   var elapsed = getElapsedFraction();
-
-  // Days elapsed since start of current cycle month
-  var now = new Date(); now.setHours(0, 0, 0, 0);
-  var parts = (APP.currentMonth || "").split(" ");
-  var mi = MONTHS.indexOf(parts[0]), yr = parseInt(parts[1]);
-  var monthStart = (mi >= 0 && !isNaN(yr)) ? new Date(yr, mi, 1) : new Date(now.getFullYear(), now.getMonth(), 1);
-  var daysElapsed = Math.max(1, Math.round((now - monthStart) / 86400000));
+  var cyc = getCycleDays();
+  var daysElapsed = cyc.elapsed, daysRemaining = cyc.remaining;
 
   var spentToDate = t.spentTotal;
 
@@ -1354,22 +1374,23 @@ function computeForecast(t) {
 
   // Discretionary run-rate comes from variable spend only; fixed costs are
   // lumpy monthly debits and would wildly inflate a per-day average.
-  var dailyAvg = t.varS / daysElapsed;
+  var dailyAvg = daysElapsed > 0 ? t.varS / daysElapsed : 0;
   var weeklyAvg = dailyAvg * 7;
 
-  // Days remaining until next payday (25th of current or next month)
-  var todayDate = now.getDate();
-  var daysToPayday;
-  if (todayDate <= 25) {
-    daysToPayday = 25 - todayDate;
-  } else {
-    var daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    daysToPayday = (daysInMonth - todayDate) + 25;
-  }
+  // Two estimates of the variable spend still to come, blended by how much of
+  // the cycle has run. A run-rate off two days of a lumpy sample is noise —
+  // extrapolating it across the rest of the cycle is what produced projections
+  // many times the entire variable budget. Early on, the unspent variable
+  // budget is the better estimate; by month end the run-rate is the whole
+  // story and the weight has moved fully onto it, so the forecast converges on
+  // actuals rather than a budget assumption.
+  var runRateRest = dailyAvg * daysRemaining;
+  var budgetRest = Math.max(0, t.varB - t.varS);
+  var w = cyc.total > 0 ? daysElapsed / cyc.total : 1;
+  var projectedAdditional = Math.round((w * runRateRest + (1 - w) * budgetRest) * 100) / 100;
 
-  var projectedAdditional = Math.round(dailyAvg * daysToPayday * 100) / 100;
-  var paydaySpend = Math.round((spentToDate + fixedDue + projectedAdditional) * 100) / 100;
-  var paydaySavings = Math.round((t.INFLOW - paydaySpend) * 100) / 100;
+  var cycleEndSpend = Math.round((spentToDate + fixedDue + projectedAdditional) * 100) / 100;
+  var cycleEndSavings = Math.round((t.INFLOW - cycleEndSpend) * 100) / 100;
 
   // Cash position: what you'll actually have after paying the CC bill
   var acc = APP.accounts || {};
@@ -1379,10 +1400,11 @@ function computeForecast(t) {
   var cashPosition = debitBal != null ? (debitBal + reimb - sp.cc) : null;
 
   return {
-    elapsed: elapsed, daysElapsed: daysElapsed, daysToPayday: daysToPayday,
+    elapsed: elapsed, daysElapsed: daysElapsed, daysRemaining: daysRemaining,
     spentToDate: spentToDate, fixedDue: fixedDue,
+    runRateRest: runRateRest, budgetRest: budgetRest,
     weeklyAvg: weeklyAvg, projectedAdditional: projectedAdditional,
-    paydaySpend: paydaySpend, paydaySavings: paydaySavings,
+    cycleEndSpend: cycleEndSpend, cycleEndSavings: cycleEndSavings,
     cashPosition: cashPosition, debitBal: debitBal, reimb: reimb, ccPayable: sp.cc
   };
 }
@@ -1392,10 +1414,10 @@ function renderForecast(t) {
   var f = computeForecast(t);
   function amtCls(v) { return v < 0 ? "r" : "g"; }
 
-  var paydayTitle = f.daysToPayday === 0 ? "Payday is today!" : "Till payday · " + f.daysToPayday + "d left";
-  var paydaySub = t.target > 0
-    ? (f.paydaySavings >= t.target ? "on track · " : fm(t.target - f.paydaySavings) + " under · ") + "target " + fm(t.target)
-    : (f.paydaySavings < 0 ? Math.abs(Math.round(f.paydaySavings / INFLOW * 100)) + "% over" : Math.round(f.paydaySavings / INFLOW * 100) + "% saved");
+  var horizonTitle = f.daysRemaining === 0 ? "Cycle ends today" : "Till cycle end · " + f.daysRemaining + "d left";
+  var horizonSub = t.target > 0
+    ? (f.cycleEndSavings >= t.target ? "on track · " : fm(t.target - f.cycleEndSavings) + " under · ") + "target " + fm(t.target)
+    : (f.cycleEndSavings < 0 ? Math.abs(Math.round(f.cycleEndSavings / INFLOW * 100)) + "% over" : Math.round(f.cycleEndSavings / INFLOW * 100) + "% saved");
 
   var cashCol;
   if (f.cashPosition != null) {
@@ -1417,8 +1439,8 @@ function renderForecast(t) {
   // Spell out the arithmetic — a forecast you cannot check is not much use.
   var note = "Spent " + fm(f.spentToDate) +
     (f.fixedDue > 0 ? " + " + fm(f.fixedDue) + " fixed still due" : "") +
-    (f.daysToPayday > 0 ? " + " + fm(f.projectedAdditional) + " variable projected (" + fm(f.weeklyAvg) + "/wk over " + f.daysElapsed + "d, " + f.daysToPayday + "d left)" : "") +
-    " = " + fm(f.paydaySpend) + " of " + fm(INFLOW) + " inflow.";
+    (f.daysRemaining > 0 ? " + " + fm(f.projectedAdditional) + " variable projected (" + fm(f.weeklyAvg) + "/wk over " + f.daysElapsed + "d, " + fm(f.budgetRest) + " budget left, " + f.daysRemaining + "d to go)" : "") +
+    " = " + fm(f.cycleEndSpend) + " of " + fm(INFLOW) + " inflow.";
 
   document.getElementById("forecast-section").innerHTML =
     '<div class="forecast">' +
@@ -1428,9 +1450,9 @@ function renderForecast(t) {
       '</div>' +
       '<div class="fc-grid">' +
         '<div class="fc-col">' +
-          '<div class="fc-label"><span class="fc-dot" style="background:var(--purple)"></span>' + paydayTitle + '</div>' +
-          '<div class="fc-amt ' + amtCls(f.paydaySavings) + '">AED ' + fm(f.paydaySavings) + '</div>' +
-          '<div class="fc-sub">' + paydaySub + '</div>' +
+          '<div class="fc-label"><span class="fc-dot" style="background:var(--purple)"></span>' + horizonTitle + '</div>' +
+          '<div class="fc-amt ' + amtCls(f.cycleEndSavings) + '">AED ' + fm(f.cycleEndSavings) + '</div>' +
+          '<div class="fc-sub">' + horizonSub + '</div>' +
         '</div>' +
         cashCol +
       '</div>' +
