@@ -42,12 +42,19 @@ pipeline, and localStorage persistence.
   projecting spend to the 25th and subtracting it from a month of inflow
   compares two different spans. `getCycleDays()` owns elapsed/remaining days
   and must stay consistent with `getElapsedFraction()`.
-- A raw run-rate must never be extrapolated across a cycle on its own. Days
-  elapsed is the day-of-month, not the difference from the 1st (that
-  off-by-one alone doubles the rate), and early in a cycle the run-rate is
-  noise — `computeForecast()` blends it against the unspent variable budget,
-  weighted by elapsed fraction, so the weight moves onto actuals as the cycle
-  runs. Unbounded extrapolation is what made the forecast read −63k on day 2.
+- The forecast is full-consumption, not run-rate. `computeForecast()` assumes
+  every category reaches 100% of its budget by cycle end and counts an
+  over-budget row at what it actually cost, so projected savings is
+  `inflow − Σ max(budget, getSpent(row)) − outflows` — i.e. exactly
+  `computeBudgetTotals().committed`. Never extrapolate a per-day run-rate
+  across the cycle: a lumpy sample says nothing useful, and blowing the
+  incidental budget in week one projected a loss when the only money still at
+  risk was the budget not yet spent. The weekly pace is displayed as a
+  description only; nothing is derived from it.
+- Over/under-budget must be accumulated PER ROW, never per group. Netting an
+  overspent Chiller against an underspent Electric at the fixed/variable level
+  hides the overspend and inflates both the projection and `unusedBudget`
+  (it read 17 instead of 4,750 on the month that prompted this).
 - Date/timezone handling has already caused one shipped bug (see git log:
   "Fix date range filter for UTC+4 timezone"). Be deliberate about local vs.
   UTC dates in any new date logic.

@@ -1177,15 +1177,21 @@ function computeBudgetTotals() {
   var OUT = outflowTotal();
   var INFLOW = BASE + REIMB;
   var fixB = 0, fixS = 0, varB = 0, varS = 0, totalS = 0;
+  var fixCommit = 0, varCommit = 0, overspend = 0, unspent = 0, overCount = 0;
   var fixedIdx = [], varIdx = [], fixedItems = [], varItems = [];
   for (var i = 0; i < data.length; i++) {
     var sp = getSpent(data[i]);
     totalS += sp;
-    if (data[i].g === "fixed") { fixedIdx.push(i); fixedItems.push(data[i]); fixB += data[i].b; fixS += sp; }
-    else { varIdx.push(i); varItems.push(data[i]); varB += data[i].b; varS += sp; }
+    // Over/under budget is accumulated PER ROW, never per group. Netting an
+    // overspent Chiller against an underspent Electric at group level hides
+    // the overspend, and the full-consumption projection below is built on
+    // exactly that per-row split.
+    overspend += Math.max(0, sp - data[i].b);
+    unspent += Math.max(0, data[i].b - sp);
+    if (sp > data[i].b) overCount++;
+    if (data[i].g === "fixed") { fixedIdx.push(i); fixedItems.push(data[i]); fixB += data[i].b; fixS += sp; fixCommit += Math.max(data[i].b, sp); }
+    else { varIdx.push(i); varItems.push(data[i]); varB += data[i].b; varS += sp; varCommit += Math.max(data[i].b, sp); }
   }
-  var fixDisplay = Math.max(fixB, fixS);
-  var varDisplay = Math.max(varB, varS) + OUT;
   // Savings is money in minus money out, full stop: inflow (+ reimbursements)
   // less everything actually spent, including outflows. Budget that was never
   // utilised therefore lands in savings instead of being written off, and
@@ -1194,10 +1200,18 @@ function computeBudgetTotals() {
   var spentTotal = Math.round((totalS + OUT) * 100) / 100;
   var savings = Math.round((INFLOW - spentTotal) * 100) / 100;
   var savingsPct = INFLOW > 0 ? Math.round(savings / INFLOW * 100) : 0;
-  // Conservative counterpart: what savings would be if every remaining dirham
-  // of budget were spent. Only used to quantify the un-utilised budget.
-  var committed = INFLOW - fixDisplay - varDisplay;
-  var unusedBudget = Math.round((savings - committed) * 100) / 100;
+  // Full-consumption basis: what savings become if every category runs to
+  // 100% of its budget, with rows already over budget counted at what they
+  // actually cost, since overspend cannot be un-spent. That makes `committed`
+  // the realistic floor the forecast projects to, and the identity
+  // committed === target - overspend holds while the target is on auto.
+  fixCommit = Math.round(fixCommit * 100) / 100;
+  varCommit = Math.round((varCommit + OUT) * 100) / 100;
+  overspend = Math.round(overspend * 100) / 100;
+  var committed = Math.round((INFLOW - fixCommit - varCommit) * 100) / 100;
+  // Budget left on the table, i.e. savings - committed, summed per row so a
+  // category that is over budget cannot cancel out one that is under.
+  var unusedBudget = Math.round(unspent * 100) / 100;
   // Progress against the savings goal.
   var target = savingsTarget();
   var targetDelta = Math.round((savings - target) * 100) / 100;
@@ -1206,7 +1220,7 @@ function computeBudgetTotals() {
     BASE: BASE, REIMB: REIMB, OUT: OUT, INFLOW: INFLOW,
     fixB: fixB, fixS: fixS, varB: varB, varS: varS, totalS: totalS,
     fixedIdx: fixedIdx, varIdx: varIdx, fixedItems: fixedItems, varItems: varItems,
-    fixDisplay: fixDisplay, varDisplay: varDisplay,
+    fixCommit: fixCommit, varCommit: varCommit, overspend: overspend, overCount: overCount,
     savings: savings, savingsPct: savingsPct,
     spentTotal: spentTotal, committed: committed, unusedBudget: unusedBudget,
     target: target, targetDelta: targetDelta, targetPct: targetPct
@@ -1219,7 +1233,7 @@ function drawBudget() {
   var INFLOW = t.INFLOW, fixB = t.fixB, fixS = t.fixS, varB = t.varB, varS = t.varS;
   var fixedIdx = t.fixedIdx, varIdx = t.varIdx;
   var OUT = t.OUT;
-  var fixDisplay = t.fixDisplay, varDisplay = t.varDisplay, savActual = t.savings;
+  var savActual = t.savings;
 
   document.getElementById("month-display").textContent = APP.currentMonth;
   document.getElementById("month-sub").textContent = APP.history.length > 0 ? APP.history.length + " month" + (APP.history.length > 1 ? "s" : "") + " in history" : "Active cycle";
@@ -1338,23 +1352,35 @@ function getCycleDays() {
 // Forecast:
 //  - cycle projection: where spend lands by the end of the current cycle
 //  - cash position: debit balance + reimbursements - CC payable
-// Projects where savings land at cycle end. Built from three parts so the
-// number is auditable:
+// Projects where savings land at cycle end, on a FULL-CONSUMPTION basis:
+// every category is assumed to use 100% of its budget before the cycle ends,
+// and any category already over budget is counted at what it actually cost,
+// because overspend cannot be un-spent. Built from two parts so the number is
+// auditable:
 //
-//   already spent    — every budget row via getSpent() (NOT just imported
-//                      transactions: rows marked paid or given a manual
-//                      spent-override have no transactions behind them, and
-//                      counting only transactions understated spend badly),
-//                      plus outflows
-//   fixed still due  — the unpaid remainder of each fixed row; rent and
-//                      tuition are going out whether or not they have landed
-//   variable to come — the variable run-rate so far and the unspent variable
-//                      budget, blended by how much of the cycle has elapsed
+//   already spent   — every budget row via getSpent() (NOT just imported
+//                     transactions: rows marked paid or given a manual
+//                     spent-override have no transactions behind them, and
+//                     counting only transactions understated spend badly),
+//                     plus outflows
+//   still to spend  — the unspent remainder of every row, fixed and variable
+//                     alike, summed per row so an overspent category cannot
+//                     be cancelled out by an underspent one
 //
-// projected spend = the three summed; projected savings = inflow - that.
+// projected spend = the two summed; projected savings = inflow - that, which
+// is exactly computeBudgetTotals().committed — that function owns the
+// arithmetic, this one only splits it out for display.
+//
+// This deliberately replaced the old run-rate extrapolation. A per-day average
+// off a lumpy sample says nothing useful: blow the incidental budget in the
+// first week and extrapolating that pace across the month projected a loss,
+// even though the only money still genuinely at risk is the budget not yet
+// spent. Nothing is extrapolated from a per-day rate any more, and the card
+// does not display one either — an 18k/wk pace off a single blown week is the
+// same noise in prose form.
 //
 // The horizon is the END OF THE CYCLE, not the 25th. Inflow, every budget row
-// and savingsTarget() are all whole-calendar-month figures, so extrapolating
+// and savingsTarget() are all whole-calendar-month figures, so projecting
 // spend to payday and then subtracting it from a full month of inflow compared
 // two different spans and made the projection meaningless near a boundary.
 function computeForecast(t) {
@@ -1364,7 +1390,8 @@ function computeForecast(t) {
 
   var spentToDate = t.spentTotal;
 
-  // Fixed commitments not yet paid — still going out before the cycle ends.
+  // Fixed commitments not yet paid — rent and tuition are going out whether
+  // or not they have landed yet.
   var fixedDue = 0;
   for (var i = 0; i < t.fixedItems.length; i++) {
     var r = t.fixedItems[i];
@@ -1372,25 +1399,18 @@ function computeForecast(t) {
   }
   fixedDue = Math.round(fixedDue * 100) / 100;
 
-  // Discretionary run-rate comes from variable spend only; fixed costs are
-  // lumpy monthly debits and would wildly inflate a per-day average.
-  var dailyAvg = daysElapsed > 0 ? t.varS / daysElapsed : 0;
-  var weeklyAvg = dailyAvg * 7;
+  // Variable budget not yet used, assumed spent in full by cycle end. Rows
+  // already over budget contribute 0 here — their overspend is in spentToDate.
+  var variableDue = 0;
+  for (var k = 0; k < t.varItems.length; k++) {
+    var vr = t.varItems[k];
+    variableDue += Math.max(0, vr.b - getSpent(vr));
+  }
+  variableDue = Math.round(variableDue * 100) / 100;
 
-  // Two estimates of the variable spend still to come, blended by how much of
-  // the cycle has run. A run-rate off two days of a lumpy sample is noise —
-  // extrapolating it across the rest of the cycle is what produced projections
-  // many times the entire variable budget. Early on, the unspent variable
-  // budget is the better estimate; by month end the run-rate is the whole
-  // story and the weight has moved fully onto it, so the forecast converges on
-  // actuals rather than a budget assumption.
-  var runRateRest = dailyAvg * daysRemaining;
-  var budgetRest = Math.max(0, t.varB - t.varS);
-  var w = cyc.total > 0 ? daysElapsed / cyc.total : 1;
-  var projectedAdditional = Math.round((w * runRateRest + (1 - w) * budgetRest) * 100) / 100;
-
-  var cycleEndSpend = Math.round((spentToDate + fixedDue + projectedAdditional) * 100) / 100;
-  var cycleEndSavings = Math.round((t.INFLOW - cycleEndSpend) * 100) / 100;
+  var stillToSpend = Math.round((fixedDue + variableDue) * 100) / 100;
+  var cycleEndSpend = Math.round((spentToDate + stillToSpend) * 100) / 100;
+  var cycleEndSavings = t.committed;
 
   // Cash position: what you'll actually have after paying the CC bill
   var acc = APP.accounts || {};
@@ -1401,9 +1421,8 @@ function computeForecast(t) {
 
   return {
     elapsed: elapsed, daysElapsed: daysElapsed, daysRemaining: daysRemaining,
-    spentToDate: spentToDate, fixedDue: fixedDue,
-    runRateRest: runRateRest, budgetRest: budgetRest,
-    weeklyAvg: weeklyAvg, projectedAdditional: projectedAdditional,
+    spentToDate: spentToDate, fixedDue: fixedDue, variableDue: variableDue,
+    stillToSpend: stillToSpend, overspend: t.overspend, overCount: t.overCount,
     cycleEndSpend: cycleEndSpend, cycleEndSavings: cycleEndSavings,
     cashPosition: cashPosition, debitBal: debitBal, reimb: reimb, ccPayable: sp.cc
   };
@@ -1414,7 +1433,8 @@ function renderForecast(t) {
   var f = computeForecast(t);
   function amtCls(v) { return v < 0 ? "r" : "g"; }
 
-  var horizonTitle = f.daysRemaining === 0 ? "Cycle ends today" : "Till cycle end · " + f.daysRemaining + "d left";
+  var horizonTitle = f.daysRemaining === 0 ? "Realistic · cycle ends today" : "Realistic · " + f.daysRemaining + "d left";
+  var gapToTarget = Math.round((t.target - f.cycleEndSavings) * 100) / 100;
   var horizonSub = t.target > 0
     ? (f.cycleEndSavings >= t.target ? "on track · " : fm(t.target - f.cycleEndSavings) + " under · ") + "target " + fm(t.target)
     : (f.cycleEndSavings < 0 ? Math.abs(Math.round(f.cycleEndSavings / INFLOW * 100)) + "% over" : Math.round(f.cycleEndSavings / INFLOW * 100) + "% saved");
@@ -1437,10 +1457,13 @@ function renderForecast(t) {
   }
 
   // Spell out the arithmetic — a forecast you cannot check is not much use.
-  var note = "Spent " + fm(f.spentToDate) +
-    (f.fixedDue > 0 ? " + " + fm(f.fixedDue) + " fixed still due" : "") +
-    (f.daysRemaining > 0 ? " + " + fm(f.projectedAdditional) + " variable projected (" + fm(f.weeklyAvg) + "/wk over " + f.daysElapsed + "d, " + fm(f.budgetRest) + " budget left, " + f.daysRemaining + "d to go)" : "") +
-    " = " + fm(f.cycleEndSpend) + " of " + fm(INFLOW) + " inflow.";
+  var note = "Assumes every category runs to 100% of its budget. Spent " + fm(f.spentToDate) +
+    (f.stillToSpend > 0 ? " + " + fm(f.stillToSpend) + " budget still unspent (" + fm(f.fixedDue) + " fixed, " + fm(f.variableDue) + " variable)" : "") +
+    " = " + fm(f.cycleEndSpend) + " of " + fm(INFLOW) + " inflow." +
+    (f.overspend > 0 ? " " + fm(f.overspend) + " already overspent across " + f.overCount + " categor" + (f.overCount === 1 ? "y" : "ies") +
+      // Overspend accounts for the entire miss only when nothing else moves the
+      // target — no reimbursements, no outflows, target still on auto.
+      (Math.abs(gapToTarget - f.overspend) < 1 ? ", which is the whole gap to target" : "") + "." : "");
 
   document.getElementById("forecast-section").innerHTML =
     '<div class="forecast">' +
@@ -2071,7 +2094,10 @@ function openConcludeModal() {
   if (REIMB > 0) html += '<div class="modal-row"><span style="color:var(--green)">Reimbursements</span><span style="color:var(--green)">+' + fm(REIMB) + '</span></div>';
   html += '<div class="modal-row"><span>Spent</span><span>' + fm(totalS) + '</span></div>';
   if (OUT > 0) html += '<div class="modal-row"><span style="color:var(--orange)">Outflows (extra spend)</span><span style="color:var(--orange)">+' + fm(OUT) + '</span></div>';
+  // Both sides of the budget, per row: what was left unspent and what ran over.
+  // Showing only the unspent half made an overspent month look tidier than it was.
   if (t.unusedBudget > 0) html += '<div class="modal-row"><span style="color:var(--green)">Budget not utilised</span><span style="color:var(--green)">+' + fm(t.unusedBudget) + '</span></div>';
+  if (t.overspend > 0) html += '<div class="modal-row"><span style="color:var(--orange)">Over budget in ' + t.overCount + ' categor' + (t.overCount === 1 ? 'y' : 'ies') + '</span><span style="color:var(--orange)">−' + fm(t.overspend) + '</span></div>';
   html += '<div class="modal-row tot"><span>Savings</span><span style="color:' + (sav >= 0 ? 'var(--green)' : 'var(--red)') + '">' + fm(sav) + ' · ' + savPct + '%</span></div>';
   if (t.target > 0) {
     html += '<div class="modal-row"><span style="color:var(--text-2)">Target</span><span style="color:var(--text-2)">' + fm(t.target) + '</span></div>';
@@ -2111,7 +2137,7 @@ function confirmConclude() {
     debitBalanceAtClose: (APP.accounts && APP.accounts.debit) ? APP.accounts.debit.balance : null,
     savings: savAmt,
     savingsPct: INFLOW > 0 ? Math.round(savAmt / INFLOW * 100) : 0,
-    unusedBudget: t.unusedBudget,
+    unusedBudget: t.unusedBudget, overspend: t.overspend, overCount: t.overCount,
     savingsTarget: t.target, savingsTargetDelta: t.targetDelta,
     topCategories: topCats, overBudget: overCats
   };
@@ -2228,6 +2254,14 @@ function drawHistory() {
         dh += '<div class="md-row"><span style="color:var(--text-2)">Inflow</span><span>' + fm(h.inflow) + '</span></div>';
         dh += '<div class="md-row tot"><span>Total Spent</span><span>' + fm(h.totalSpent) + '</span></div>';
         if (h.unusedBudget > 0) dh += '<div class="md-row"><span style="color:var(--green)">Budget not utilised</span><span style="color:var(--green)">+' + fm(h.unusedBudget) + '</span></div>';
+        // Entries concluded before overspend was stored still carry the
+        // per-category overBudget list, so derive the total from that.
+        var hOver = h.overspend, hOverN = h.overCount;
+        if (hOver == null) {
+          hOver = 0; hOverN = 0;
+          for (var ob = 0; ob < (h.overBudget || []).length; ob++) { hOver += h.overBudget[ob].over; hOverN++; }
+        }
+        if (hOver > 0) dh += '<div class="md-row"><span style="color:var(--orange)">Over budget in ' + hOverN + ' categor' + (hOverN === 1 ? 'y' : 'ies') + '</span><span style="color:var(--orange)">−' + fm(hOver) + '</span></div>';
         dh += '<div class="md-row tot"><span>Savings</span><span style="color:' + (h.savings >= 0 ? 'var(--green)' : 'var(--red)') + '">' + fm(h.savings) + '</span></div>';
         if (h.savingsTarget > 0) {
           var tDelta = h.savingsTargetDelta != null ? h.savingsTargetDelta : Math.round((h.savings - h.savingsTarget) * 100) / 100;
