@@ -34,9 +34,22 @@ pipeline, and localStorage persistence.
   in `tests/budget-core.test.js`. This repo has shipped the same class of
   savings-calculation regression several times; a test is how it stops.
 - The visual system lives in the one `:root` block at the top of `index.html`
-  (`--bg`, `--card`, `--hair`, `--text-*`, the accents, and the `--lift`
-  elevation ramp) and `setup.html` mirrors it. Change the tokens there — never
-  bolt a second `:root` or an override block onto the end of the sheet.
+  (`--bg`, `--card`, `--well`, `--hair`, `--text-*`, the accents, `--accent`
+  for buttons, and the `--lift` elevation ramp) and `setup.html` mirrors it.
+  Change the tokens there — never bolt a second `:root` or an override block
+  onto the end of the sheet.
+- Colour carries meaning about money and nothing else: `--green` is saved /
+  income, `--red` is over budget, `--blue` is fixed commitments, `--orange`
+  is variable spending, `--purple` is the forecast, `--teal`/`--pink` are
+  debit / credit card. Chrome (buttons, nav, hairlines) stays monochrome —
+  the primary button is `--accent` (off-white on ink), not a data colour.
+  Category identity comes from `CAT_COLORS` via `catColor()`/`catAvatar()`.
+- Icons are the inline SVG sprite at the top of `<body>`, used as
+  `<svg class="ic"><use href="#i-name"/></svg>`. Don't reintroduce emoji as
+  UI icons; they render differently on every OS. (The WhatsApp text share
+  keeps its emoji on purpose — that is message content.)
+- A fully used fixed bill is the expected outcome, not an alarm. Row bars use
+  the category colour and turn `--red` only when genuinely over budget.
 - Every editable field is at least 16px. iOS Safari zooms the viewport when a
   focused input is smaller, which throws the layout sideways mid-edit. Treat
   16px as the floor when adding one.

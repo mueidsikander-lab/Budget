@@ -46,6 +46,46 @@ To regenerate/update this file, run `/improve-scan` (or `/loop 60m
 
 ---
 
+## Resolved — 2026-09-05 (redesign)
+
+Full visual and layout revamp of `index.html` (`setup.html` mirrors it).
+Behaviour, IDs, `data-act` hooks and the financial arithmetic are untouched;
+`budget-core.js` and its tests did not change.
+
+### UI/UX
+
+- New "Ledger" visual system: deep-ink ground, one `:root` token block,
+  monochrome chrome, and colour reserved for money (green saved, red over,
+  blue fixed, orange variable, purple forecast, teal/pink debit/credit).
+  Primary buttons are off-white on ink instead of spending blue on chrome.
+- Budget page reorganised: header with cycle-day progress, a hero with an
+  inflow ring (fixed / variable / saved), four KPI tiles (fixed left,
+  variable left, end-of-cycle savings, cash on hand) replacing the two stat
+  tiles plus a separate forecast card, the forecast arithmetic kept as a
+  footnote, a taller daily-spend chart with an average line, and a
+  "where it goes" card with share-of-spend and a real % change vs last month.
+- Category rows carry a letter avatar in the category colour, a status chip
+  (paid / over by / left), a transaction count, and a bar in the category
+  colour that turns red only when genuinely over budget. A fully used fixed
+  bill no longer renders as an alarming red bar.
+- History gained a summary strip (total / average / best month), an average
+  line on the trend chart, and month cards whose bar tiles inflow into
+  fixed / variable / saved with chips for over-budget count and target.
+- Import is three clear cards (auto-sync featured, paste, upload with the
+  date range inside). Settings fields read as a ledger (label left, figure
+  right); merchant mappings show the category in its colour.
+- Emoji UI icons replaced with an inline SVG sprite so the nav and section
+  icons render identically on every OS. The WhatsApp text share keeps its
+  emoji deliberately — that is message content.
+- **[Bug]** Tapping the *text* of the Reimbursements / Outflows header did
+  nothing, because the delegated click handler read `data-act` only off the
+  exact element tapped. Both delegates now resolve the nearest `[data-act]`
+  ancestor.
+- Month cards in History are keyboard-operable (`role=button`, Enter/Space,
+  `aria-expanded`); the hero ring carries an `aria-label` with the split.
+
+---
+
 ## Resolved — 2026-09-05 (visual system + date handling)
 
 A second pass, merging the parts of an independent review patch that were
