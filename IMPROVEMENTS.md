@@ -33,14 +33,6 @@ To regenerate/update this file, run `/improve-scan` (or `/loop 60m
   the intended budget timezone (UTC+4). Given this project already shipped one
   UTC+4-related date bug, this is worth hardening proactively even though not
   currently broken.
-- **[Low]** Auto-learned merchant mapping key (`cleanDesc.toLowerCase().split("
-  ").slice(0,2).join(" ")`) is built inconsistently from SMS/email- vs.
-  CSV-derived description strings, risking over/under-broad future matches via
-  the substring-based `matchCat`.
-- **[Low]** `renderDailyChart` buckets by re-parsing a stored `toISOString()`
-  (UTC) timestamp with local-timezone `ymd()` formatting — not verified as
-  currently triggering a wrong bucket, but the same class of bug as the
-  forecast issue above; flagged for awareness.
 
 ### Performance & code quality
 
@@ -51,6 +43,63 @@ To regenerate/update this file, run `/improve-scan` (or `/loop 60m
 - **[Low]** Naming drift (`fixB/fixS/varB/varS` vs. full-word vs.
   single-letter scoped reuse, e.g. `t` meaning different things in nearby
   functions) — only worth fixing opportunistically when touching nearby code.
+
+---
+
+## Resolved — 2026-09-05 (visual system + date handling)
+
+A second pass, merging the parts of an independent review patch that were
+better than what shipped in the data-integrity pass below. Its visual system
+was adopted; its paid-placeholder rule (replace rather than floor), its
+projected-vs-actual savings-target row, and its removal of the
+`alertSync.processed` size cap were not — see the analysis in the session log.
+
+### UI/UX
+
+- Adopted a calmer, higher-contrast visual system: near-black `#06070a` ground
+  with two ambient radial gradients, translucent card surfaces on a single
+  `--lift` elevation ramp, accents lifted off the iOS palette so they hold up
+  on the lighter cards, `clamp()` type scale, 1040px page cap, a two-column
+  dashboard grid on wide screens, and a floating nav pill that goes
+  edge-to-edge under 700px. `setup.html` matches. Applied by editing the
+  existing rules — the source patch appended a second `:root` and an override
+  block, leaving two competing palettes in one file.
+- Every editable field is now at least 16px, so iOS stops zooming the viewport
+  on focus. Done by raising the fields themselves rather than with a blanket
+  `!important`, which in the source patch also clobbered deliberate sizes.
+- `prefers-reduced-motion` honoured; 48px nav targets; 3px focus rings.
+- The upload drop zone is a real `<label>`, removing the JS click handler that
+  opened the file picker twice.
+
+### Financial logic correctness
+
+- **[Medium]** `renderDailyChart` bucketed by re-parsing the stored UTC
+  `toISOString()` with local `ymd()`, so a late-evening charge in UTC+4 landed
+  on the wrong day. It now buckets from `t.dateStr` via `dateStrToYmd()`.
+- **[Medium]** `addManualTxn` parsed its date input with `new Date("YYYY-MM-DD")`
+  — UTC midnight — then read it back with local getters. Now built from parts,
+  matching `processStatement()`.
+- **[Low]** Auto-learned merchant mapping keys are now derived through
+  `normalizeDescKey()`, so email-sync and CSV descriptions produce the same key.
+- **[Low]** `removeTxn` released a shared import key while another transaction
+  still held it, letting that sibling be re-imported as new.
+
+### Data integrity
+
+- **[Medium]** Learned merchant mappings were written to `APP.mappings` the
+  moment a category was picked in the import preview — they survived Cancel and
+  could not be undone. They are now applied with the import and captured in its
+  before-snapshot, so Undo Import removes them.
+- **[Low]** `exportData` revoked the object URL synchronously, which races the
+  download in some browsers.
+- **[Low]** `index.html` now fails loudly with a Reload prompt if
+  `budget-core.js` does not load, instead of throwing on first use and looking
+  like data loss.
+
+### Security
+
+- **[Low]** `setup.html` interpolated gist IDs and GitHub error messages into
+  `innerHTML` unescaped.
 
 ---
 

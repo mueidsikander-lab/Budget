@@ -8,91 +8,107 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Budget">
-<meta name="theme-color" content="#000000">
+<meta name="theme-color" content="#06070a">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" href="icons/icon-192.png">
 <style>
 :root {
-  --bg: #000;
-  --card: #1c1c1e;
-  --card-2: #2c2c2e;
-  --hair: rgba(255,255,255,0.07);
-  --hair-strong: rgba(255,255,255,0.12);
+  /* Near-black rather than pure black: it lets the card surfaces and the two
+     ambient gradients on <body> read as depth instead of as flat panels. */
+  --bg: #06070a;
+  --card: rgba(22, 24, 31, 0.94);
+  --card-2: #242833;
+  --hair: rgba(255,255,255,0.09);
+  --hair-strong: rgba(255,255,255,0.16);
   --text: #fff;
-  /* Explanatory copy uses --text-2 and --text-3; at 0.6/0.3 alpha on black the
-     latter fell far below WCAG AA (about 2.4:1) and the former sat right on the
-     line. Raised so secondary and tertiary copy stay readable. */
-  --text-2: rgba(235,235,245,0.75);
-  --text-3: rgba(235,235,245,0.55);
-  --blue: #0A84FF;
-  --green: #30D158;
+  /* Explanatory copy uses --text-2 and --text-3. At the old 0.6/0.3 alpha the
+     tertiary tone measured about 2.48:1 on card — far below WCAG AA. These
+     measure 9.5:1 and 5.3:1 against the card surface. */
+  --text-2: rgba(244,247,255,0.74);
+  --text-3: rgba(244,247,255,0.52);
+  /* Accents lifted off the iOS system palette so they stay legible on the
+     lighter card surface rather than vibrating against pure black. */
+  --blue: #4da3ff;
+  --green: #3ee28a;
   --red: #FF453A;
-  --orange: #FF9F0A;
+  --orange: #ffad42;
   --yellow: #FFD60A;
-  --purple: #BF5AF2;
-  --teal: #64D2FF;
+  --purple: #c879ff;
+  --teal: #58d5e8;
   --pink: #FF6482;
   --indigo: #5E5CE6;
   --mint: #66D4CF;
+  /* One elevation ramp, so every raised surface agrees. */
+  --lift: 0 14px 40px rgba(0,0,0,0.16), inset 0 1px 0 rgba(255,255,255,0.025);
+  --lift-hero: 0 24px 70px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.04);
 }
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; }
 input, textarea { user-select: text; -webkit-user-select: text; }
 html { color-scheme: dark; }
 body {
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, sans-serif;
-  background: var(--bg); color: var(--text); font-size: 15px; -webkit-text-size-adjust: 100%;
-  min-height: 100vh; padding: 0 0 88px; letter-spacing: -0.01em;
+  background:
+    radial-gradient(900px 520px at 10% -10%, rgba(77,163,255,0.13), transparent 62%),
+    radial-gradient(700px 440px at 92% 4%, rgba(200,121,255,0.09), transparent 64%),
+    var(--bg);
+  background-attachment: fixed;
+  color: var(--text); font-size: 16px; -webkit-text-size-adjust: 100%;
+  min-height: 100vh; padding: 0; letter-spacing: -0.01em;
 }
+/* iOS Safari zooms the viewport whenever a focused field is under 16px, which
+   throws the whole layout sideways mid-edit. Every field below is therefore at
+   16px or larger; treat that as the floor when adding new ones. */
 .mono { font-variant-numeric: tabular-nums; }
 /* Designed iPhone-first; on a wide screen the single column stretched to the
-   full viewport and became unreadable. Cap it and centre it instead. */
-.page { display: none; padding: 12px 16px 16px; max-width: 720px; margin: 0 auto; }
-:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; border-radius: 6px; }
+   full viewport and became unreadable. Cap it and centre it instead. The
+   bottom padding clears the floating nav pill. */
+.page { display: none; width: 100%; max-width: 1040px; margin: 0 auto; padding: 22px 24px 128px; }
+:focus-visible { outline: 3px solid rgba(77,163,255,0.55); outline-offset: 3px; border-radius: 8px; }
 .page.active { display: block; animation: fadeIn 0.18s ease-out; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
-.header { display: flex; align-items: center; justify-content: space-between; padding: 14px 4px 16px; }
-.h-month { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
-.h-month-sub { font-size: 13px; color: var(--text-2); margin-top: 1px; font-weight: 400; }
+.header { display: flex; align-items: center; justify-content: space-between; padding: 12px 2px 22px; }
+.h-month { font-size: clamp(28px, 4vw, 38px); font-weight: 760; letter-spacing: -0.9px; }
+.h-month-sub { font-size: 14px; color: var(--text-2); margin-top: 2px; font-weight: 400; }
 .h-actions { display: flex; gap: 6px; }
 .icon-btn {
-  background: var(--card); border: none; color: var(--text);
-  width: 36px; height: 36px; border-radius: 18px; cursor: pointer;
+  background: var(--card); border: 1px solid var(--hair); color: var(--text);
+  width: 42px; height: 42px; border-radius: 14px; cursor: pointer;
   display: inline-flex; align-items: center; justify-content: center;
   font-size: 16px; transition: background 0.15s, transform 0.1s;
 }
 .icon-btn:active { background: var(--card-2); transform: scale(0.94); }
-.hero { background: linear-gradient(150deg, #1e2030 0%, #17171c 55%, #141417 100%); border: 1px solid rgba(94,92,230,0.22); border-radius: 18px; padding: 22px 20px 20px; margin-bottom: 14px; position: relative; overflow: hidden; }
-.hero::after { content: ""; position: absolute; top: -60px; right: -40px; width: 180px; height: 180px; border-radius: 50%; background: radial-gradient(circle, rgba(10,132,255,0.16), transparent 70%); pointer-events: none; }
-.hero-label { font-size: 13px; color: var(--text-2); font-weight: 500; margin-bottom: 4px; }
-.hero-amt { font-size: 44px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.05; letter-spacing: -1.5px; margin-bottom: 10px; }
+.hero { background: linear-gradient(145deg, rgba(31,42,62,0.98), rgba(19,21,29,0.98) 58%, rgba(17,19,25,0.98)); border: 1px solid rgba(92,164,255,0.24); border-radius: 24px; padding: 26px 26px 22px; margin-bottom: 14px; position: relative; overflow: hidden; box-shadow: var(--lift-hero); }
+.hero::after { content: ""; position: absolute; top: -60px; right: -40px; width: 180px; height: 180px; border-radius: 50%; background: radial-gradient(circle, rgba(77,163,255,0.22), transparent 68%); pointer-events: none; }
+.hero-label { font-size: 14px; color: var(--text-2); font-weight: 500; margin-bottom: 4px; }
+.hero-amt { font-size: clamp(42px, 7vw, 58px); font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.05; letter-spacing: -2px; margin-bottom: 10px; }
 .hero-amt.g { color: var(--green); }
 .hero-amt.r { color: var(--red); }
-.hero-sub { font-size: 13px; color: var(--text-2); margin-bottom: 14px; font-variant-numeric: tabular-nums; }
+.hero-sub { font-size: 14px; color: var(--text-2); margin-bottom: 14px; font-variant-numeric: tabular-nums; }
 .hero-bar { display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: rgba(255,255,255,0.08); margin-bottom: 10px; }
 .hero-bar-seg { height: 100%; transition: width 0.35s ease-out; }
 .hb-fixed { background: var(--blue); } .hb-variable { background: var(--orange); } .hb-saved { background: var(--green); }
-.hero-legend { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-2); flex-wrap: wrap; gap: 8px; font-variant-numeric: tabular-nums; }
-.hero-target { margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.08); }
+.hero-legend { display: flex; gap: 18px; font-size: 13px; color: var(--text-2); flex-wrap: wrap; gap: 8px; font-variant-numeric: tabular-nums; }
+.hero-target { margin-top: 18px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.08); }
 .ht-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 7px; }
-.ht-label { font-size: 12px; color: var(--text-2); font-weight: 500; }
-.ht-val { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.ht-label { font-size: 13px; color: var(--text-2); font-weight: 500; }
+.ht-val { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .ht-val.g { color: var(--green); }
 .ht-bar { height: 5px; border-radius: 3px; overflow: hidden; background: rgba(255,255,255,0.08); }
 .ht-fill { height: 100%; background: var(--purple); border-radius: 3px; transition: width 0.35s ease-out; }
 .ht-fill.g { background: var(--green); }
-.ht-note { font-size: 11px; color: var(--text-2); margin-top: 6px; font-variant-numeric: tabular-nums; }
+.ht-note { font-size: 13px; color: var(--text-2); margin-top: 6px; font-variant-numeric: tabular-nums; }
 .hero-legend-item { display: flex; align-items: center; gap: 6px; }
 .legend-dot { width: 8px; height: 8px; border-radius: 2px; }
-.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
-.stat { background: var(--card); border: 1px solid var(--hair); border-radius: 14px; padding: 14px 16px; }
-.stat-label { font-size: 11px; color: var(--text-2); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
+.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+.stat { background: var(--card); border: 1px solid var(--hair); border-radius: 18px; padding: 14px 16px; box-shadow: var(--lift); }
+.stat-label { font-size: 12px; color: var(--text-2); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
 .stat-val { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.5px; }
 .stat-val.r { color: var(--red); }
 .stat-pct { font-size: 12px; color: var(--text-2); margin-top: 2px; font-variant-numeric: tabular-nums; }
 .stat-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
 .stat-dot.b { background: var(--blue); } .stat-dot.o { background: var(--orange); }
-.forecast { background: var(--card); border-radius: 16px; padding: 16px 18px 14px; margin-bottom: 18px; position: relative; overflow: hidden; }
+.forecast { background: var(--card); border: 1px solid var(--hair); border-radius: 18px; padding: 16px 18px 14px; margin-bottom: 18px; position: relative; overflow: hidden; box-shadow: var(--lift); }
 .forecast::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, var(--purple), var(--blue)); opacity: 0.9; }
 .fc-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
 .fc-head-title { font-size: 13px; font-weight: 600; color: var(--text); letter-spacing: 0.2px; display: flex; align-items: center; gap: 7px; }
@@ -108,7 +124,12 @@ body {
 .fc-sub { font-size: 11px; color: var(--text-2); margin-top: 3px; font-variant-numeric: tabular-nums; }
 .fc-note { font-size: 11px; color: var(--text-3); margin-top: 13px; padding-top: 11px; border-top: 1px solid var(--hair); line-height: 1.45; }
 .fc-note strong { color: var(--text-2); font-weight: 600; }
-.dash-card { background: var(--card); border: 1px solid var(--hair); border-radius: 16px; padding: 16px 18px 14px; margin-bottom: 12px; }
+.dash-card { background: var(--card); border: 1px solid var(--hair); border-radius: 18px; padding: 16px 18px 14px; margin-bottom: 12px; box-shadow: var(--lift); }
+/* On a wide screen the dashboard cards read better side by side; the first
+   (the spend chart) keeps the full width. */
+#dash-section { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 14px; }
+#dash-section .dash-card { margin-bottom: 0; }
+#dash-section .dash-card:first-child { grid-column: 1 / -1; }
 .dash-title { font-size: 13px; font-weight: 600; color: var(--text); letter-spacing: 0.2px; display: flex; align-items: center; gap: 7px; margin-bottom: 13px; }
 .dash-title .ic { font-size: 14px; }
 .dash-title .dash-aside { margin-left: auto; font-size: 11px; font-weight: 500; color: var(--text-3); }
@@ -143,24 +164,24 @@ body {
 .cbk-amt { flex: 0 1 auto; min-width: 62px; text-align: right; font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .cbk-delta { flex: 0 0 52px; text-align: right; font-size: 10.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .cbk-delta.up { color: var(--red); } .cbk-delta.down { color: var(--green); } .cbk-delta.flat { color: var(--text-3); }
-.alert-import-section { background: var(--card); border: 1px solid var(--hair); border-radius: 14px; padding: 14px; margin-bottom: 14px; }
+.alert-import-section { background: var(--card); border: 1px solid var(--hair); border-radius: 18px; padding: 14px; margin-bottom: 14px; box-shadow: var(--lift); }
 .alert-import-title { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
 .alert-import-sub { font-size: 12px; color: var(--text-2); margin-bottom: 10px; line-height: 1.4; }
-.alert-textarea { width: 100%; min-height: 90px; background: var(--bg); border: 1px solid var(--hair); border-radius: 10px; padding: 10px; font-family: inherit; font-size: 12px; color: var(--text); resize: vertical; box-sizing: border-box; outline: none; }
+.alert-textarea { width: 100%; min-height: 110px; background: rgba(0,0,0,0.35); border: 1px solid var(--hair); border-radius: 12px; padding: 12px; font-family: inherit; font-size: 16px; color: var(--text); resize: vertical; box-sizing: border-box; outline: none; }
 .alert-textarea:focus { border-color: var(--blue); }
 .import-or-divider { display: flex; align-items: center; gap: 10px; margin: 0 0 14px; color: var(--text-3); font-size: 12px; font-weight: 500; }
 .import-or-divider::before, .import-or-divider::after { content: ''; flex: 1; height: 1px; background: var(--hair); }
 .sec-head { display: flex; justify-content: space-between; align-items: baseline; padding: 18px 4px 8px; }
 .sec-title { font-size: 13px; font-weight: 600; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.6px; }
 .sec-amt { font-size: 13px; color: var(--text-2); font-variant-numeric: tabular-nums; font-weight: 500; }
-.list { background: var(--card); border: 1px solid var(--hair); border-radius: 14px; overflow: hidden; }
+.list { background: var(--card); border: 1px solid var(--hair); border-radius: 18px; overflow: hidden; box-shadow: var(--lift); }
 .row-cat-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .list + .list { margin-top: 16px; }
-.row { padding: 14px 16px; cursor: pointer; position: relative; transition: background 0.12s; }
+.row { padding: 16px 18px; cursor: pointer; position: relative; transition: background 0.12s; }
 .row:active { background: var(--card-2); }
 .row + .row::before { content: ""; position: absolute; top: 0; left: 16px; right: 0; height: 1px; background: var(--hair); }
 .row.paid .row-name { color: var(--text-2); }
-.row-top { display: flex; align-items: center; gap: 12px; }
+.row-top { display: flex; align-items: center; gap: 12px; min-height: 34px; }
 .row-name { flex: 1; font-size: 15px; font-weight: 500; }
 .row-vals { text-align: right; display: flex; flex-direction: column; align-items: flex-end; font-variant-numeric: tabular-nums; min-width: 0; }
 .row-spent { font-size: 15px; font-weight: 600; }
@@ -184,7 +205,7 @@ body {
 .txn-amt { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .txn-del { background: none; border: none; color: var(--text-3); font-size: 17px; width: 28px; height: 28px; border-radius: 14px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: background 0.15s, color 0.15s; }
 .txn-del:active { background: rgba(255,69,58,0.15); color: var(--red); }
-.txn-cat-select { margin-top: 5px; background: var(--card-2); border: 1px solid var(--hair); border-radius: 7px; color: var(--text-2); font-size: 11px; padding: 4px 8px; font-family: inherit; max-width: 100%; cursor: pointer; }
+.txn-cat-select { margin-top: 6px; background: var(--card-2); border: 1px solid var(--hair); border-radius: 8px; color: var(--text-2); font-size: 16px; padding: 6px 8px; font-family: inherit; max-width: 100%; cursor: pointer; }
 .txn-cat-select:focus { border-color: var(--blue); color: var(--text); outline: none; }
 .exp-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .exp-btn { flex: 1; min-width: 0; background: var(--card-2); border: none; color: var(--text); padding: 10px; border-radius: 10px; font-size: 13px; font-weight: 500; font-family: inherit; cursor: pointer; transition: background 0.12s, transform 0.1s; }
@@ -198,11 +219,11 @@ body {
 .edit-input:focus { border-color: var(--blue); }
 .add-txn-form { background: var(--card-2); border-radius: 10px; padding: 10px; margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
 .atf-row { display: flex; gap: 8px; }
-.atf-input { background: rgba(0,0,0,0.4); border: 1px solid transparent; border-radius: 8px; color: var(--text); font-size: 14px; padding: 9px 10px; outline: none; font-family: inherit; }
+.atf-input { background: rgba(0,0,0,0.4); border: 1px solid transparent; border-radius: 10px; color: var(--text); font-size: 16px; padding: 9px 10px; outline: none; font-family: inherit; }
 .atf-input:focus { border-color: var(--blue); }
 .atf-desc { flex: 1; min-width: 0; }
 .atf-amt { width: 110px; font-variant-numeric: tabular-nums; text-align: right; font-weight: 600; }
-.reimb-card { background: var(--card); border-radius: 14px; overflow: hidden; margin-bottom: 14px; }
+.reimb-card { background: var(--card); border: 1px solid var(--hair); border-radius: 18px; overflow: hidden; margin-bottom: 14px; box-shadow: var(--lift); }
 .reimb-head { padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: background 0.12s; }
 .reimb-head:active { background: var(--card-2); }
 .reimb-head-left { display: flex; align-items: center; gap: 12px; }
@@ -212,8 +233,8 @@ body {
 .reimb-total.g { color: var(--green); } .reimb-total.dim { color: var(--text-2); }
 .reimb-body { padding: 0 16px 12px; border-top: 1px solid var(--hair); animation: expandIn 0.18s ease-out; }
 .reimb-row { display: flex; gap: 8px; align-items: center; padding-top: 10px; }
-.reimb-desc { flex: 1; background: var(--card-2); border: 1px solid transparent; border-radius: 8px; color: var(--text); font-size: 14px; padding: 9px 10px; outline: none; font-family: inherit; min-width: 0; }
-.reimb-amt { width: 96px; background: var(--card-2); border: 1px solid transparent; border-radius: 8px; color: var(--text); font-size: 14px; padding: 9px 10px; outline: none; font-family: inherit; font-variant-numeric: tabular-nums; text-align: right; font-weight: 600; }
+.reimb-desc { flex: 1; background: var(--card-2); border: 1px solid transparent; border-radius: 10px; color: var(--text); font-size: 16px; padding: 9px 10px; outline: none; font-family: inherit; min-width: 0; }
+.reimb-amt { width: 106px; background: var(--card-2); border: 1px solid transparent; border-radius: 10px; color: var(--text); font-size: 16px; padding: 9px 10px; outline: none; font-family: inherit; font-variant-numeric: tabular-nums; text-align: right; font-weight: 600; }
 .reimb-desc:focus, .reimb-amt:focus { border-color: var(--blue); }
 .reimb-del { background: rgba(255,69,58,0.15); border: none; color: var(--red); width: 32px; height: 32px; border-radius: 8px; font-size: 14px; cursor: pointer; flex-shrink: 0; transition: background 0.12s; }
 .reimb-del:active { background: rgba(255,69,58,0.25); }
@@ -238,22 +259,34 @@ body {
 .btn-full { width: 100%; display: block; }
 .btn-row { display: flex; gap: 10px; }
 .btn-row > .btn { flex: 1; }
-.nav { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border-top: 1px solid var(--hair); display: flex; z-index: 100; padding-bottom: env(safe-area-inset-bottom); }
-.nav-btn { flex: 1; padding: 10px 0 10px; text-align: center; background: none; border: none; color: var(--text-2); font-size: 10px; font-weight: 500; font-family: inherit; cursor: pointer; transition: color 0.15s; }
-.nav-btn.act { color: var(--blue); }
-.nav-icon { font-size: 22px; display: block; margin-bottom: 2px; line-height: 1; }
-.page-h { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; padding: 14px 4px 4px; }
+/* A floating pill on wide screens, edge-to-edge on a phone (see the 700px
+   breakpoint) so it still reaches the bottom of the display. */
+.nav {
+  position: fixed; bottom: 14px; left: 50%; right: auto;
+  width: calc(100% - 28px); max-width: 680px;
+  transform: translateX(-50%);
+  background: rgba(19,21,27,0.88);
+  backdrop-filter: blur(22px) saturate(1.3); -webkit-backdrop-filter: blur(22px) saturate(1.3);
+  border: 1px solid var(--hair-strong); border-radius: 24px;
+  display: flex; z-index: 100;
+  padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+  box-shadow: 0 18px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05);
+}
+.nav-btn { flex: 1; min-height: 48px; padding: 6px 0; text-align: center; background: none; border: none; border-radius: 16px; color: var(--text-3); font-size: 11px; font-weight: 500; font-family: inherit; cursor: pointer; transition: color 0.15s, background 0.15s; }
+.nav-btn.act { color: #fff; background: rgba(77,163,255,0.13); }
+.nav-icon { font-size: 18px; display: block; margin-bottom: 2px; line-height: 1; }
+.page-h { font-size: clamp(28px, 4vw, 36px); font-weight: 700; letter-spacing: -0.8px; padding: 4px 2px 6px; }
 .page-sub { font-size: 13px; color: var(--text-2); padding: 0 4px 16px; }
-.upload-zone { background: var(--card); border: 2px dashed rgba(10,132,255,0.4); border-radius: 14px; padding: 28px 20px; text-align: center; margin-bottom: 14px; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+.upload-zone { display: block; background: var(--card); border: 2px dashed rgba(77,163,255,0.45); border-radius: 18px; padding: 28px 20px; text-align: center; margin-bottom: 14px; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
 .upload-zone:active { border-color: var(--blue); background: rgba(10,132,255,0.05); }
 .upload-zone .icon { font-size: 32px; margin-bottom: 8px; }
 .upload-zone p { color: var(--text-2); font-size: 14px; }
 .upload-zone input { display: none; }
 .detected-month { background: rgba(10,132,255,0.12); border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; font-size: 13px; color: var(--blue); }
-.date-range { background: var(--card); border-radius: 14px; padding: 14px 16px; margin-bottom: 14px; }
+.date-range { background: var(--card); border: 1px solid var(--hair); border-radius: 18px; padding: 14px 16px; margin-bottom: 14px; box-shadow: var(--lift); }
 .date-range-title { font-size: 11px; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; font-weight: 600; }
 .date-range-row { display: flex; gap: 10px; align-items: center; }
-.date-input { flex: 1; background: var(--card-2); border: 1px solid transparent; border-radius: 10px; color: var(--text); font-size: 14px; padding: 10px 12px; outline: none; font-family: inherit; font-variant-numeric: tabular-nums; }
+.date-input { flex: 1; background: var(--card-2); border: 1px solid transparent; border-radius: 12px; color: var(--text); font-size: 16px; padding: 10px 12px; outline: none; font-family: inherit; font-variant-numeric: tabular-nums; }
 .date-input:focus { border-color: var(--blue); }
 .date-sep { font-size: 12px; color: var(--text-2); }
 .date-presets { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
@@ -269,7 +302,7 @@ body {
 .txn-info-date { font-size: 11px; color: var(--text-2); }
 .txn-info-amt { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .txn-info-cat { margin-top: 6px; }
-.cat-select { background: var(--card-2); border: 1px solid transparent; border-radius: 8px; color: var(--text); font-size: 13px; padding: 7px 10px; width: 100%; font-family: inherit; }
+.cat-select { background: var(--card-2); border: 1px solid transparent; border-radius: 10px; color: var(--text); font-size: 16px; padding: 8px 10px; width: 100%; font-family: inherit; }
 .cat-select.unset { border-color: rgba(255,159,10,0.5); color: var(--orange); }
 .day-header { font-size: 12px; font-weight: 600; color: var(--text-2); padding: 12px 4px 6px; }
 .txn-skip { display: flex; align-items: center; gap: 6px; cursor: pointer; flex-shrink: 0; }
@@ -306,10 +339,11 @@ body {
 .tb-fill.r { background: linear-gradient(180deg, var(--red), #c12c25); }
 .tb-val { font-size: 10px; color: var(--text); font-variant-numeric: tabular-nums; font-weight: 600; margin-bottom: 2px; }
 .tb-label { font-size: 10px; color: var(--text-2); text-align: center; line-height: 1.2; }
-.s-section { background: var(--card); border-radius: 14px; padding: 4px 0; margin-bottom: 18px; overflow: hidden; }
+.s-section { background: var(--card); border: 1px solid var(--hair); border-radius: 18px; padding: 4px 0; margin-bottom: 18px; overflow: hidden; box-shadow: var(--lift); }
 .s-section-title { font-size: 13px; font-weight: 600; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.6px; padding: 0 4px 8px; }
 .s-item { padding: 14px 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: background 0.12s; }
 .s-item.nudge { background: rgba(255,159,10,0.08); }
+.s-item:hover, .map-item:hover { background: rgba(255,255,255,0.035); }
 .s-item:active { background: var(--card-2); }
 .s-item + .s-item { border-top: 1px solid var(--hair); }
 .s-icon { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
@@ -334,7 +368,7 @@ body {
 .foot { text-align: center; font-size: 11px; color: var(--text-3); margin-top: 16px; padding-bottom: 20px; }
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); z-index: 200; display: flex; align-items: flex-end; justify-content: center; padding: 0; animation: fadeIn 0.2s ease-out; }
 .modal-overlay.center { align-items: center; padding: 20px; }
-.modal-box { background: #1c1c1e; border-radius: 22px 22px 0 0; padding: 20px 20px 28px; max-width: 480px; width: 100%; animation: slideUp 0.25s ease-out; max-height: 90vh; overflow-y: auto; }
+.modal-box { background: #16181f; border: 1px solid var(--hair-strong); box-shadow: 0 32px 100px rgba(0,0,0,0.56); border-radius: 22px 22px 0 0; padding: 20px 20px 28px; max-width: 480px; width: 100%; animation: slideUp 0.25s ease-out; max-height: 90vh; overflow-y: auto; }
 .modal-overlay.center .modal-box { border-radius: 18px; padding: 24px; }
 @keyframes slideUp { from { transform: translateY(100%); } to { transform: none; } }
 .modal-grab { width: 36px; height: 5px; background: rgba(255,255,255,0.18); border-radius: 3px; margin: 0 auto 14px; }
@@ -354,11 +388,11 @@ body {
 .cat-pick:active { background: rgba(255,255,255,0.12); }
 .cat-pick-name { font-weight: 500; }
 .cat-pick-amt { font-size: 12px; color: var(--text-2); font-variant-numeric: tabular-nums; }
-.toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-100px); background: rgba(28,28,30,0.95); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); color: #fff; padding: 11px 18px; border-radius: 18px; font-size: 14px; font-weight: 500; z-index: 300; opacity: 0; transition: transform 0.3s, opacity 0.3s; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+.toast { position: fixed; top: calc(16px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%) translateY(-100px); background: rgba(28,28,30,0.95); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); color: #fff; padding: 11px 18px; border-radius: 18px; font-size: 14px; font-weight: 500; z-index: 300; opacity: 0; transition: transform 0.3s, opacity 0.3s; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
 .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
 .toast.err { background: rgba(255,69,58,0.95); }
 .toast.warn { background: rgba(255,159,10,0.95); }
-#save-error { position: fixed; left: 0; right: 0; bottom: 62px; z-index: 250; background: rgba(255,69,58,0.96); color: #fff; font-size: 13px; font-weight: 500; line-height: 1.4; padding: 10px 16px; text-align: center; }
+#save-error { position: fixed; left: 0; right: 0; bottom: calc(84px + env(safe-area-inset-bottom)); z-index: 250; background: rgba(255,69,58,0.96); color: #fff; font-size: 13px; font-weight: 500; line-height: 1.4; padding: 10px 16px; text-align: center; }
 .share-card { position: absolute; top: -10000px; left: 0; width: 400px; background: #000; color: #fff; padding: 24px; border-radius: 0; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif; }
 .sc-month { font-size: 14px; color: rgba(235,235,245,0.6); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
 .sc-month-name { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 18px; }
@@ -392,14 +426,38 @@ body {
 .bgt-add-area { padding: 0 16px 14px; }
 .bgt-add-form { display: flex; flex-direction: column; gap: 8px; padding-top: 12px; border-top: 1px solid var(--hair); }
 .bgt-add-inputs { display: flex; gap: 8px; }
-.bgt-add-name { flex: 1; background: var(--card-2); border: 1px solid transparent; border-radius: 8px; color: var(--text); font-size: 14px; padding: 9px 10px; outline: none; font-family: inherit; }
+.bgt-add-name { flex: 1; background: var(--card-2); border: 1px solid transparent; border-radius: 10px; color: var(--text); font-size: 16px; padding: 9px 10px; outline: none; font-family: inherit; }
 .bgt-add-name:focus { border-color: var(--blue); }
-.bgt-add-amt { width: 100px; background: var(--card-2); border: 1px solid transparent; border-radius: 8px; color: var(--text); font-size: 14px; padding: 9px 10px; outline: none; font-family: inherit; text-align: right; font-weight: 600; }
+.bgt-add-amt { width: 110px; background: var(--card-2); border: 1px solid transparent; border-radius: 10px; color: var(--text); font-size: 16px; padding: 9px 10px; outline: none; font-family: inherit; text-align: right; font-weight: 600; }
 .bgt-add-amt:focus { border-color: var(--blue); }
 .bgt-type-sel { display: flex; gap: 6px; }
 .bgt-type-btn { flex: 1; padding: 8px; background: var(--card-2); border: none; border-radius: 8px; color: var(--text-2); font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; transition: background 0.12s, color 0.12s; }
 .bgt-type-btn.on { background: var(--blue); color: #fff; }
 #adj-cat:focus { border-color: var(--blue); outline: none; }
+
+@media (max-width: 700px) {
+  .page { padding: 12px 16px 118px; }
+  .hero { border-radius: 20px; padding: 22px 20px 19px; }
+  .hero-legend { justify-content: space-between; gap: 8px; }
+  /* Edge-to-edge on a phone: a floating pill wastes the bottom of the screen
+     and fights the home indicator. */
+  .nav { bottom: 0; left: 0; right: 0; width: 100%; max-width: none; transform: none; border-width: 1px 0 0; border-radius: 20px 20px 0 0; }
+  #dash-section { display: block; margin-bottom: 0; }
+  #dash-section .dash-card { margin-bottom: 12px; }
+  .fc-grid, .acct-grid { gap: 9px; }
+}
+@media (max-width: 390px) {
+  .hero-amt { font-size: 38px; }
+  .hero-legend { justify-content: flex-start; }
+  .stats { gap: 8px; }
+  .stat { padding: 13px; }
+  .fc-grid { grid-template-columns: 1fr; }
+  .fc-col + .fc-col { padding-top: 12px; border-top: 1px solid var(--hair); }
+  .fc-col + .fc-col::before { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}
 </style>
 </head>
 <body>
@@ -487,7 +545,7 @@ body {
       <input type="text" id="adj-desc" class="reimb-desc" style="width:100%" placeholder="Description">
       <input type="number" inputmode="decimal" id="adj-amt" class="reimb-amt" style="width:100%;text-align:left" placeholder="Amount (AED)" step="0.01" min="0">
       <div id="adj-cat-row" style="display:none">
-        <select id="adj-cat" style="width:100%;background:var(--card-2);border:1px solid transparent;border-radius:8px;color:var(--text);font-size:14px;padding:9px 10px;font-family:inherit;outline:none">
+        <select id="adj-cat" style="width:100%;background:var(--card-2);border:1px solid transparent;border-radius:10px;color:var(--text);font-size:16px;padding:10px;font-family:inherit;outline:none">
           <option value="">— Category (optional) —</option>
         </select>
       </div>
@@ -505,7 +563,7 @@ body {
     <div class="modal-title">Delete Category</div>
     <div class="modal-sub" id="delcat-sub"></div>
     <div id="delcat-body" style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px">
-      <select id="delcat-target" style="width:100%;background:var(--card-2);border:1px solid transparent;border-radius:8px;color:var(--text);font-size:14px;padding:9px 10px;font-family:inherit;outline:none"></select>
+      <select id="delcat-target" style="width:100%;background:var(--card-2);border:1px solid transparent;border-radius:10px;color:var(--text);font-size:16px;padding:10px;font-family:inherit;outline:none"></select>
       <div style="font-size:12px;color:var(--text-2);line-height:1.5">Its transactions and merchant mappings move to the category you pick, so the spending stays counted.</div>
     </div>
     <div class="btn-row">
@@ -578,7 +636,7 @@ body {
     </div>
   </div>
 
-  <div class="upload-zone" id="drop-zone"><div class="icon">📄</div><p>Tap to select CSV or PDF</p><input type="file" accept=".csv,.pdf,application/pdf" id="csv-input"></div>
+  <label class="upload-zone" id="drop-zone"><div class="icon">📄</div><p>Tap to select CSV or PDF</p><input type="file" accept=".csv,.pdf,application/pdf" id="csv-input"></label>
 
   <div id="import-preview" style="display:none">
     <div id="detected-month-banner"></div>
@@ -642,7 +700,7 @@ body {
   <div class="s-section">
     <div class="s-inflow" style="padding-bottom:6px">
       <label for="gist-id-input" style="font-size:11px;color:var(--text-2);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;display:block">GitHub Gist ID</label>
-      <input type="text" id="gist-id-input" placeholder="e.g. a1b2c3d4e5f6..." autocapitalize="off" autocorrect="off" spellcheck="false" style="font-size:13px">
+      <input type="text" id="gist-id-input" placeholder="e.g. a1b2c3d4e5f6..." autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" style="font-size:16px">
       <div style="font-size:11px;color:var(--text-3);margin-top:8px;text-align:center" id="gist-id-meta">Your iPhone Shortcut forwards ADCB email alerts into this Gist</div>
     </div>
     <div class="s-item" onclick="window.open('setup.html','_blank')">
@@ -730,7 +788,17 @@ body {
 <script src="budget-core.js"></script>
 <script>
 var CACHE_KEY = "bgt_v7";
+// index.html is useless without the core module, and a half-loaded app that
+// throws on the first call looks like data loss. Fail loudly and stop.
 var BC = window.BudgetCore;
+if (!BC) {
+  document.body.innerHTML = '<div style="max-width:420px;margin:22vh auto;padding:0 24px;text-align:center;font:15px -apple-system,BlinkMacSystemFont,sans-serif;color:#fff">' +
+    '<div style="font-size:34px;margin-bottom:12px">⚠</div>' +
+    '<div style="font-size:18px;font-weight:600;margin-bottom:8px">App files did not load</div>' +
+    '<div style="color:rgba(244,247,255,0.74);line-height:1.5;margin-bottom:18px">budget-core.js is missing or blocked. Your saved data is untouched — reloading usually fixes this.</div>' +
+    '<button onclick="location.reload()" style="background:#4da3ff;border:0;color:#fff;font:600 15px inherit;padding:12px 22px;border-radius:12px;cursor:pointer">Reload</button></div>';
+  throw new Error("budget-core.js failed to load");
+}
 var DEFAULT_INFLOW = BC.DEFAULT_INFLOW;
 var DEFAULT_SAVINGS_TARGET = BC.DEFAULT_SAVINGS_TARGET;
 var MONTHS = BC.MONTHS;
@@ -1582,7 +1650,10 @@ function renderDailyChart() {
   var debTot = 0, ccTot = 0, any = false;
   for (var i = 0; i < APP.transactions.length; i++) {
     var t = APP.transactions[i];
-    var k = ymd(new Date(t.date));
+    // t.date is a UTC ISO instant; bucketing it with local ymd() puts a late
+    // evening charge in UTC+4 on the wrong day. t.dateStr is already the local
+    // calendar date the transaction was recorded against.
+    var k = dateStrToYmd(t.dateStr) || ymd(new Date(t.date));
     if (!map[k]) continue;
     var a = parseFloat(t.amount); if (isNaN(a)) continue;
     any = true;
@@ -2069,7 +2140,12 @@ function recalcHeader() {
 }
 
 function addManualTxn(cat, desc, amount, dateStr) {
-  var d = dateStr ? new Date(dateStr) : new Date();
+  // new Date("2026-09-05") is parsed as UTC midnight, then read back with
+  // local getters — the same local/UTC mismatch that produced the shipped
+  // date-range bug. Build the date locally, as processStatement() does.
+  var d;
+  if (dateStr) { var dp = dateStr.split('-'); d = new Date(+dp[0], +dp[1] - 1, +dp[2]); }
+  else d = new Date();
   var t = {
     id: uid("t"), date: d.toISOString(), dateStr: formatDate(d),
     desc: desc, cleanDesc: desc,
@@ -2102,8 +2178,14 @@ function removeTxn(id, cat) {
     APP.budget[idx].cs = null;
   }
   if (t.key) {
-    var ki = APP.imported.indexOf(t.key);
-    if (ki > -1) APP.imported.splice(ki, 1);
+    // Legacy rows can share a key (identity became occurrence-aware later).
+    // Releasing it while a sibling still holds it would let that sibling be
+    // re-imported as new.
+    var stillUsed = APP.transactions.some(function (x) { return x.key === t.key; });
+    if (!stillUsed) {
+      var ki = APP.imported.indexOf(t.key);
+      if (ki > -1) APP.imported.splice(ki, 1);
+    }
   }
   saveData(); drawBudget();
 }
@@ -2331,6 +2413,7 @@ function drawHistory() {
 }
 
 function ymd(d) { var y = d.getFullYear(); var m = String(d.getMonth() + 1).padStart(2, "0"); var dd = String(d.getDate()).padStart(2, "0"); return y + "-" + m + "-" + dd; }
+function dateStrToYmd(s) { var m = String(s || "").match(/^(\d{2})\/(\d{2})\/(\d{4})$/); return m ? m[3] + "-" + m[2] + "-" + m[1] : ""; }
 
 var importAcct = "cc";
 
@@ -2616,7 +2699,6 @@ var pendingTxns = [];
 var pendingAcct = "cc";
 var pendingMaxDate = null;
 var pendingBalance = null;
-document.getElementById("drop-zone").addEventListener("click", function () { document.getElementById("csv-input").click(); });
 document.getElementById("csv-input").addEventListener("change", function (e) {
   var f = e.target.files[0]; if (!f) return;
   if (f.name.toLowerCase().endsWith('.pdf') || f.type === 'application/pdf') {
@@ -2714,7 +2796,12 @@ function drawTxnList() {
       if (val === "SKIP") { pendingTxns[idx].skip = true; pendingTxns[idx].category = null; }
       else {
         pendingTxns[idx].skip = false; pendingTxns[idx].category = val || null;
-        if (val) { var mK = pendingTxns[idx].cleanDesc.toLowerCase().split(" ").slice(0, 2).join(" "); if (mK.length > 2) { APP.mappings[mK] = val; saveData(); } }
+        // Remember the mapping this row implies, but do not commit it yet:
+        // written here it survived Cancel and could not be undone.
+        if (val) {
+          var mK = normalizeDescKey(pendingTxns[idx].desc || pendingTxns[idx].cleanDesc).toLowerCase().split(" ").slice(0, 2).join(" ");
+          pendingTxns[idx].mappingKey = mK.length > 2 ? mK : null;
+        } else pendingTxns[idx].mappingKey = null;
       }
       drawTxnList(); updatePreviewSummary();
     });
@@ -2754,7 +2841,7 @@ function updatePreviewSummary() {
 }
 
 document.getElementById("btn-apply").addEventListener("click", function () {
-  var sums = {}; var appliedKeys = []; var appliedTxns = [];
+  var sums = {}; var appliedKeys = []; var appliedTxns = []; var learnedMappings = {};
   // Undo has to be a real undo, so capture the complete before-state of every
   // field this import is about to touch BEFORE touching any of it. The old
   // snapshot recorded spent-overrides after they had already been cleared, and
@@ -2762,6 +2849,7 @@ document.getElementById("btn-apply").addEventListener("click", function () {
   // or the processed-alert list — so "Undo Import" left several of them changed.
   var before = {
     rows: {},
+    mappings: {},
     accounts: JSON.parse(JSON.stringify(APP.accounts || {})),
     lastImport: APP.lastImport || null,
     prevDelta: null
@@ -2777,6 +2865,7 @@ document.getElementById("btn-apply").addEventListener("click", function () {
     if (t.skip || !t.category) continue;
     if (!sums[t.category]) sums[t.category] = 0;
     sums[t.category] += t.amount;
+    if (t.mappingKey) learnedMappings[t.mappingKey] = t.category;
     appliedKeys.push(t.key);
     appliedTxns.push({
       id: uid("t"), date: t.date.toISOString(), dateStr: t.dateStr,
@@ -2785,6 +2874,13 @@ document.getElementById("btn-apply").addEventListener("click", function () {
       acct: t.acct || pendingAcct,
       addedAt: new Date().toISOString()
     });
+  }
+  var learnedKeys = Object.keys(learnedMappings);
+  for (var i = 0; i < learnedKeys.length; i++) {
+    var lk = learnedKeys[i];
+    before.mappings[lk] = Object.prototype.hasOwnProperty.call(APP.mappings, lk)
+      ? { existed: true, value: APP.mappings[lk] } : { existed: false };
+    APP.mappings[lk] = learnedMappings[lk];
   }
   for (var i = 0; i < APP.budget.length; i++) {
     if (sums[APP.budget[i].c]) {
@@ -2911,9 +3007,15 @@ function undoLastImport() {
   if (before) {
     if (before.accounts) APP.accounts = JSON.parse(JSON.stringify(before.accounts));
     APP.lastImport = before.lastImport;
+    var mapKeys = Object.keys(before.mappings || {});
+    for (var i = 0; i < mapKeys.length; i++) {
+      var prevMap = before.mappings[mapKeys[i]];
+      if (prevMap.existed) APP.mappings[mapKeys[i]] = prevMap.value;
+      else delete APP.mappings[mapKeys[i]];
+    }
   }
   APP.lastImportDelta = (before && before.prevDelta) ? before.prevDelta : null;
-  saveData(); drawBudget(); drawSettings();
+  saveData(); drawBudget(); drawSettings(); drawMappings();
   toast("Import undone · " + (delta.txnIds ? delta.txnIds.length : keysOut.length) + " transactions removed");
 }
 
@@ -3322,7 +3424,8 @@ function exportData() {
   var u = URL.createObjectURL(b);
   var a = document.createElement("a");
   a.href = u; a.download = "budget_" + new Date().toISOString().slice(0, 10) + ".json"; a.click();
-  URL.revokeObjectURL(u);
+  // Revoking synchronously races the download in some browsers.
+  setTimeout(function () { URL.revokeObjectURL(u); }, 1000);
   APP.lastExportAt = new Date().toISOString();
   saveData(); drawBackupStatus();
   toast("Exported");

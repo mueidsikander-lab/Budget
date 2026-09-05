@@ -33,6 +33,13 @@ pipeline, and localStorage persistence.
 - New or changed financial arithmetic belongs in `budget-core.js` with a test
   in `tests/budget-core.test.js`. This repo has shipped the same class of
   savings-calculation regression several times; a test is how it stops.
+- The visual system lives in the one `:root` block at the top of `index.html`
+  (`--bg`, `--card`, `--hair`, `--text-*`, the accents, and the `--lift`
+  elevation ramp) and `setup.html` mirrors it. Change the tokens there — never
+  bolt a second `:root` or an override block onto the end of the sheet.
+- Every editable field is at least 16px. iOS Safari zooms the viewport when a
+  focused input is smaller, which throws the layout sideways mid-edit. Treat
+  16px as the floor when adding one.
 - All dynamic content interpolated into `innerHTML` must go through
   `escHtml()` (defined near the top of the script in `index.html`). This is
   the app's only XSS defense and it must stay consistent.
@@ -89,6 +96,10 @@ pipeline, and localStorage persistence.
   overspent Chiller against an underspent Electric at the fixed/variable level
   hides the overspend and inflates both the projection and `unusedBudget`
   (it read 17 instead of 4,750 on the month that prompted this).
+- Transaction bucketing and manual entry use the LOCAL calendar date, via
+  `t.dateStr` (DD/MM/YYYY) or a locally-constructed `Date` — never by re-reading
+  the stored `toISOString()` instant with local getters. `dateStrToYmd()` is the
+  bridge. `new Date("YYYY-MM-DD")` parses as UTC; build it from parts instead.
 - Date/timezone handling has already caused one shipped bug (see git log:
   "Fix date range filter for UTC+4 timezone"). Be deliberate about local vs.
   UTC dates in any new date logic.
