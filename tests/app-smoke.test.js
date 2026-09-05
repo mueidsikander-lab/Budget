@@ -48,45 +48,74 @@ function boot(saved) {
 
 test('the actual shipped app starts and all navigation destinations render',()=>{
   const {app,el}=boot();
-  assert.match(el('today-content').innerHTML,/Available in your plan/);
+  assert.match(el('today-content').innerHTML,/Projected month-end savings/);
   assert.doesNotMatch(el('today-content').innerHTML,/hero-ring|Cash on hand|Credit card payable/);
   for(const page of ['pg-plan','pg-activity','pg-accounts','pg-history','pg-settings','pg-upload','pg-budget'])app.navigateToPage(page);
-  assert.match(el('budget-content').innerHTML,/Set planning date/);
+  assert.doesNotMatch(el('budget-content').innerHTML,/planning date|openPaymentDate/);
   assert.match(el('accounts-content').innerHTML,/Balance unknown/);
 });
 
-test('saved dates survive reload and a concluded cycle without changing financial totals',()=>{
-  const run=boot(),{app,el,storage}=run;
-  app.APP.currentMonth='September 2026';
-  const before=BC.computeBudgetTotals(app.APP);
-  app.openPaymentDate(1);
-  el('payment-date').value='2026-09-28';el('payment-scope').value='monthly';el('payment-form').fire('submit');
-  assert.equal(BC.paymentDate(app.APP.budget[1],app.APP.currentMonth),'2026-09-28');
-  assert.deepEqual(BC.computeBudgetTotals(app.APP),before);
-  const reloaded=boot(JSON.parse(storage.get('bgt_v7')));
-  assert.equal(BC.paymentDate(reloaded.app.APP.budget[1],'September 2026'),'2026-09-28');
-  reloaded.app.confirmConclude();
-  assert.equal(BC.paymentDate(reloaded.app.APP.budget[1],reloaded.app.APP.currentMonth),'2026-10-28');
-  assert.equal(reloaded.app.APP.history[0].budget[1].schedule.day,28);
+function savingsFixture(app) {
+  app.APP.inflow=10000;
+  app.APP.savingsTargetMode='auto';
+  app.APP.reimbursements=[];app.APP.outflows=[];app.APP.transactions=[];
+  app.APP.budget=[
+    {c:'Rent',b:3000,s:0,p:true,g:'fixed'},
+    {c:'Incidentals',b:1000,s:1300,p:false,g:'variable'},
+    {c:'Groceries',b:2000,s:500,p:false,g:'variable'},
+    {c:'Transport',b:1000,s:0,p:false,g:'variable'}
+  ];
+}
+function savingsHeadline(el) {
+  return el('today-content').innerHTML.match(/id="projected-savings"[^>]*><small>AED<\/small>([^<]+)/)[1];
+}
+
+test('Today shows full-budget savings with incidental overspending included',()=>{
+  const {app,el}=boot();savingsFixture(app);app.drawBudget();
+  assert.equal(savingsHeadline(el),'2,700.00');
+  const view=el('today-content').innerHTML;
+  assert.match(view,/AED 300.00 below your savings target/);
+  assert.match(view,/− 4,800.00/);assert.match(view,/− 2,500.00/);
+  assert.match(view,/Incidentals/);assert.match(view,/− AED 300.00/);
+  assert.doesNotMatch(view,/Coming up|daily|per day|reserved|Try the plan|Reduce category allowances/i);
+  assert.doesNotMatch(el('budget-content').innerHTML,/planning date|openPaymentDate/);
 });
 
-test('date edits and savings changes roll back when device storage fails',()=>{
-  const run=boot(),{app,el}=run;
-  app.openPaymentDate(1);el('payment-date').value='2026-09-29';run.failStorage(true);
-  el('payment-form').fire('submit');assert.equal(app.APP.budget[1].schedule,undefined);
-  run.failStorage(false);app.closeModal('payment-modal');
-  const before=JSON.stringify(app.APP);app.openSavingsBoost(11);run.failStorage(true);app.applySavingsBoost();
-  assert.equal(JSON.stringify(app.APP),before);
+test('using other category budgets leaves projection unchanged, more overspending lowers it',()=>{
+  const {app,el}=boot();savingsFixture(app);
+  app.APP.budget[2].s=2000;app.APP.budget[3].s=1000;app.drawBudget();
+  assert.equal(savingsHeadline(el),'2,700.00');
+  app.APP.budget[1].s+=200;app.drawBudget();
+  assert.equal(savingsHeadline(el),'2,500.00');
 });
 
-test('previewing savings does not save until Apply and preserves payment schedules',()=>{
-  const {app,storage}=boot();
-  app.APP.budget[1].schedule={day:22,overrides:{}};
-  const original=JSON.stringify(app.APP);app.openSavingsBoost(11);
-  assert.equal(JSON.stringify(app.APP),original);
-  const target=BC.savingsTarget(app.APP);app.applySavingsBoost();
-  assert.equal(BC.savingsTarget(app.APP),target+500);
-  assert.equal(JSON.parse(storage.get('bgt_v7')).budget[1].schedule.day,22);
+test('a custom savings goal cannot replace the projection or cut remaining category budgets',()=>{
+  const {app,el}=boot();savingsFixture(app);
+  app.APP.savingsTargetMode='custom';app.APP.savingsTarget=9000;app.drawBudget();
+  assert.equal(savingsHeadline(el),'2,700.00');
+  assert.match(el('today-content').innerHTML,/− 2,500.00/);
+  assert.match(el('accounts-content').innerHTML,/Projected month-end savings: AED 2,700.00/);
+});
+
+test('reimbursements, outflows and deficits are reflected in the visible projection',()=>{
+  const {app,el}=boot();savingsFixture(app);
+  app.APP.reimbursements=[{amount:100}];app.APP.outflows=[{amount:200}];app.drawBudget();
+  assert.equal(savingsHeadline(el),'2,600.00');
+  app.APP.inflow=6000;app.drawBudget();
+  assert.equal(savingsHeadline(el),'-1,400.00');
+  assert.match(el('today-content').innerHTML,/Projected shortfall/);
+  assert.doesNotMatch(el('today-content').innerHTML,/width:-/);
+});
+
+test('concluding a month saves actual unused budgets and preserves stored schedules',()=>{
+  const {app,storage}=boot();savingsFixture(app);
+  app.APP.budget[0].schedule={day:22,overrides:{}};
+  const before=JSON.stringify(app.APP);app.drawBudget();
+  assert.equal(JSON.stringify(app.APP),before,'rendering must not change budgets or spending');
+  app.confirmConclude();
+  assert.equal(app.APP.history[0].savings,5200,'unused budgets become final savings');
+  assert.equal(app.APP.history[0].budget[0].schedule.day,22);
+  assert.equal(JSON.parse(storage.get('bgt_v7')).budget[0].schedule.day,22);
 });
 
 test('import account selection is explicit and card alerts retain their card account',()=>{

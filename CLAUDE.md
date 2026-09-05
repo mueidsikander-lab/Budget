@@ -55,9 +55,12 @@ pipeline, and localStorage persistence.
 - All dynamic content interpolated into `innerHTML` must go through
   `escHtml()` (defined near the top of the script in `index.html`). This is
   the app's only XSS defense and it must stay consistent.
-- `computeSpendingPlan()` reserves unpaid fixed bills and the savings goal
-  before exposing a flexible allowance. The daily guide includes today, while
-  `getCycleDays()` keeps its existing elapsed-day semantics for forecasts.
+- Today leads with `computeForecast().cycleEndSavings`, the full-consumption
+  projection. Show spent so far and remaining category budgets separately.
+  Never replace the projection with a goal-protected spending allowance: category
+  overspending reduces savings, not the remaining budgets of other categories.
+  Upcoming payments, date controls, daily limits and savings-boost prompts are
+  removed from the UI. Preserve stored schedules for backup compatibility.
 - Payment schedules live on their budget row as `{day, overrides}`. Overrides
   are keyed by budget cycle, even for a date outside that month. Moving a
   planning date never releases the bill's reservation. Restore validation must

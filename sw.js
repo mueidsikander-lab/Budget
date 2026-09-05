@@ -1,6 +1,6 @@
 // Cache name is bumped whenever the shell file list changes so the old cache
 // (which cached every GET, including API responses) is dropped on activate.
-var CACHE_NAME = "budget-shell-v3-earth";
+var CACHE_NAME = "budget-shell-v4-savings";
 var SHELL_FILES = ["./", "./index.html", "./budget-core.js", "./setup.html", "./manifest.json", "./icons/apple-touch-icon.png", "./icons/icon-192.png", "./icons/icon-512.png"];
 
 // Only these same-origin paths are ever written to the cache. The previous

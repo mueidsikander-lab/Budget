@@ -75,9 +75,13 @@ body {
 .balance-amount { font-size:clamp(44px,5.5vw,70px); letter-spacing:-.045em; line-height:1.15; font-weight:550; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
 .balance-amount small { font-size:18px; font-weight:400; color:var(--text-3); letter-spacing:0; margin-right:8px; }
 .balance-copy { color:var(--text-2); font-size:14px; line-height:1.55; max-width:340px; margin-top:12px; }
-.daily-guide { display:flex; align-items:flex-end; justify-content:space-between; flex-wrap:wrap; gap:12px; border-top:1px solid var(--hair); margin-top:24px; padding-top:18px; }
-.daily-guide strong { font-size:26px; font-weight:550; letter-spacing:-.03em; }
-.daily-guide small { display:block; font-size:13px; color:var(--text-3); margin-top:3px; }
+.savings-comparison { border-top:1px solid var(--hair); margin-top:24px; padding-top:18px; font-size:15px; line-height:1.5; }
+.savings-comparison small { display:block; color:var(--text-3); margin-top:4px; }
+.category-group-title { font-size:14px; font-weight:600; color:var(--text-2); margin:22px 0 10px; }
+.savings-impact { background:var(--card); border:1px solid var(--hair); border-radius:14px; padding:20px; }
+.impact-row { display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px; width:100%; border:0; border-top:1px solid var(--hair); background:transparent; color:var(--text); text-align:left; padding:16px 0; margin-top:12px; font:inherit; font-size:14px; cursor:pointer; }
+.impact-row small { display:block; color:var(--text-3); margin-top:4px; font-size:12px; }
+.impact-row strong { color:var(--red); font-weight:550; }
 .allocation { padding:8px 0 8px 26px; border-left:1px solid var(--hair); min-width:0; }
 .panel-heading { font-size:20px; font-weight:550; letter-spacing:-.025em; line-height:1.35; }
 .panel-sub { font-size:13px; line-height:1.5; color:var(--text-3); margin-top:6px; }
@@ -88,12 +92,6 @@ body {
 .allocation-row strong { font-weight:550; font-variant-numeric:tabular-nums; }
 .allocation-key { width:8px; height:8px; border-radius:2px; }
 .allocation-note { font-size:12px; color:var(--text-3); border-top:1px solid var(--hair); padding-top:12px; margin-top:9px; line-height:1.5; }
-.decision-strip { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; background:var(--card-2); padding:18px 20px; border-radius:12px; margin:0 0 28px; }
-.decision-copy { display:flex; align-items:center; gap:12px; flex:1; min-width:200px; }
-.decision-copy > .ic { font-size:24px; color:var(--green); }
-.decision-copy strong { display:block; font-size:15px; font-weight:550; }
-.decision-copy p { font-size:13px; color:var(--text-2); margin-top:4px; line-height:1.5; }
-.decision-strip.warning { background:#f6e7db; }
 .today-lower { display:grid; grid-template-columns:minmax(0,1.45fr) minmax(0,1fr); gap:28px; align-items:start; }
 .section-heading { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:14px; flex-wrap:wrap; }
 .text-button { background:transparent; border:0; color:var(--accent); font:inherit; font-size:14px; min-height:44px; cursor:pointer; text-align:left; padding:6px 0; text-decoration:underline; text-underline-offset:4px; }
@@ -102,26 +100,13 @@ body {
 .envelope-name { font-size:15px; font-weight:550; display:block; }
 .envelope-track { display:block; height:5px; background:var(--hair); border-radius:3px; overflow:hidden; margin:10px 0 6px; }
 .envelope-fill { display:block; height:100%; background:var(--spent); }
-.envelope.warn .envelope-fill { background:var(--orange); }
 .envelope.over .envelope-fill { background:var(--red); }
 .envelope-meta { font-size:12px; color:var(--text-3); display:block; line-height:1.5; }
-.envelope.warn .envelope-meta { color:var(--orange); }
 .envelope.over .envelope-meta { color:var(--red); }
 .envelope-value { font-size:16px; font-weight:550; text-align:right; font-variant-numeric:tabular-nums; }
 .envelope-value small { display:block; font-size:12px; color:var(--text-3); font-weight:400; margin-top:4px; }
-.coming-up { background:var(--card); border:1px solid var(--hair); border-radius:14px; padding:20px; }
-.payment-item { display:grid; grid-template-columns:40px minmax(0,1fr); gap:12px; margin-top:20px; }
-.payment-calendar { border:1px solid var(--hair); border-radius:7px; padding:5px 2px; text-align:center; height:max-content; font-size:21px; font-weight:550; }
-.payment-calendar small { display:block; font-size:12px; color:var(--text-3); text-transform:uppercase; }
-.payment-name { font-size:14px; font-weight:500; }
-.payment-amount { font-size:18px; font-weight:550; margin-top:4px; }
-.payment-context { color:var(--text-3); font-size:13px; margin-top:4px; }
-.payment-context.overdue { color:var(--red); }
-.payment-reserve { border-top:1px solid var(--hair); padding-top:14px; margin-top:18px; font-size:13px; color:var(--green); }
 .coverage-note { padding:20px 2px 0; font-size:14px; line-height:1.6; color:var(--text-3); }
 .coverage-note strong { color:var(--text); display:block; font-weight:550; margin-bottom:6px; }
-.row-schedule { margin:7px 0 0 78px; }
-.row-schedule button { min-height:36px; font-size:13px; }
 .form-field { display:block; font-size:14px; margin:15px 0 7px; }
 .planning-note { font-size:13px; line-height:1.5; color:var(--text-3); margin-top:12px; }
 .plan-summary { display:flex; flex-wrap:wrap; gap:18px 30px; margin:18px 0 26px; padding:20px; background:var(--card-2); border-radius:12px; }
@@ -596,7 +581,7 @@ body {
   .row-main { min-width:105px; }
   .row-name { white-space:normal; overflow:visible; }
   .row-meta { flex-wrap:wrap; }
-  .row-schedule,.row-bar { margin-left:0; }
+  .row-bar { margin-left:0; }
   .row { padding:14px 12px; }
   .atf-row { flex-wrap:wrap; }
   .atf-row .exp-btn { flex:1 !important; }
@@ -750,22 +735,6 @@ body {
   </div>
 </div>
 
-<div class="modal-overlay center" id="payment-modal" style="display:none" aria-labelledby="payment-title">
-  <form class="modal-box" id="payment-form">
-    <div class="modal-title" id="payment-title">Edit planning date</div>
-    <div class="modal-sub" id="payment-sub"></div>
-    <label class="form-field" for="payment-date">Planning date</label>
-    <input type="date" class="date-input" id="payment-date" min="2000-01-01" max="2199-12-31" required style="width:100%">
-    <label class="form-field" for="payment-scope">Apply to</label>
-    <select class="sel" id="payment-scope"><option value="once">This payment only</option><option value="monthly">Monthly schedule</option></select>
-    <p class="planning-note">Planning only — this does not change the provider’s due date. The amount stays reserved in this budget cycle. Shorter months use their last day.</p>
-    <p class="planning-note" id="payment-next" aria-live="polite"></p>
-    <div class="btn-row" style="margin-top:20px"><button type="button" class="btn btn-secondary" onclick="closeModal('payment-modal')">Cancel</button><button class="btn btn-blue" type="submit">Save date</button></div>
-  </form>
-</div>
-<div class="modal-overlay center" id="savings-modal" style="display:none" aria-labelledby="savings-title">
-  <div class="modal-box"><div class="modal-title" id="savings-title">Make more room for savings</div><div id="savings-preview"></div><div class="btn-row" style="margin-top:20px"><button class="btn btn-secondary" onclick="closeModal('savings-modal')">Keep current plan</button><button class="btn btn-blue" onclick="applySavingsBoost()">Apply plan</button></div></div>
-</div>
 <input type="file" id="restore-input" accept="application/json,.json" style="display:none">
 
 <div id="save-error" role="alert" style="display:none"></div>
@@ -1658,8 +1627,7 @@ function drawBudget() {
   if (!APP.budget) return;
   var t = computeBudgetTotals();
   document.getElementById('month-display').textContent = APP.currentMonth;
-  var plan = BC.computeSpendingPlan(APP);
-  document.getElementById('cycle-sub').textContent = plan.cycleState === 'past' ? 'Cycle ended · ready to close in Plan' : plan.cycleState === 'future' ? 'Upcoming cycle · '+plan.days+' days' : plan.days+' days left, including today';
+  document.getElementById('cycle-sub').textContent = 'Your monthly savings and category budgets';
   renderTop(t);
   drawReimbursements(); drawOutflows();
   var html = '<div class="plan-groups">';
@@ -1674,44 +1642,40 @@ function drawBudget() {
 }
 
 function renderTop(t) {
-  var m = BC.computeSpendingPlan(APP), f = m.forecast;
-  document.getElementById('plan-summary').innerHTML = '<div class="plan-summary"><div><small>Commitments · full month</small><strong>AED '+fm(t.fixB)+'</strong></div><div><small>Everyday spending · full month</small><strong>AED '+fm(t.varB)+'</strong></div><div><small>Savings goal</small><strong>AED '+fm(t.target)+'</strong></div></div>';
-  var title = m.fundingGap || m.savingsGap ? 'Your plan needs attention.' : m.flexible > 0 ? 'Your month has room.' : 'Your money is allocated.';
-  var html = '<div class="overview-top"><section class="balance-area"><div class="h-eyebrow">Available in your plan</div><h2>'+title+'</h2><div class="balance-amount"><small>AED</small>'+fm(m.flexible)+'</div><p class="balance-copy">For everyday spending, after reserving upcoming bills and your savings goal.</p><div class="daily-guide"><div><strong>'+(m.daily === null ? 'Cycle ended' : 'AED '+fm(m.daily))+'</strong><small>'+(m.cycleState === 'future' ? 'per day when this cycle starts' : 'per day, as a guide')+'</small></div><small>Budget allowance<br>Not your bank balance</small></div></section>'+renderAllocation(m)+'</div>';
-  html += renderDecision(m);
-  html += '<div class="today-lower"><section><div class="section-heading"><h2 class="panel-heading">Where to pay attention</h2><button class="text-button" onclick="navigateToPage(\'pg-plan\')">All categories</button></div>'+renderEnvelopes(m)+'</section><aside>'+renderUpcoming(m)+'<div class="coverage-note"><strong>The plan isn’t the bank.</strong>Account balances need reconciliation before we can confirm cash available.<br><button class="text-button" onclick="navigateToPage(\'pg-accounts\')">Check account coverage</button></div></aside></div>';
+  var f = computeForecast(t), delta = BC.r2(f.cycleEndSavings - t.target);
+  document.getElementById('plan-summary').innerHTML = '<div class="plan-summary"><div><small>Total category budgets</small><strong>AED '+fd(t.fixB+t.varB)+'</strong></div><div><small>Savings target</small><strong>AED '+fd(t.target)+'</strong></div><div><small>Projected savings</small><strong>AED '+fd(f.cycleEndSavings)+'</strong></div></div>';
+  var status = delta < 0 ? 'AED '+fd(-delta)+' below your savings target' : delta > 0 ? 'AED '+fd(delta)+' above your savings target' : 'On your savings target';
+  var html = '<div class="overview-top"><section class="balance-area"><div class="h-eyebrow">Projected month-end savings</div><h2>'+(f.cycleEndSavings < 0 ? 'Your projected shortfall.' : 'What you’ll finish with.')+'</h2><div class="balance-amount" id="projected-savings" style="color:var(--'+(f.cycleEndSavings<0?'red':'green')+')"><small>AED</small>'+fd(f.cycleEndSavings)+'</div><p class="balance-copy">Assumes every category uses its full budget. Categories already over budget count at their actual spending.</p><div class="savings-comparison"><strong>'+escHtml(status)+'</strong><small>Target: AED '+fd(t.target)+'</small></div></section>'+renderAllocation(t,f)+'</div>';
+  html += '<div class="today-lower"><section><div class="section-heading"><h2 class="panel-heading">Your category budgets</h2><button class="text-button" onclick="navigateToPage(\'pg-plan\')">Edit budgets</button></div><p class="panel-sub">All amounts left below are assumed spent in the projection.</p><h3 class="category-group-title">Everyday spending</h3>'+renderEnvelopes(t.varIdx)+'<h3 class="category-group-title">Fixed expenses</h3>'+renderEnvelopes(t.fixedIdx)+'</section><aside>'+renderSavingsImpact(t)+'</aside></div>';
   document.getElementById('today-content').innerHTML = html;
   renderDashboard();
 }
 
-function renderAllocation(m) {
-  var t = m.totals;
-  var slices = [{name:'Already spent',amount:t.spentTotal,color:'var(--spent)'},{name:'Upcoming bills · reserved',amount:m.forecast.fixedDue,color:'var(--bills)'},{name:'Flexible spending',amount:m.flexible,color:'var(--flexible)'},{name:'Savings goal · reserved',amount:m.savingsReserved,color:'var(--savings)'}];
-  if (m.unallocated > 0) slices.push({name:'Unallocated surplus',amount:m.unallocated,color:'var(--hair-strong)'});
-  var total = slices.reduce(function (sum, slice) {return sum+Math.max(0,slice.amount);},0);
-  var summary = slices.map(function (slice) { return slice.name+': AED '+fd(slice.amount); }).join('; ');
-  var h = '<section class="allocation"><h2 class="panel-heading">Every dirham has a place.</h2><div class="panel-sub">Your whole month, not just a balance.</div><div class="allocation-total"><span>Monthly inflow</span><strong>AED '+fm(t.INFLOW)+'</strong></div><div class="allocation-bar" role="img" aria-label="'+escHtml(summary)+'">';
-  slices.forEach(function (slice) {h += '<span style="background:'+slice.color+';width:'+(total > 0 ? Math.max(0,slice.amount)/total*100 : 0)+'%"></span>';});
-  h += '</div>';
-  slices.forEach(function (slice) {h += '<div class="allocation-row"><span class="allocation-key" style="background:'+slice.color+'"></span><span>'+slice.name+'</span><strong>'+fd(slice.amount)+'</strong></div>';});
-  h += '<p class="allocation-note">'+(m.fundingGap ? 'Commitments exceed inflow by AED '+fd(m.fundingGap)+'. ' : '')+'Reserved means allocated, not transferred. '+(t.REIMB ? 'Inflow includes AED '+fd(t.REIMB)+' in recorded reimbursements. ' : '')+'Savings if all category budgets are used: <strong>AED '+fd(t.committed)+'</strong>.</p></section>';
+function renderAllocation(t,f) {
+  var slices = [{name:'Spent so far',amount:t.spentTotal,color:'var(--spent)'},{name:'Remaining category budgets',amount:f.stillToSpend,color:'var(--bills)'}];
+  if(f.cycleEndSavings>=0)slices.push({name:'Projected savings',amount:f.cycleEndSavings,color:'var(--savings)'});
+  var total = slices.reduce(function(sum,slice){return sum+Math.max(0,slice.amount);},0);
+  var summary = slices.map(function(slice){return slice.name+': AED '+fd(slice.amount);}).join('; ');
+  var h = '<section class="allocation"><h2 class="panel-heading">How your savings add up</h2><div class="panel-sub">Income minus spending and all unused category budgets.</div><div class="allocation-total"><span>Monthly inflow</span><strong>AED '+fd(t.INFLOW)+'</strong></div><div class="allocation-bar" role="img" aria-label="'+escHtml(summary)+'">';
+  slices.forEach(function(slice){h+='<span style="background:'+slice.color+';width:'+(total>0?Math.max(0,slice.amount)/total*100:0)+'%"></span>';});
+  h+='</div>';
+  slices.forEach(function(slice,i){h+='<div class="allocation-row"><span class="allocation-key" style="background:'+slice.color+'"></span><span>'+slice.name+'</span><strong>'+(i<2?'− ':'= ')+fd(slice.amount)+'</strong></div>';});
+  if(f.cycleEndSavings<0)h+='<div class="allocation-row" style="color:var(--red)"><span class="allocation-key" style="background:var(--red)"></span><span>Projected shortfall</span><strong>'+fd(-f.cycleEndSavings)+'</strong></div>';
+  h+='<p class="allocation-note">'+(f.cycleEndSavings<0?'Projected spending exceeds income. The bar shows the spending total. ':'')+'Spent so far includes overspending'+(t.OUT?' and AED '+fd(t.OUT)+' in extra outflows':'')+'. '+(t.REIMB?'Inflow includes AED '+fd(t.REIMB)+' in reimbursements. ':'')+'Every AED left unused at month-end adds to your final savings.</p></section>';
   return h;
 }
 
-function savingsBoostIndex(m) {
-  if (m.flexible < 500 || m.envelopeGap || m.savingsGap || m.goal !== m.totals.target) return -1;
-  var candidates = m.totals.varIdx.filter(function(i){return APP.budget[i].b-getSpent(APP.budget[i])>=500;});
-  candidates.sort(function(a,b){var ah=/house/i.test(APP.budget[a].c),bh=/house/i.test(APP.budget[b].c);return Number(bh)-Number(ah)||(APP.budget[b].b-getSpent(APP.budget[b]))-(APP.budget[a].b-getSpent(APP.budget[a]));});
-  return candidates.length ? candidates[0] : -1;
-}
-function renderDecision(m) {
-  var index = savingsBoostIndex(m), title, detail, action;
-  if (m.fundingGap) { title = 'Upcoming bills need AED '+fm(m.fundingGap)+' more.'; detail='All available income is allocated. Review commitments and income in your plan.'; }
-  else if(m.savingsGap) { title = 'Your savings goal is short by AED '+fm(m.savingsGap)+'.'; detail='There is no flexible allowance left after upcoming bills and the goal.'; }
-  else if(m.envelopeGap) { title='Reduce category allowances by AED '+fm(m.envelopeGap)+'.'; detail='Your remaining envelopes exceed the spending room after protecting your savings goal.'; }
-  else if(index >= 0) { title='What if you saved AED 500 more?'; detail='Preview the trade-off with '+APP.budget[index].c+'.'; action='<button class="btn btn-secondary" onclick="openSavingsBoost('+index+')">Try the plan</button>'; }
-  else {title='Your savings goal: AED '+fm(m.goal);detail='The full-budget projection is AED '+fm(m.totals.committed)+'. You can adjust the plan as your month changes.';}
-  return '<section class="decision-strip'+(m.fundingGap||m.savingsGap||m.envelopeGap?' warning':'')+'"><div class="decision-copy"><svg class="ic" aria-hidden="true"><use href="#i-trend"/></svg><div><strong>'+escHtml(title)+'</strong><p>'+escHtml(detail)+'</p></div></div>'+(action||'<button class="btn btn-secondary" onclick="navigateToPage(\'pg-plan\')">Review plan</button>')+'</section>';
+function renderSavingsImpact(t) {
+  var rows=APP.budget.map(function(row,index){return {row:row,index:index,over:BC.r2(Math.max(0,getSpent(row)-row.b))};}).filter(function(item){return item.over>0;}).sort(function(a,b){return b.over-a.over;});
+  var h='<section class="savings-impact"><h2 class="panel-heading">What’s affecting savings</h2>';
+  if(rows.length){
+    h+='<p class="panel-sub">AED '+fd(t.overspend)+' in category overspending is already deducted from your projection.</p>';
+    rows.forEach(function(item){h+='<button class="impact-row" onclick="openCategory('+item.index+')"><span>'+escHtml(item.row.c)+'<small>Over budget · reduces savings</small></span><strong>− AED '+fd(item.over)+'</strong></button>';});
+  }else h+='<p class="panel-sub">No categories are over budget.</p>';
+  h+='<p class="allocation-note">The projection includes the full remaining AED '+fd(t.unusedBudget)+' across your categories. Spending within these amounts leaves projected savings unchanged.</p>';
+  if(t.REIMB)h+='<p class="planning-note">Reimbursements add AED '+fd(t.REIMB)+' to savings.</p>';
+  if(t.OUT)h+='<p class="planning-note">Extra outflows reduce savings by AED '+fd(t.OUT)+'.</p>';
+  return h+'</section>';
 }
 
 function openCategory(index) {
@@ -1721,16 +1685,14 @@ function openCategory(index) {
   var row = document.querySelector('.row[data-cat="'+cssEsc(APP.budget[index].c)+'"]');
   if(row) row.scrollIntoView({block:'center'});
 }
-function renderEnvelopes(m) {
-  var ids=m.totals.varIdx.slice(), elapsed=getElapsedFraction()*100;
-  ids.sort(function(a,b){var ra=APP.budget[a],rb=APP.budget[b];var pa=ra.b>0?getSpent(ra)/ra.b: getSpent(ra)>0?Infinity:0;var pb=rb.b>0?getSpent(rb)/rb.b: getSpent(rb)>0?Infinity:0;return pb-pa;});
-  if(!ids.length) return '<p class="panel-sub">Add flexible categories in Plan to allocate everyday spending.</p>';
+function renderEnvelopes(indices) {
+  var ids=indices.slice();
+  ids.sort(function(a,b){var ra=APP.budget[a],rb=APP.budget[b];var pa=ra.b>0?getSpent(ra)/ra.b:getSpent(ra)>0?Infinity:0;var pb=rb.b>0?getSpent(rb)/rb.b:getSpent(rb)>0?Infinity:0;return pb-pa;});
+  if(!ids.length)return '<p class="panel-sub">No categories in this group.</p>';
   return ids.map(function(index){
-    var row=APP.budget[index], spent=getSpent(row), left=BC.r2(row.b-spent), pct=row.b>0?spent/row.b*100:spent>0?100:0;
-    var warning=left<0?'over':pct>=85&&elapsed<85?'warn':'';
-    var note=left<0?'Over budget by AED '+fd(-left):'AED '+fd(spent)+' of '+fd(row.b)+' used';
-    if(warning==='warn')note=Math.round(pct)+'% used · '+m.days+' days still to go';
-    return '<button class="envelope '+warning+'" onclick="openCategory('+index+')">'+catAvatar(row.c)+'<span><span class="envelope-name">'+escHtml(row.c)+'</span><span class="envelope-track"><span class="envelope-fill" style="width:'+Math.max(0,Math.min(100,pct))+'%"></span></span><span class="envelope-meta">'+escHtml(note)+'</span></span><span class="envelope-value">'+fm(Math.abs(left))+'<small>AED '+(left<0?'over':'left')+'</small></span></button>';
+    var row=APP.budget[index],spent=getSpent(row),left=BC.r2(row.b-spent),pct=row.b>0?spent/row.b*100:spent>0?100:0;
+    var note='AED '+fd(spent)+' of '+fd(row.b)+' used'+(left<0?' · reduces projected savings':'');
+    return '<button class="envelope '+(left<0?'over':'')+'" onclick="openCategory('+index+')">'+catAvatar(row.c)+'<span><span class="envelope-name">'+escHtml(row.c)+'</span><span class="envelope-track"><span class="envelope-fill" style="width:'+Math.max(0,Math.min(100,pct))+'%"></span></span><span class="envelope-meta">'+escHtml(note)+'</span></span><span class="envelope-value">'+fd(Math.abs(left))+'<small>AED '+(left<0?'over':'left')+'</small></span></button>';
   }).join('');
 }
 function dateLabel(date) {
@@ -1738,63 +1700,6 @@ function dateLabel(date) {
   var parts=date.split('-').map(Number);
   return parts[2]+' '+MONTHS[parts[1]-1].slice(0,3)+' '+parts[0];
 }
-function renderUpcoming(m) {
-  var bills=BC.upcomingPayments(APP), h='<section class="coming-up"><h2 class="panel-heading">Coming up</h2><div class="panel-sub">Your planning dates · editable</div>';
-  if(!bills.length)h+='<p class="planning-note">All fixed commitments are covered by recorded spending or marked paid.</p>';
-  bills.slice(0,4).forEach(function(bill){
-    var parts=bill.date?bill.date.split('-'):null;
-    var timing=bill.days===null?'Choose a planning date':bill.days<0?'Overdue by '+(-bill.days)+' day'+(bill.days===-1?'':'s'):bill.days===0?'Due today':'In '+bill.days+' day'+(bill.days===1?'':'s');
-    var cycle=BC.parseCycle(APP.currentMonth);
-    if(parts && cycle && (Number(parts[0])!==cycle.year || Number(parts[1])!==cycle.month+1))timing+=' · '+dateLabel(bill.date)+' · still reserved in this cycle';
-    h+='<div class="payment-item"><div class="payment-calendar"><small>'+(parts?MONTHS[Number(parts[1])-1].slice(0,3):'DATE')+'</small>'+(parts?Number(parts[2]):'—')+'</div><div><div class="payment-name">'+escHtml(bill.category)+'</div><div class="payment-amount">AED '+fd(bill.amount)+'</div><div class="payment-context'+(bill.days!==null&&bill.days<0?' overdue':'')+'">'+escHtml(timing)+'</div><button class="text-button" onclick="openPaymentDate('+bill.index+')">'+(parts?'Edit date':'Set date')+'</button></div></div>';
-  });
-  if(bills.length>4)h+='<button class="text-button" onclick="navigateToPage(\'pg-plan\')">All '+bills.length+' commitments</button>';
-  return h+'<div class="payment-reserve">AED '+fd(m.forecast.fixedDue)+' reserved in this plan</div></section>';
-}
-
-var editingPaymentIndex = null, savingsPreviewIndex = null;
-function openPaymentDate(index) {
-  var row=APP.budget[index];if(!row || row.g!=='fixed')return;
-  editingPaymentIndex=index;
-  document.getElementById('payment-title').textContent='Planning date · '+row.c;
-  document.getElementById('payment-sub').textContent=APP.currentMonth+' · AED '+fd(Math.max(0,row.b-getSpent(row)))+' remaining';
-  document.getElementById('payment-date').value=BC.paymentDate(row,APP.currentMonth)||'';
-  document.getElementById('payment-scope').value='once';
-  updatePaymentPreview();openModal('payment-modal');
-  document.getElementById('payment-date').focus();
-}
-function updatePaymentPreview() {
-  var row=APP.budget[editingPaymentIndex], host=document.getElementById('payment-next');if(!row)return;
-  var date=document.getElementById('payment-date').value,scope=document.getElementById('payment-scope').value;
-  if(!BC.validDate(date)){host.textContent='Set a date for this payment, or choose a monthly schedule.';return;}
-  var schedule=BC.changePaymentDate(row,APP.currentMonth,date,scope);
-  var next=BC.paymentDate({schedule:schedule},nextMonthYear(APP.currentMonth));
-  host.textContent=next?'Next cycle: '+dateLabel(next)+(scope==='once'?' · regular monthly day unchanged':' · repeats monthly'):'One payment only · no recurring date set';
-}
-document.getElementById('payment-date').addEventListener('input',updatePaymentPreview);
-document.getElementById('payment-scope').addEventListener('change',updatePaymentPreview);
-document.getElementById('payment-form').addEventListener('submit',function(event){
-  event.preventDefault();var row=APP.budget[editingPaymentIndex];if(!row)return;
-  var previous=row.schedule;
-  try {row.schedule=BC.changePaymentDate(row,APP.currentMonth,document.getElementById('payment-date').value,document.getElementById('payment-scope').value);}catch(error){toast(error.message,'warn');return;}
-  if(!saveData()){if(previous===undefined)delete row.schedule;else row.schedule=previous;return;}
-  closeModal('payment-modal');drawBudget();toast('Planning date saved');
-});
-function openSavingsBoost(index) {
-  try {
-    var next=BC.previewSavingsBoost(APP,index,500),current=BC.computeSpendingPlan(APP);savingsPreviewIndex=index;
-    document.getElementById('savings-preview').innerHTML='<p class="planning-note">Move AED 500 from '+escHtml(APP.budget[index].c)+' to your savings goal.</p><div class="plan-summary"><div><small>Savings goal</small><strong>AED '+fm(current.goal)+' → '+fm(next.plan.goal)+'</strong></div><div><small>Flexible allowance</small><strong>AED '+fm(current.flexible)+' → '+fm(next.plan.flexible)+'</strong></div><div><small>Daily guide</small><strong>'+(current.daily===null?'Cycle ended':'AED '+fm(current.daily)+' → '+fm(next.plan.daily))+'</strong></div></div><p class="planning-note">No changes until you apply this plan. Upcoming bills stay reserved.</p>';
-    openModal('savings-modal');
-  }catch(error){toast(error.message,'warn');}
-}
-function applySavingsBoost() {
-  try {
-    var next=BC.previewSavingsBoost(APP,savingsPreviewIndex,500),previous=APP;
-    APP=next.state;if(!saveData()){APP=previous;return;}
-    closeModal('savings-modal');drawBudget();toast('Savings plan updated');
-  }catch(error){toast(error.message,'warn');}
-}
-
 // Elapsed/remaining days of the current cycle month, and the same figure as a
 // fraction (0..1). Past cycles count as fully elapsed, future ones as not yet
 // begun. Both live in budget-core.js so they cannot drift apart.
@@ -1803,7 +1708,7 @@ function getCycleDays() { return BC.getCycleDays(APP); }
 
 // Forecast:
 //  - cycle projection: where spend lands by the end of the current cycle
-//  - cash position: debit balance + reimbursements - CC payable
+//  - account balances stay separate from this budget projection
 //
 // Full-consumption basis (never a run-rate) with an end-of-cycle horizon; see
 // budget-core.js for the reasoning and tests/budget-core.test.js for the cases
@@ -1827,7 +1732,7 @@ function editDebitBalance() {
 
 function renderAccountsCard() {
   var sp=acctSpendTotals(),acc=APP.accounts||{},debit=acc.debit||{},cc=acc.cc||{};
-  return '<div class="account-grid"><section class="account-surface"><h2>Bank cash</h2><div class="account-number">'+(debit.balance==null?'Balance not entered':'AED '+fd(debit.balance))+'</div><p>'+(debit.balanceDate?'Balance recorded '+escHtml(dateLabel(debit.balanceDate))+'.':'Add a dated balance to start reconciling your account.')+' '+(debit.lastUploadTo?'Statement coverage through '+escHtml(debit.lastUploadTo)+'.':'No debit statement coverage recorded.')+'</p><button class="text-button" onclick="editDebitBalance()">'+(debit.balance==null?'Add balance':'Update balance')+'</button></section><section class="account-surface"><h2>Credit card</h2><div class="account-number">Balance unknown</div><p>AED '+fd(sp.cc)+' in recorded card purchases this cycle. Purchases alone do not establish what is owed; opening balance, payments and refunds also matter.</p><p class="planning-note">'+(cc.lastUploadTo?'Statement coverage through '+escHtml(cc.lastUploadTo):'No card statement coverage recorded')+'</p><button class="text-button" onclick="navigateToPage(\'pg-upload\')">Import activity</button></section></div><div class="coverage-note"><strong>Your planning allowance: AED '+fm(BC.computeSpendingPlan(APP).flexible)+'</strong>Derived from your monthly income and spending plan, not from reconciled bank cash. Recorded debit purchases: AED '+fd(sp.debit)+'.</div>';
+  return '<div class="account-grid"><section class="account-surface"><h2>Bank cash</h2><div class="account-number">'+(debit.balance==null?'Balance not entered':'AED '+fd(debit.balance))+'</div><p>'+(debit.balanceDate?'Balance recorded '+escHtml(dateLabel(debit.balanceDate))+'.':'Add a dated balance to start reconciling your account.')+' '+(debit.lastUploadTo?'Statement coverage through '+escHtml(debit.lastUploadTo)+'.':'No debit statement coverage recorded.')+'</p><button class="text-button" onclick="editDebitBalance()">'+(debit.balance==null?'Add balance':'Update balance')+'</button></section><section class="account-surface"><h2>Credit card</h2><div class="account-number">Balance unknown</div><p>AED '+fd(sp.cc)+' in recorded card purchases this cycle. Purchases alone do not establish what is owed; opening balance, payments and refunds also matter.</p><p class="planning-note">'+(cc.lastUploadTo?'Statement coverage through '+escHtml(cc.lastUploadTo):'No card statement coverage recorded')+'</p><button class="text-button" onclick="navigateToPage(\'pg-upload\')">Import activity</button></section></div><div class="coverage-note"><strong>Projected month-end savings: AED '+fd(computeBudgetTotals().committed)+'</strong>Assumes full category budgets, with actual overspending included. This is not a reconciled bank balance. Recorded debit purchases: AED '+fd(sp.debit)+'.</div>';
 }
 
 function renderDailyChart() {
@@ -1983,10 +1888,6 @@ function renderRow(i) {
   h += '</div>';
   if (r.b > 0) {
     h += '<div class="row-bar"><div class="row-bar-fill' + (isOver ? ' over' : '') + '" style="width:' + pct.toFixed(1) + '%;background:' + catColor(r.c) + '"></div></div>';
-  }
-  if (r.g === 'fixed') {
-    var planningDate = BC.paymentDate(r, APP.currentMonth);
-    h += '<div class="row-schedule"><button class="text-button" onclick="event.stopPropagation();openPaymentDate('+i+')"><svg class="ic" aria-hidden="true"><use href="#i-calendar"/></svg> '+escHtml(planningDate ? dateLabel(planningDate)+' · Edit date' : 'Set planning date')+'</button></div>';
   }
   if (isOpen) {
     h += '<div class="row-expand">';
