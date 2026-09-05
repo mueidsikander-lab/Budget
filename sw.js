@@ -1,14 +1,14 @@
 // Cache name is bumped whenever the shell file list changes so the old cache
 // (which cached every GET, including API responses) is dropped on activate.
-var CACHE_NAME = "budget-shell-v4-savings";
-var SHELL_FILES = ["./", "./index.html", "./budget-core.js", "./setup.html", "./manifest.json", "./icons/apple-touch-icon.png", "./icons/icon-192.png", "./icons/icon-512.png"];
+var CACHE_NAME = "budget-shell-v5-appearance";
+var SHELL_FILES = ["./", "./index.html", "./budget-core.js", "./appearance.js", "./setup.html", "./manifest.json", "./icons/apple-touch-icon.png", "./icons/icon-192.png", "./icons/icon-512.png"];
 
 // Only these same-origin paths are ever written to the cache. The previous
 // version cached the response to every GET the page made, which meant Gist
 // comment bodies — the user's bank alerts — sat in the cache indefinitely, and
 // the cache-busting `?t=<timestamp>` on each sync created a new entry every
 // time it ran, so the cache grew without bound and was never read back.
-var SHELL_PATHS = ["/", "/index.html", "/budget-core.js", "/setup.html", "/manifest.json"];
+var SHELL_PATHS = ["/", "/index.html", "/budget-core.js", "/appearance.js", "/setup.html", "/manifest.json"];
 
 function isShellRequest(req) {
   var url;

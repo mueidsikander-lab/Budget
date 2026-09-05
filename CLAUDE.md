@@ -17,6 +17,10 @@ pipeline, and localStorage persistence.
   sites read exactly as before.
 - `tests/budget-core.test.js` — runs with `node --test` from the repo root.
   No install step. CI runs it on every push (`.github/workflows/tests.yml`).
+- `appearance.js` — light/dark/system mode and five color palettes. Runs in
+  the head before paint; preferences live in `bgt_appearance_v1`, separate from
+  all financial data. Apply themes through the shared CSS tokens, preserve
+  semantic savings/deficit colors, and cache this script for offline use.
 - `sw.js` — service worker. Network-first, and it caches **only** the
   same-origin app shell; api.github.com and the CDN scripts must never be
   written to the cache (the Gist comments are the user's bank alerts).
@@ -38,7 +42,8 @@ pipeline, and localStorage persistence.
   for buttons, and the `--lift` elevation ramp) and `setup.html` mirrors it.
   Change the tokens there — never bolt a second `:root` or an override block
   onto the end of the sheet.
-- The approved palette is ivory, olive, sage and terracotta. `--accent`
+- The default Earth palette is ivory, olive, sage and terracotta; Appearance
+  offers Sand, Ocean, Plum and Graphite in light/dark/system modes. `--accent`
   controls olive actions; `--spent`, `--bills`, `--flexible`, and `--savings`
   identify allocation segments. `--red` means an actual deficit. Keep the
   main balance area open, without a solid coloured hero box. Category icons

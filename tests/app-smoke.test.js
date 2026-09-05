@@ -8,12 +8,12 @@ const BC = require('../budget-core.js');
 const html = fs.readFileSync(require('node:path').join(__dirname, '../index.html'), 'utf8');
 const source = html.match(/<script>([\s\S]*?)<\/script>/)[1];
 
-function boot(saved) {
+function boot(saved, appearanceOptions={}) {
   const elements = new Map();
   function element(id='', attrs={}) {
     const classes = new Set((attrs.class || '').split(' '));
     const handlers = {};
-    return {id, attrs, handlers, style:{}, value:'', innerHTML:'', textContent:'', disabled:false,
+    return {id, attrs, handlers, style:{setProperty(k,v){this[k]=v}}, value:'', innerHTML:'', textContent:'', disabled:false,
       classList:{add(x){classes.add(x)},remove(x){classes.delete(x)},contains(x){return classes.has(x)},toggle(x,on){if(on===undefined)on=!classes.has(x);if(on)classes.add(x);else classes.delete(x)}},
       getAttribute(k){return attrs[k]},setAttribute(k,v){attrs[k]=v},removeAttribute(k){delete attrs[k]},
       addEventListener(k,v){(handlers[k] ||= []).push(v)},
@@ -26,7 +26,10 @@ function boot(saved) {
   const nav=['pg-budget','pg-plan','pg-activity','pg-accounts','pg-history'].map(id=>element('',{'data-pg':id}));
   let failStorage=false;
   const storage = new Map(saved ? [['bgt_v7',JSON.stringify(saved)]] : []);
+  if(appearanceOptions.preference!==undefined)storage.set('bgt_appearance_v1',appearanceOptions.preference);
+  const media={matches:!!appearanceOptions.dark,addEventListener(event,fn){this.change=fn}};
   const document={
+    documentElement:element(),
     body:element(),head:element(),activeElement:element(),
     getElementById(id){assert(elements.has(id),`App references missing element: ${id}`);return elements.get(id)},
     querySelector(){return null},
@@ -38,12 +41,13 @@ function boot(saved) {
   const sandbox={document,navigator,location,console,Date,Math,Number,JSON,Intl,URL,Blob,
     setTimeout(){},clearTimeout(){},setInterval(){},clearInterval(){},
     localStorage:{getItem(k){return storage.get(k)||null},removeItem(k){storage.delete(k)},setItem(k,v){if(failStorage)throw Error('Storage blocked');storage.set(k,v)}},
-    window:{BudgetCore:BC,navigator,location,addEventListener(){},scrollTo(){},history:{replaceState(){}}},
+    window:{BudgetCore:BC,navigator,location,matchMedia(){return media},addEventListener(){},scrollTo(){},history:{replaceState(){}}},
     confirm(){return true},prompt(){return null}
   };
   vm.createContext(sandbox);
+  vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'../appearance.js'),'utf8'),sandbox);
   vm.runInContext(source,sandbox);
-  return {app:sandbox,el:id=>elements.get(id),storage,failStorage(value){failStorage=value}};
+  return {app:sandbox,media,root:document.documentElement,el:id=>elements.get(id),storage,failStorage(value){failStorage=value}};
 }
 
 test('the actual shipped app starts and all navigation destinations render',()=>{
@@ -137,4 +141,48 @@ test('dynamic category and ledger content is escaped in new views',()=>{
   app.drawBudget();app.renderActivity();
   assert.match(el('today-content').innerHTML,/&lt;img/);
   assert.doesNotMatch(el('activity-content').innerHTML,/<script>bad/);
+});
+
+
+test('appearance choices survive reload without changing any financial state',()=>{
+  const {app,el,storage,root}=boot();const before=JSON.stringify(app.APP);
+  app.openAppearance();app.setAppearance('mode','dark');app.setAppearance('tone','plum');
+  assert.equal(root.getAttribute('data-mode'),'dark');assert.equal(root.getAttribute('data-tone'),'plum');
+  assert.equal(el('mode-dark').checked,true);assert.equal(el('tone-plum').checked,true);
+  assert.equal(JSON.stringify(app.APP),before);
+  assert.equal(storage.has('bgt_v7'),false,'theme choices must not write a financial cache');
+  const next=boot(JSON.parse(before),{preference:storage.get('bgt_appearance_v1')});
+  assert.equal(next.root.getAttribute('data-tone'),'plum');assert.equal(next.root.style.colorScheme,'dark');
+  next.app.setAppearance('mode','light');
+  assert.equal(next.app.window.BudgetAppearance.get().tone,'plum','mode and tone are independent');
+});
+
+test('system mode follows live device changes while explicit mode stays fixed',()=>{
+  const {app,media,root}=boot(undefined,{dark:true});
+  assert.equal(root.getAttribute('data-mode'),'light','keep the existing light default');
+  app.setAppearance('mode','system');assert.equal(root.getAttribute('data-mode'),'dark');
+  media.matches=false;media.change();assert.equal(root.getAttribute('data-mode'),'light');
+  app.setAppearance('mode','dark');media.change();assert.equal(root.getAttribute('data-mode'),'dark');
+});
+
+test('blocked appearance storage restores controls and malformed preferences recover safely',()=>{
+  const {app,root,el,failStorage}=boot(undefined,{preference:'{"mode":"invalid","tone":"__proto__"}'});
+  assert.equal(root.getAttribute('data-tone'),'earth');assert.equal(root.getAttribute('data-mode'),'light');
+  failStorage(true);app.setAppearance('mode','dark');
+  assert.equal(root.getAttribute('data-mode'),'light');assert.equal(el('mode-light').checked,true);
+  assert.match(el('appearance-status').textContent,/Could not save/);
+  assert.equal(boot(undefined,{preference:'broken json'}).root.getAttribute('data-tone'),'earth');
+});
+
+test('each light and dark palette keeps text and action labels readable',()=>{
+  const {app}=boot();
+  function lum(hex){const c=hex.slice(1).match(/../g).map(v=>parseInt(v,16)/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4);return .2126*c[0]+.7152*c[1]+.0722*c[2];}
+  function contrast(a,b){const x=lum(a),y=lum(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05);}
+  for(const tone of ['earth','sand','ocean','plum','graphite'])for(const mode of ['light','dark']){
+    const c=app.window.BudgetAppearance.colors(tone,mode);
+    for(const bg of ['bg','card','card-2','well'])for(const fg of ['text','text-2','text-3','green','red','orange','blue','purple','teal','pink','indigo','mint','yellow']){
+      assert(contrast(c[fg],c[bg])>=4.5,`${tone}/${mode}: ${fg} on ${bg} = ${contrast(c[fg],c[bg]).toFixed(2)}`);
+    }
+    assert(contrast(c.accent,c['accent-fg'])>=4.5,`${tone}/${mode} action label`);
+  }
 });
