@@ -1,0 +1,20 @@
+name: tests
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  budget-core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      # No install step: budget-core.js and its tests have no dependencies.
+      - name: Financial-logic tests
+        run: node --test
+      - name: Syntax-check the shipped scripts
+        run: node --check budget-core.js && node --check sw.js

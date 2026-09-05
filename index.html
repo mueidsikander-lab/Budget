@@ -20,8 +20,11 @@
   --hair: rgba(255,255,255,0.07);
   --hair-strong: rgba(255,255,255,0.12);
   --text: #fff;
-  --text-2: rgba(235,235,245,0.6);
-  --text-3: rgba(235,235,245,0.3);
+  /* Explanatory copy uses --text-2 and --text-3; at 0.6/0.3 alpha on black the
+     latter fell far below WCAG AA (about 2.4:1) and the former sat right on the
+     line. Raised so secondary and tertiary copy stay readable. */
+  --text-2: rgba(235,235,245,0.75);
+  --text-3: rgba(235,235,245,0.55);
   --blue: #0A84FF;
   --green: #30D158;
   --red: #FF453A;
@@ -42,7 +45,10 @@ body {
   min-height: 100vh; padding: 0 0 88px; letter-spacing: -0.01em;
 }
 .mono { font-variant-numeric: tabular-nums; }
-.page { display: none; padding: 12px 16px 16px; }
+/* Designed iPhone-first; on a wide screen the single column stretched to the
+   full viewport and became unreadable. Cap it and centre it instead. */
+.page { display: none; padding: 12px 16px 16px; max-width: 720px; margin: 0 auto; }
+:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; border-radius: 6px; }
 .page.active { display: block; animation: fadeIn 0.18s ease-out; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 .header { display: flex; align-items: center; justify-content: space-between; padding: 14px 4px 16px; }
@@ -169,6 +175,7 @@ body {
 @keyframes expandIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
 .txn-list { display: flex; flex-direction: column; gap: 0; margin-bottom: 12px; }
 .txn-empty { font-size: 13px; color: var(--text-3); padding: 6px 0 10px; text-align: center; }
+.paid-note { font-size: 12px; color: var(--text-2); line-height: 1.5; padding: 4px 0 8px; }
 .txn-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; }
 .txn-item + .txn-item { border-top: 1px solid var(--hair); }
 .txn-meta { flex: 1; min-width: 0; }
@@ -257,6 +264,8 @@ body {
 .txn-info { flex: 1; min-width: 0; }
 .txn-info-desc { font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 6px; }
 .dup-badge { font-size: 9px; background: rgba(255,159,10,0.2); color: var(--orange); padding: 1px 6px; border-radius: 4px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+/* A genuine repeat of an identical purchase on the same day, not a re-import. */
+.rep-badge { font-size: 9px; background: rgba(10,132,255,0.18); color: var(--blue); padding: 1px 6px; border-radius: 4px; font-weight: 700; letter-spacing: 0.5px; margin-left: 6px; }
 .txn-info-date { font-size: 11px; color: var(--text-2); }
 .txn-info-amt { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .txn-info-cat { margin-top: 6px; }
@@ -300,6 +309,7 @@ body {
 .s-section { background: var(--card); border-radius: 14px; padding: 4px 0; margin-bottom: 18px; overflow: hidden; }
 .s-section-title { font-size: 13px; font-weight: 600; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.6px; padding: 0 4px 8px; }
 .s-item { padding: 14px 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: background 0.12s; }
+.s-item.nudge { background: rgba(255,159,10,0.08); }
 .s-item:active { background: var(--card-2); }
 .s-item + .s-item { border-top: 1px solid var(--hair); }
 .s-icon { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
@@ -348,6 +358,7 @@ body {
 .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
 .toast.err { background: rgba(255,69,58,0.95); }
 .toast.warn { background: rgba(255,159,10,0.95); }
+#save-error { position: fixed; left: 0; right: 0; bottom: 62px; z-index: 250; background: rgba(255,69,58,0.96); color: #fff; font-size: 13px; font-weight: 500; line-height: 1.4; padding: 10px 16px; text-align: center; }
 .share-card { position: absolute; top: -10000px; left: 0; width: 400px; background: #000; color: #fff; padding: 24px; border-radius: 0; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif; }
 .sc-month { font-size: 14px; color: rgba(235,235,245,0.6); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
 .sc-month-name { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 18px; }
@@ -487,6 +498,26 @@ body {
     </div>
   </div>
 </div>
+
+<div class="modal-overlay center" id="delcat-modal" style="display:none">
+  <div class="modal-box">
+    <div class="modal-grab"></div>
+    <div class="modal-title">Delete Category</div>
+    <div class="modal-sub" id="delcat-sub"></div>
+    <div id="delcat-body" style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px">
+      <select id="delcat-target" style="width:100%;background:var(--card-2);border:1px solid transparent;border-radius:8px;color:var(--text);font-size:14px;padding:9px 10px;font-family:inherit;outline:none"></select>
+      <div style="font-size:12px;color:var(--text-2);line-height:1.5">Its transactions and merchant mappings move to the category you pick, so the spending stays counted.</div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="closeModal('delcat-modal')">Cancel</button>
+      <button class="btn btn-blue" onclick="confirmDeleteCategory()">Move &amp; Delete</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="restore-input" accept="application/json,.json" style="display:none">
+
+<div id="save-error" role="alert" style="display:none"></div>
 
 <div id="share-render"></div>
 
@@ -650,6 +681,11 @@ body {
       <div class="s-label">Undo Last Import<div class="s-sub" id="undo-sub"></div></div>
       <span class="s-chev">›</span>
     </div>
+    <div class="s-item" id="repair-row" onclick="repairDoubleCounted()" style="display:none">
+      <span class="s-icon s-i-orange">⚖</span>
+      <div class="s-label">Repair Double-Counted Spend<div class="s-sub" id="repair-sub"></div></div>
+      <span class="s-chev">›</span>
+    </div>
   </div>
 
   <div class="s-section-title">Merchant Mappings</div>
@@ -662,9 +698,14 @@ body {
       <div class="s-label">Add to Home Screen<div class="s-sub">Transfer your data to the iOS app icon</div></div>
       <span class="s-chev">›</span>
     </div>
-    <div class="s-item" onclick="exportData()">
+    <div class="s-item" id="export-row" onclick="exportData()">
       <span class="s-icon s-i-blue">⤓</span>
-      <div class="s-label">Export Data<div class="s-sub">Download a backup as JSON</div></div>
+      <div class="s-label">Export Data<div class="s-sub" id="backup-status">Download a backup as JSON</div></div>
+      <span class="s-chev">›</span>
+    </div>
+    <div class="s-item" onclick="openRestorePicker()">
+      <span class="s-icon s-i-green">⤒</span>
+      <div class="s-label">Restore from Backup<div class="s-sub">Replace everything with an exported JSON file</div></div>
       <span class="s-chev">›</span>
     </div>
     <div class="s-item" onclick="resetData()">
@@ -684,19 +725,21 @@ body {
   <button class="nav-btn" data-pg="pg-settings"><span class="nav-icon">⚙️</span>Settings</button>
 </div>
 
+<!-- Financial arithmetic lives in a plain, dependency-free script so it can be
+     unit-tested with `node --test` (see tests/). Still no build step. -->
+<script src="budget-core.js"></script>
 <script>
 var CACHE_KEY = "bgt_v7";
-var DEFAULT_INFLOW = 42150;
-// Monthly savings goal: inflow (42,150) less the total budgeted spend (31,704).
-var DEFAULT_SAVINGS_TARGET = 10446;
-var CATS = ["Rent","Car Payments","Telephone+Internet+TV","Electric+Water","Chiller","Gas","Fuel","Tuition","Money to Pakistan","Groceries","Dining / Entertainment","Mueid / Madiha / House","Incidental"];
-var MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+var BC = window.BudgetCore;
+var DEFAULT_INFLOW = BC.DEFAULT_INFLOW;
+var DEFAULT_SAVINGS_TARGET = BC.DEFAULT_SAVINGS_TARGET;
+var MONTHS = BC.MONTHS;
 
-function nowMonthYear() { var d = new Date(); return MONTHS[d.getMonth()] + " " + d.getFullYear(); }
-function nextMonthYear(s) { var p = s.split(" "), m = MONTHS.indexOf(p[0]), y = parseInt(p[1]); m++; if (m > 11) { m = 0; y++; } return MONTHS[m] + " " + y; }
+function nowMonthYear() { return BC.nowMonthYear(); }
+function nextMonthYear(s) { return BC.nextMonthYear(s); }
 function fm(n) { return Math.round(n).toLocaleString("en"); }
 function fd(n) { return (n || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
-function escHtml(s) { return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+function escHtml(s) { return BC.escHtml(s); }
 function uid(prefix) { return (prefix || "x") + Date.now().toString(36) + Math.floor(Math.random() * 1e6).toString(36); }
 var _scriptCache = {};
 // Injects a <script> on first use and caches the load promise, so html2canvas/
@@ -712,25 +755,10 @@ function loadScript(src) {
   });
   return _scriptCache[src];
 }
-function getSpent(r) { if (r.p) return r.b; if (r.cs !== undefined && r.cs !== null) return r.cs; return r.s || 0; }
-// Single source of truth for the savings goal.
-//
-// In "auto" mode (the default) the target is whatever the plan implies:
-// monthly inflow less everything budgeted across fixed + variable. Raise a
-// category's budget and the target drops by the same amount; trim one and it
-// rises. Reimbursements are deliberately excluded — they are unplanned income,
-// so they should beat the target rather than silently raise the bar.
-//
-// A manual value set in Settings pins the goal instead, so it stays put when
-// budgets move. 0 is a legitimate target ("no goal"), hence the explicit
-// null/NaN checks rather than a falsy test.
-function savingsTarget() {
-  if (APP.savingsTargetMode === "custom") {
-    var t = APP.savingsTarget;
-    if (t !== undefined && t !== null && !isNaN(t)) return t;
-  }
-  return Math.round(((APP.inflow || DEFAULT_INFLOW) - budgetTotal()) * 100) / 100;
-}
+// See budget-core.js — `p` (marked paid) is a floor, not an addend, so a paid
+// placeholder is replaced by real transactions rather than added to them.
+function getSpent(r) { return BC.getSpent(r); }
+function savingsTarget() { return BC.savingsTarget(APP); }
 function pctCls(p) { return p >= 75 ? "g" : (p >= 40 ? "y" : "r"); }
 
 function defaultData() {
@@ -746,7 +774,7 @@ function defaultData() {
       {c:"Electric+Water",b:900,s:0,p:false,g:"fixed"},
       {c:"Chiller",b:250,s:0,p:false,g:"fixed"},
       {c:"Gas",b:100,s:0,p:false,g:"fixed"},
-      {c:"Tuition",b:5083,s:5083,p:true,g:"fixed"},
+      {c:"Tuition",b:5083,s:0,p:true,g:"fixed"},
       {c:"Money to Pakistan",b:1414,s:0,p:false,g:"fixed"},
       {c:"Fuel",b:1000,s:0,p:false,g:"variable"},
       {c:"Groceries",b:3000,s:0,p:false,g:"variable"},
@@ -794,8 +822,34 @@ function defaultAcctForCat(cat) {
 }
 
 function loadCache() { try { var r = localStorage.getItem(CACHE_KEY); if (r) return JSON.parse(r); } catch (e) {} return null; }
-function saveCache() { try { localStorage.setItem(CACHE_KEY, JSON.stringify(APP)); } catch (e) {} }
-function saveData() { saveCache(); }
+
+// A silent catch here meant a full or blocked localStorage looked exactly like
+// a successful save: the app kept working off the in-memory APP object and the
+// user only found out their month was gone after a reload. Failures now surface
+// immediately and stay on screen until the next successful write.
+var saveFailed = false;
+function showSaveError(msg) {
+  var bar = document.getElementById("save-error");
+  if (!bar) return;
+  bar.textContent = msg;
+  bar.style.display = msg ? "block" : "none";
+}
+function saveCache() {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify(APP));
+    if (saveFailed) { saveFailed = false; showSaveError(""); toast("Saved — storage is working again"); }
+    return true;
+  } catch (e) {
+    saveFailed = true;
+    var full = e && (e.name === "QuotaExceededError" || e.code === 22 || e.code === 1014);
+    showSaveError(full
+      ? "⚠ Not saved — device storage is full. Export a backup now, then clear space or old months."
+      : "⚠ Not saved — this browser is blocking storage (private mode?). Export a backup before closing.");
+    toast(full ? "Could not save — storage full" : "Could not save — storage blocked", "err");
+    return false;
+  }
+}
+function saveData() { return saveCache(); }
 var _debouncedSaveTimer = null;
 // Free-text inputs (reimbursement/outflow desc & amount) fire on every
 // keystroke; debounce the full-APP localStorage write so typing doesn't
@@ -803,6 +857,25 @@ var _debouncedSaveTimer = null;
 function debouncedSaveCache() {
   clearTimeout(_debouncedSaveTimer);
   _debouncedSaveTimer = setTimeout(saveCache, 400);
+}
+
+// Deleting a custom category used to leave its transactions behind. Every
+// total walks APP.budget, so that spend stopped being counted anywhere. Park
+// any such transactions in a visible zero-budget row instead of losing them —
+// the money really was spent, and the user can re-file it from there.
+function recoverOrphanTransactions() {
+  var orphans = BC.orphanTransactions(APP);
+  if (!orphans.length) return;
+  var name = "Unfiled (recovered)";
+  var idx = catIndex(name);
+  if (idx < 0) {
+    APP.budget.push({ c: name, b: 0, s: 0, p: false, g: "variable", custom: true });
+    idx = catIndex(name);
+  }
+  var sum = 0;
+  for (var i = 0; i < orphans.length; i++) { orphans[i].category = name; sum += (parseFloat(orphans[i].amount) || 0); }
+  APP.budget[idx].s = Math.round((APP.budget[idx].s + sum) * 100) / 100;
+  APP.budget[idx].cs = null;
 }
 
 function fixApp() {
@@ -834,6 +907,31 @@ function fixApp() {
   // Pre-accounts transactions were all credit card statement imports
   for (var i = 0; i < APP.transactions.length; i++) {
     if (!APP.transactions[i].acct) APP.transactions[i].acct = "cc";
+  }
+  recoverOrphanTransactions();
+  // `s` is the sum of a row's own transactions and nothing else; the paid flag
+  // supplies the placeholder via getSpent(). Older data (and the old seed row
+  // for Tuition) wrote the placeholder into `s` as well, which made the first
+  // real payment land on top of it. Re-deriving `s` here is display-neutral —
+  // getSpent() reads max(budget, sum) for a paid row either way.
+  var paidSums = null;
+  for (var pi = 0; pi < APP.budget.length; pi++) {
+    if (!APP.budget[pi].p) continue;
+    if (paidSums === null) {
+      paidSums = {};
+      for (var px = 0; px < APP.transactions.length; px++) {
+        var ptx = APP.transactions[px];
+        if (!ptx.category) continue;
+        paidSums[ptx.category] = Math.round(((paidSums[ptx.category] || 0) + (parseFloat(ptx.amount) || 0)) * 100) / 100;
+      }
+    }
+    APP.budget[pi].s = paidSums[APP.budget[pi].c] || 0;
+  }
+  // Mappings that point at a category which no longer exists would silently
+  // re-file future imports into nothing.
+  var mk = Object.keys(APP.mappings);
+  for (var m = 0; m < mk.length; m++) {
+    if (catIndex(APP.mappings[mk[m]]) < 0) delete APP.mappings[mk[m]];
   }
   backfillHistory();
 }
@@ -907,6 +1005,12 @@ var pendingTransferData = null;
     var payload = JSON.parse(decoded);
     if (!payload || !payload.budget) return;
     if (APP._pwaBootstrapped) return;
+    // The hash is attacker-controllable and its strings end up interpolated
+    // into the DOM and treated as financial state, so run it through the same
+    // validator a restored backup goes through.
+    var checked = BC.validateAppData(payload);
+    if (!checked.ok) return;
+    payload = checked.data;
     pendingTransferData = payload;
     var hist = (payload.history || []).length;
     var txns = (payload.transactions || []).length;
@@ -962,11 +1066,7 @@ var editingBudgetCat = null;
 var addingCategory = false;
 var newCatType = 'variable';
 
-function budgetTotal() {
-  var t = 0;
-  for (var i = 0; i < APP.budget.length; i++) t += APP.budget[i].b;
-  return t;
-}
+function budgetTotal() { return BC.budgetTotal(APP); }
 
 function drawBudgetSettings() {
   var host = document.getElementById('budget-cat-list');
@@ -1074,12 +1174,7 @@ function bindBudgetSettingsEvents() {
     if (act === 'bgt-del') {
       var idx = catIndex(cat); if (idx < 0) return;
       if (!APP.budget[idx].custom) { toast('Built-in categories cannot be deleted', 'warn'); return; }
-      var hasTxns = APP.transactions.some(function(tx) { return tx.category === cat; });
-      if (!confirm(hasTxns ? '"' + cat + '" has transactions. Delete anyway?' : 'Delete "' + cat + '"?')) return;
-      APP.budget.splice(idx, 1);
-      editingBudgetCat = null;
-      saveData(); drawBudgetSettings(); drawBudget();
-      toast('Category deleted');
+      openDeleteCategoryModal(cat);
       return;
     }
     if (act === 'bgt-add-open') { addingCategory = true; editingBudgetCat = null; drawBudgetSettings(); return; }
@@ -1122,24 +1217,129 @@ function bindBudgetSettingsEvents() {
   });
 }
 
-function reimbTotal() {
-  var t = 0;
-  for (var i = 0; i < APP.reimbursements.length; i++) {
-    var a = parseFloat(APP.reimbursements[i].amount);
-    if (!isNaN(a)) t += a;
-  }
-  return t;
+// Deleting a category used to splice the row out and leave its transactions
+// and merchant mappings behind. Every total in the app walks APP.budget, so
+// that spending stopped being counted anywhere — it simply vanished. Deletion
+// now always reassigns (or explicitly discards) both.
+var deletingCat = null;
+function categoryUsage(cat) {
+  var txns = 0, i;
+  for (i = 0; i < APP.transactions.length; i++) if (APP.transactions[i].category === cat) txns++;
+  var maps = [];
+  var mk = Object.keys(APP.mappings || {});
+  for (i = 0; i < mk.length; i++) if (APP.mappings[mk[i]] === cat) maps.push(mk[i]);
+  return { txns: txns, mappings: maps };
 }
-function outflowTotal() {
-  var t = 0;
-  var o = APP.outflows || [];
-  for (var i = 0; i < o.length; i++) {
-    var a = parseFloat(o[i].amount);
-    if (!isNaN(a)) t += a;
+
+function openDeleteCategoryModal(cat) {
+  var idx = catIndex(cat); if (idx < 0) return;
+  var use = categoryUsage(cat);
+  if (use.txns === 0 && use.mappings.length === 0) {
+    if (!confirm('Delete "' + cat + '"?')) return;
+    APP.budget.splice(idx, 1);
+    editingBudgetCat = null;
+    saveData(); drawBudgetSettings(); drawBudget();
+    toast('Category deleted');
+    return;
   }
-  return t;
+  deletingCat = cat;
+  var bits = [];
+  if (use.txns) bits.push(use.txns + ' transaction' + (use.txns > 1 ? 's' : '') + ' (AED ' + fm(categorySpend(cat)) + ')');
+  if (use.mappings.length) bits.push(use.mappings.length + ' merchant mapping' + (use.mappings.length > 1 ? 's' : ''));
+  document.getElementById('delcat-sub').textContent = '"' + cat + '" still has ' + bits.join(' and ') + '. Choose where they go.';
+  var sel = document.getElementById('delcat-target');
+  var h = '';
+  for (var i = 0; i < APP.budget.length; i++) {
+    if (APP.budget[i].c === cat) continue;
+    h += '<option value="' + escHtml(APP.budget[i].c) + '">Move to ' + escHtml(APP.budget[i].c) + '</option>';
+  }
+  h += '<option value="__DELETE__">Delete them along with the category</option>';
+  sel.innerHTML = h;
+  openModal('delcat-modal');
 }
-function getTotalInflow() { return (APP.inflow || DEFAULT_INFLOW) + reimbTotal(); }
+
+function categorySpend(cat) {
+  var t = 0;
+  for (var i = 0; i < APP.transactions.length; i++) if (APP.transactions[i].category === cat) t += (parseFloat(APP.transactions[i].amount) || 0);
+  return Math.round(t * 100) / 100;
+}
+
+function confirmDeleteCategory() {
+  var cat = deletingCat;
+  if (!cat) { closeModal('delcat-modal'); return; }
+  var idx = catIndex(cat); if (idx < 0) { closeModal('delcat-modal'); return; }
+  var target = document.getElementById('delcat-target').value;
+  var discard = target === '__DELETE__';
+  var use = categoryUsage(cat);
+  if (discard && !confirm('Permanently delete "' + cat + '" and its ' + use.txns + ' transaction(s)?')) return;
+
+  var i;
+  var movedAmount = categorySpend(cat);
+  if (discard) {
+    APP.transactions = APP.transactions.filter(function (t) { return t.category !== cat; });
+    for (i = 0; i < use.mappings.length; i++) delete APP.mappings[use.mappings[i]];
+  } else {
+    var tidx = catIndex(target);
+    if (tidx < 0) { toast('Pick a category to move them to', 'warn'); return; }
+    for (i = 0; i < APP.transactions.length; i++) {
+      if (APP.transactions[i].category === cat) APP.transactions[i].category = target;
+    }
+    for (i = 0; i < use.mappings.length; i++) APP.mappings[use.mappings[i]] = target;
+    // The moved amount was counted in the deleted row's raw sum; carry it over
+    // so total spend is unchanged by the reorganisation.
+    APP.budget[tidx].s = Math.round((APP.budget[tidx].s + movedAmount) * 100) / 100;
+    APP.budget[tidx].cs = null;
+  }
+  APP.budget.splice(catIndex(cat), 1);
+  if (APP.expanded) delete APP.expanded[cat];
+  deletingCat = null;
+  editingBudgetCat = null;
+  closeModal('delcat-modal');
+  saveData(); drawBudgetSettings(); drawBudget(); drawMappings();
+  toast(discard ? '"' + cat + '" and its transactions deleted' : '"' + cat + '" deleted · moved to ' + target);
+}
+
+// Data written by the version that did `s = budget + amount` when a statement
+// row landed on a category marked paid carries that double count forever. The
+// signature is exact — the row's recorded spend exceeds the sum of its own
+// transactions by precisely its budget — but this rewrites real financial
+// figures, so it is offered as a reviewable repair rather than applied on load.
+function findDoubleCountedRows() {
+  var sums = {}, i;
+  for (i = 0; i < APP.transactions.length; i++) {
+    var tx = APP.transactions[i];
+    if (!tx.category) continue;
+    sums[tx.category] = Math.round(((sums[tx.category] || 0) + (parseFloat(tx.amount) || 0)) * 100) / 100;
+  }
+  var out = [];
+  for (i = 0; i < APP.budget.length; i++) {
+    var r = APP.budget[i];
+    var sum = sums[r.c];
+    if (sum === undefined || !r.b || r.p) continue;
+    if (r.cs !== undefined && r.cs !== null) continue;
+    if (r.s > sum && Math.abs((r.s - sum) - r.b) < 0.01) out.push({ c: r.c, from: r.s, to: sum, budget: r.b });
+  }
+  return out;
+}
+
+function repairDoubleCounted() {
+  var rows = findDoubleCountedRows();
+  if (!rows.length) { toast("Nothing to repair"); return; }
+  var lines = rows.map(function (r) { return "· " + r.c + ": " + fm(r.from) + " → " + fm(r.to) + " (budget " + fm(r.budget) + ", marked paid again)"; });
+  if (!confirm("These categories record their budget AND the matching payment, which an older version double-counted:\n\n" +
+      lines.join("\n") + "\n\nRecord each at its transactions, with the budget kept as a floor?")) return;
+  for (var i = 0; i < rows.length; i++) {
+    var idx = catIndex(rows[i].c); if (idx < 0) continue;
+    APP.budget[idx].s = rows[i].to;
+    APP.budget[idx].p = true;
+  }
+  saveData(); drawBudget(); drawSettings();
+  toast(rows.length + " categor" + (rows.length === 1 ? "y" : "ies") + " repaired");
+}
+
+function reimbTotal() { return BC.reimbTotal(APP); }
+function outflowTotal() { return BC.outflowTotal(APP); }
+function getTotalInflow() { return BC.getTotalInflow(APP); }
 
 var toastT = null;
 function toast(msg, type) {
@@ -1170,62 +1370,8 @@ for (var i = 0; i < navBtns.length; i++) {
 // Single source of truth for budget totals/savings, consumed by every
 // render path (live Budget page, conclude-month modal/history, share text,
 // share-card images) so they can never independently drift out of sync.
-function computeBudgetTotals() {
-  var data = APP.budget;
-  var BASE = APP.inflow || DEFAULT_INFLOW;
-  var REIMB = reimbTotal();
-  var OUT = outflowTotal();
-  var INFLOW = BASE + REIMB;
-  var fixB = 0, fixS = 0, varB = 0, varS = 0, totalS = 0;
-  var fixCommit = 0, varCommit = 0, overspend = 0, unspent = 0, overCount = 0;
-  var fixedIdx = [], varIdx = [], fixedItems = [], varItems = [];
-  for (var i = 0; i < data.length; i++) {
-    var sp = getSpent(data[i]);
-    totalS += sp;
-    // Over/under budget is accumulated PER ROW, never per group. Netting an
-    // overspent Chiller against an underspent Electric at group level hides
-    // the overspend, and the full-consumption projection below is built on
-    // exactly that per-row split.
-    overspend += Math.max(0, sp - data[i].b);
-    unspent += Math.max(0, data[i].b - sp);
-    if (sp > data[i].b) overCount++;
-    if (data[i].g === "fixed") { fixedIdx.push(i); fixedItems.push(data[i]); fixB += data[i].b; fixS += sp; fixCommit += Math.max(data[i].b, sp); }
-    else { varIdx.push(i); varItems.push(data[i]); varB += data[i].b; varS += sp; varCommit += Math.max(data[i].b, sp); }
-  }
-  // Savings is money in minus money out, full stop: inflow (+ reimbursements)
-  // less everything actually spent, including outflows. Budget that was never
-  // utilised therefore lands in savings instead of being written off, and
-  // fixS + varS + OUT + savings === INFLOW exactly. Same basis confirmAdj()
-  // uses for concluded months (inflow - totalSpent), so they cannot disagree.
-  var spentTotal = Math.round((totalS + OUT) * 100) / 100;
-  var savings = Math.round((INFLOW - spentTotal) * 100) / 100;
-  var savingsPct = INFLOW > 0 ? Math.round(savings / INFLOW * 100) : 0;
-  // Full-consumption basis: what savings become if every category runs to
-  // 100% of its budget, with rows already over budget counted at what they
-  // actually cost, since overspend cannot be un-spent. That makes `committed`
-  // the realistic floor the forecast projects to, and the identity
-  // committed === target - overspend holds while the target is on auto.
-  fixCommit = Math.round(fixCommit * 100) / 100;
-  varCommit = Math.round((varCommit + OUT) * 100) / 100;
-  overspend = Math.round(overspend * 100) / 100;
-  var committed = Math.round((INFLOW - fixCommit - varCommit) * 100) / 100;
-  // Budget left on the table, i.e. savings - committed, summed per row so a
-  // category that is over budget cannot cancel out one that is under.
-  var unusedBudget = Math.round(unspent * 100) / 100;
-  // Progress against the savings goal.
-  var target = savingsTarget();
-  var targetDelta = Math.round((savings - target) * 100) / 100;
-  var targetPct = target > 0 ? Math.round(savings / target * 100) : 0;
-  return {
-    BASE: BASE, REIMB: REIMB, OUT: OUT, INFLOW: INFLOW,
-    fixB: fixB, fixS: fixS, varB: varB, varS: varS, totalS: totalS,
-    fixedIdx: fixedIdx, varIdx: varIdx, fixedItems: fixedItems, varItems: varItems,
-    fixCommit: fixCommit, varCommit: varCommit, overspend: overspend, overCount: overCount,
-    savings: savings, savingsPct: savingsPct,
-    spentTotal: spentTotal, committed: committed, unusedBudget: unusedBudget,
-    target: target, targetDelta: targetDelta, targetPct: targetPct
-  };
-}
+// The arithmetic itself lives in budget-core.js and is unit-tested there.
+function computeBudgetTotals() { return BC.computeBudgetTotals(APP); }
 
 function drawBudget() {
   var data = APP.budget; if (!data) return;
@@ -1317,116 +1463,20 @@ function renderStats(fixB, fixS, varB, varS) {
     '<div class="stat"><div class="stat-label"><span class="stat-dot o"></span>Variable left</div><div class="stat-val ' + (varRem < 0 ? 'r' : '') + '">' + fm(varRem) + '</div><div class="stat-pct">' + Math.round(varPct) + '% used</div></div>';
 }
 
-// Fraction of the current cycle's calendar month that has elapsed (0..1).
-// Past cycles count as fully elapsed; future cycles as just started.
-function getElapsedFraction() {
-  var parts = (APP.currentMonth || "").split(" ");
-  var mi = MONTHS.indexOf(parts[0]), yr = parseInt(parts[1]);
-  if (mi < 0 || isNaN(yr)) return 1;
-  var now = new Date(), cy = now.getFullYear(), cm = now.getMonth();
-  if (yr < cy || (yr === cy && mi < cm)) return 1;
-  if (yr > cy || (yr === cy && mi > cm)) return 0;
-  var daysInMonth = new Date(yr, mi + 1, 0).getDate();
-  return Math.min(1, now.getDate() / daysInMonth);
-}
-
-// Whole-day counterpart of getElapsedFraction(): how far through the current
-// cycle month we are, in days. Both must agree — the forecast divides by
-// elapsed days and weights by the fraction, so a day counted by one and not
-// the other skews the run-rate. Elapsed is the day-of-month (on the 2nd, two
-// days of the cycle have gone), NOT the difference from the 1st, which is the
-// off-by-one that used to halve the denominator and double the run-rate.
-function getCycleDays() {
-  var parts = (APP.currentMonth || "").split(" ");
-  var mi = MONTHS.indexOf(parts[0]), yr = parseInt(parts[1]);
-  var now = new Date(), cy = now.getFullYear(), cm = now.getMonth();
-  if (mi < 0 || isNaN(yr)) { mi = cm; yr = cy; }
-  var total = new Date(yr, mi + 1, 0).getDate();
-  var elapsed;
-  if (yr < cy || (yr === cy && mi < cm)) elapsed = total;              // past cycle: over
-  else if (yr > cy || (yr === cy && mi > cm)) elapsed = 0;             // future cycle: not begun
-  else elapsed = Math.min(total, now.getDate());
-  return { total: total, elapsed: elapsed, remaining: total - elapsed };
-}
+// Elapsed/remaining days of the current cycle month, and the same figure as a
+// fraction (0..1). Past cycles count as fully elapsed, future ones as not yet
+// begun. Both live in budget-core.js so they cannot drift apart.
+function getElapsedFraction() { return BC.getElapsedFraction(APP); }
+function getCycleDays() { return BC.getCycleDays(APP); }
 
 // Forecast:
 //  - cycle projection: where spend lands by the end of the current cycle
 //  - cash position: debit balance + reimbursements - CC payable
-// Projects where savings land at cycle end, on a FULL-CONSUMPTION basis:
-// every category is assumed to use 100% of its budget before the cycle ends,
-// and any category already over budget is counted at what it actually cost,
-// because overspend cannot be un-spent. Built from two parts so the number is
-// auditable:
 //
-//   already spent   — every budget row via getSpent() (NOT just imported
-//                     transactions: rows marked paid or given a manual
-//                     spent-override have no transactions behind them, and
-//                     counting only transactions understated spend badly),
-//                     plus outflows
-//   still to spend  — the unspent remainder of every row, fixed and variable
-//                     alike, summed per row so an overspent category cannot
-//                     be cancelled out by an underspent one
-//
-// projected spend = the two summed; projected savings = inflow - that, which
-// is exactly computeBudgetTotals().committed — that function owns the
-// arithmetic, this one only splits it out for display.
-//
-// This deliberately replaced the old run-rate extrapolation. A per-day average
-// off a lumpy sample says nothing useful: blow the incidental budget in the
-// first week and extrapolating that pace across the month projected a loss,
-// even though the only money still genuinely at risk is the budget not yet
-// spent. Nothing is extrapolated from a per-day rate any more, and the card
-// does not display one either — an 18k/wk pace off a single blown week is the
-// same noise in prose form.
-//
-// The horizon is the END OF THE CYCLE, not the 25th. Inflow, every budget row
-// and savingsTarget() are all whole-calendar-month figures, so projecting
-// spend to payday and then subtracting it from a full month of inflow compared
-// two different spans and made the projection meaningless near a boundary.
-function computeForecast(t) {
-  var elapsed = getElapsedFraction();
-  var cyc = getCycleDays();
-  var daysElapsed = cyc.elapsed, daysRemaining = cyc.remaining;
-
-  var spentToDate = t.spentTotal;
-
-  // Fixed commitments not yet paid — rent and tuition are going out whether
-  // or not they have landed yet.
-  var fixedDue = 0;
-  for (var i = 0; i < t.fixedItems.length; i++) {
-    var r = t.fixedItems[i];
-    fixedDue += Math.max(0, r.b - getSpent(r));
-  }
-  fixedDue = Math.round(fixedDue * 100) / 100;
-
-  // Variable budget not yet used, assumed spent in full by cycle end. Rows
-  // already over budget contribute 0 here — their overspend is in spentToDate.
-  var variableDue = 0;
-  for (var k = 0; k < t.varItems.length; k++) {
-    var vr = t.varItems[k];
-    variableDue += Math.max(0, vr.b - getSpent(vr));
-  }
-  variableDue = Math.round(variableDue * 100) / 100;
-
-  var stillToSpend = Math.round((fixedDue + variableDue) * 100) / 100;
-  var cycleEndSpend = Math.round((spentToDate + stillToSpend) * 100) / 100;
-  var cycleEndSavings = t.committed;
-
-  // Cash position: what you'll actually have after paying the CC bill
-  var acc = APP.accounts || {};
-  var debitBal = (acc.debit && acc.debit.balance != null) ? acc.debit.balance : null;
-  var reimb = reimbTotal();
-  var sp = acctSpendTotals();
-  var cashPosition = debitBal != null ? (debitBal + reimb - sp.cc) : null;
-
-  return {
-    elapsed: elapsed, daysElapsed: daysElapsed, daysRemaining: daysRemaining,
-    spentToDate: spentToDate, fixedDue: fixedDue, variableDue: variableDue,
-    stillToSpend: stillToSpend, overspend: t.overspend, overCount: t.overCount,
-    cycleEndSpend: cycleEndSpend, cycleEndSavings: cycleEndSavings,
-    cashPosition: cashPosition, debitBal: debitBal, reimb: reimb, ccPayable: sp.cc
-  };
-}
+// Full-consumption basis (never a run-rate) with an end-of-cycle horizon; see
+// budget-core.js for the reasoning and tests/budget-core.test.js for the cases
+// that pinned it down.
+function computeForecast(t) { return BC.computeForecast(APP, t); }
 
 function renderForecast(t) {
   var INFLOW = t.INFLOW;
@@ -1483,15 +1533,7 @@ function renderForecast(t) {
     '</div>';
 }
 
-function acctSpendTotals() {
-  var deb = 0, cc = 0;
-  for (var i = 0; i < APP.transactions.length; i++) {
-    var t = APP.transactions[i];
-    var a = parseFloat(t.amount); if (isNaN(a)) continue;
-    if (t.acct === "debit") deb += a; else cc += a;
-  }
-  return { debit: deb, cc: cc };
-}
+function acctSpendTotals() { return BC.acctSpendTotals(APP); }
 
 function editDebitBalance() {
   var cur = APP.accounts.debit.balance;
@@ -1649,6 +1691,12 @@ function renderRow(i) {
   }
   if (isOpen) {
     h += '<div class="row-expand">';
+    if (r.p) {
+      // Explains the floor rule, so "paid ✓" plus a list of real transactions
+      // reads as one figure rather than looking like something is missing.
+      h += '<div class="paid-note">Marked paid · counted at the budget (' + fm(r.b) + ')' +
+        (r.s > 0 ? ', or at ' + fm(r.s) + ' of recorded transactions once those exceed it' : ' until transactions are recorded') + '.</div>';
+    }
     h += renderTxnList(r.c);
     if (isEditing) {
       h += '<div class="edit-pane">';
@@ -2007,7 +2055,7 @@ function bindBudgetEvents() {
 }
 
 function cssEsc(s) { return String(s).replace(/(["\\])/g, "\\$1"); }
-function catIndex(cat) { for (var i = 0; i < APP.budget.length; i++) { if (APP.budget[i].c === cat) return i; } return -1; }
+function catIndex(cat) { return BC.catIndex(APP, cat); }
 function findReimb(id) { for (var i = 0; i < APP.reimbursements.length; i++) { if (APP.reimbursements[i].id === id) return APP.reimbursements[i]; } return null; }
 function findOutflow(id) { var o = APP.outflows || []; for (var i = 0; i < o.length; i++) { if (o[i].id === id) return o[i]; } return null; }
 
@@ -2033,8 +2081,10 @@ function addManualTxn(cat, desc, amount, dateStr) {
   APP.transactions.push(t);
   var idx = catIndex(cat);
   if (idx >= 0) {
-    if (APP.budget[idx].p) { APP.budget[idx].p = false; APP.budget[idx].s = APP.budget[idx].b + t.amount; }
-    else { APP.budget[idx].s = Math.round((APP.budget[idx].s + t.amount) * 100) / 100; }
+    // `s` is always the plain sum of the row's transactions. A row marked paid
+    // keeps its flag; getSpent() treats the budget as a floor, so the recorded
+    // payment replaces the placeholder instead of stacking on top of it.
+    APP.budget[idx].s = Math.round((APP.budget[idx].s + t.amount) * 100) / 100;
     APP.budget[idx].cs = null;
   }
   saveData();
@@ -2073,8 +2123,7 @@ function recategorizeTxn(id, newCat) {
   }
   var nidx = catIndex(newCat);
   if (nidx >= 0) {
-    if (APP.budget[nidx].p) { APP.budget[nidx].p = false; APP.budget[nidx].s = APP.budget[nidx].b + t.amount; }
-    else { APP.budget[nidx].s = Math.round((APP.budget[nidx].s + t.amount) * 100) / 100; }
+    APP.budget[nidx].s = Math.round((APP.budget[nidx].s + t.amount) * 100) / 100;
     APP.budget[nidx].cs = null;
   }
   t.category = newCat;
@@ -2188,7 +2237,7 @@ function drawHistory() {
       html += '<div class="trend-bar">';
       html += '<div class="tb-val">' + fm(h.savings) + '</div>';
       html += '<div class="tb-fill' + (h.savings < 0 ? ' r' : '') + '" style="height:' + heightPct + '%"></div>';
-      html += '<div class="tb-label">' + label + '</div>';
+      html += '<div class="tb-label">' + escHtml(label) + '</div>';
       html += '</div>';
     }
     html += '</div>';
@@ -2329,7 +2378,11 @@ function parseAlertMessages(text) {
   }
   if (cur) msgs.push(cur);
 
-  var txns = [], seenKeys = {};
+  // NOTE: identical alerts are deliberately NOT collapsed here. Two identical
+  // purchases at the same merchant on the same day are two transactions, and
+  // squashing them at parse time lost one for good. Duplicate detection happens
+  // once, occurrence-aware, in BC.assignImportKeys() at preview time.
+  var txns = [];
   for (var i = 0; i < msgs.length; i++) {
     var msg = msgs[i].trim();
     if (!msg) continue;
@@ -2353,10 +2406,6 @@ function parseAlertMessages(text) {
     var desc = merchantM[1].replace(/\s+/g, ' ').trim().toUpperCase();
     // Strip trailing 2-3 letter country codes (e.g. ARE, GBR, PAK)
     desc = desc.replace(/\s+[A-Z]{2,3}$/, '').trim();
-
-    var key = dateStr + '|' + normalizeDescKey(desc) + '|' + amt;
-    if (seenKeys[key]) continue;
-    seenKeys[key] = true;
 
     var dp = dateStr.split('/');
     txns.push({ date: new Date(parseInt(dp[2]), parseInt(dp[1])-1, parseInt(dp[0])), dateStr: dateStr, desc: desc, crdr: 'DR', amount: amt, card: 'Primary', source: 'email' });
@@ -2472,11 +2521,11 @@ function parseCSV(text) {
   return { txns: txns, periodFrom: periodFrom, periodTo: periodTo };
 }
 function matchCat(d) { var l = d.toLowerCase(); var k = Object.keys(APP.mappings); for (var i = 0; i < k.length; i++) { if (l.indexOf(k[i]) > -1) return APP.mappings[k[i]]; } return null; }
-function cleanDesc(d) { return d.replace(/\s+(DUBAI|ABU DHABI|ABUDHABI|LONDON|ISLAMABAD)\s+(ARE|GBR|PAK|IRL).*$/i, "").replace(/\s+ARE$/, "").replace(/\s+WWW\..+$/, "").trim(); }
+function cleanDesc(d) { return BC.cleanDesc(d); }
 // Canonical identity for dedup keys, shared by every import channel (email-sync,
 // CSV, PDF) so the same real-world charge produces the same key regardless of
 // how differently each channel formats the raw description text.
-function normalizeDescKey(d) { return cleanDesc(d || "").toUpperCase().replace(/\s+/g, ' ').trim(); }
+function normalizeDescKey(d) { return BC.normalizeDescKey(d); }
 
 function parsePDFLines(lines) {
   var txns = [], cc = "Primary", periodFrom = null, periodTo = null;
@@ -2604,12 +2653,14 @@ function processStatement(parsed) {
     if (t.crdr !== "DR") continue;
     if (t.desc.indexOf("PAYMENT RECEIVED") > -1 || t.desc.indexOf("FOREIGN TRANSACTION FEE") > -1 || t.desc.indexOf("VAT ON FOREIGN") > -1) continue;
     inRangeTxns.push(t);
-    var key = t.dateStr + "|" + normalizeDescKey(t.desc) + "|" + t.amount;
-    var isDup = APP.imported && APP.imported.indexOf(key) > -1;
-    t.key = key; t.cleanDesc = cleanDesc(t.desc); t.category = matchCat(t.desc);
-    t.isDup = isDup; t.skip = isDup; t.acct = pendingAcct;
+    t.cleanDesc = cleanDesc(t.desc); t.category = matchCat(t.desc);
+    t.acct = pendingAcct;
     pendingTxns.push(t);
   }
+  // Identity is date + merchant + amount + WHICH occurrence of that triple this
+  // is, so two genuine coffees at the same place on the same day survive as two
+  // transactions while a re-imported statement still flags both as duplicates.
+  BC.assignImportKeys(pendingTxns, APP.imported || []);
   pendingTxns.sort(function (a, b) { return b.date - a.date; });
   var detectedMonth = detectPredominantMonth(inRangeTxns);
   var banner = document.getElementById("detected-month-banner");
@@ -2646,7 +2697,7 @@ function drawTxnList() {
     var t = pendingTxns[i];
     if (t.dateStr !== ld) { ld = t.dateStr; var dn = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]; html += '<div class="day-header">' + dn[t.date.getDay()] + ", " + t.dateStr + '</div>'; }
     var dupClass = t.skip ? ' dup' : '';
-    html += '<div class="txn' + dupClass + '"><div class="txn-info"><div class="txn-info-desc">' + escHtml(t.cleanDesc) + (t.isDup ? '<span class="dup-badge">DUP</span>' : '') + '</div><div class="txn-info-date">' + t.card + '</div><div class="txn-info-cat"><select class="cat-select' + (t.category ? '' : ' unset') + '" data-i="' + i + '"><option value="">— Select —</option>';
+    html += '<div class="txn' + dupClass + '"><div class="txn-info"><div class="txn-info-desc">' + escHtml(t.cleanDesc) + (t.isDup ? '<span class="dup-badge">DUP</span>' : (t.occurrence > 1 ? '<span class="rep-badge">#' + t.occurrence + '</span>' : '')) + '</div><div class="txn-info-date">' + t.card + '</div><div class="txn-info-cat"><select class="cat-select' + (t.category ? '' : ' unset') + '" data-i="' + i + '"><option value="">— Select —</option>';
     var allCatNames = APP.budget.map(function(b) { return b.c; });
     for (var j = 0; j < allCatNames.length; j++) html += '<option value="' + escHtml(allCatNames[j]) + '"' + (t.category === allCatNames[j] ? ' selected' : '') + '>' + escHtml(allCatNames[j]) + '</option>';
     html += '<option value="SKIP"' + (t.skip ? ' selected' : '') + '>— Skip —</option>';
@@ -2693,7 +2744,7 @@ function updatePreviewSummary() {
   }
   var html = '<div class="preview-summary"><div class="preview-summary-title">Will be added to ' + escHtml(APP.currentMonth) + '</div>';
   var keys = Object.keys(sums); var total = 0;
-  for (var i = 0; i < keys.length; i++) { html += '<div class="preview-row"><span class="preview-row-cat">' + keys[i] + '</span><span>+' + fd(sums[keys[i]]) + '</span></div>'; total += sums[keys[i]]; }
+  for (var i = 0; i < keys.length; i++) { html += '<div class="preview-row"><span class="preview-row-cat">' + escHtml(keys[i]) + '</span><span>+' + fd(sums[keys[i]]) + '</span></div>'; total += sums[keys[i]]; }
   html += '<div class="preview-row tot"><span class="preview-row-cat">Total</span><span>' + fd(total) + '</span></div>';
   if (skipped > 0) html += '<div style="font-size:11px;color:var(--text-2);margin-top:6px">' + skipped + ' transaction(s) skipped</div>';
   html += '</div>';
@@ -2704,6 +2755,23 @@ function updatePreviewSummary() {
 
 document.getElementById("btn-apply").addEventListener("click", function () {
   var sums = {}; var appliedKeys = []; var appliedTxns = [];
+  // Undo has to be a real undo, so capture the complete before-state of every
+  // field this import is about to touch BEFORE touching any of it. The old
+  // snapshot recorded spent-overrides after they had already been cleared, and
+  // never covered the paid flags, statement coverage dates, the debit balance
+  // or the processed-alert list — so "Undo Import" left several of them changed.
+  var before = {
+    rows: {},
+    accounts: JSON.parse(JSON.stringify(APP.accounts || {})),
+    lastImport: APP.lastImport || null,
+    prevDelta: null
+  };
+  if (APP.lastImportDelta) {
+    // Keep one level of chaining so undo can step back import-by-import,
+    // without the snapshot chain growing without bound in localStorage.
+    before.prevDelta = JSON.parse(JSON.stringify(APP.lastImportDelta));
+    if (before.prevDelta.before) before.prevDelta.before.prevDelta = null;
+  }
   for (var i = 0; i < pendingTxns.length; i++) {
     var t = pendingTxns[i];
     if (t.skip || !t.category) continue;
@@ -2720,14 +2788,22 @@ document.getElementById("btn-apply").addEventListener("click", function () {
   }
   for (var i = 0; i < APP.budget.length; i++) {
     if (sums[APP.budget[i].c]) {
-      if (APP.budget[i].p) { APP.budget[i].p = false; APP.budget[i].s = Math.round((APP.budget[i].b + sums[APP.budget[i].c]) * 100) / 100; }
-      else { APP.budget[i].s = Math.round((APP.budget[i].s + sums[APP.budget[i].c]) * 100) / 100; }
-      APP.budget[i].cs = null;
+      var row = APP.budget[i];
+      before.rows[row.c] = { s: row.s, cs: (row.cs === undefined ? null : row.cs), p: !!row.p };
+      // Statement rows only ever add to the raw sum. Rows marked paid keep the
+      // flag and getSpent() reads the budget as a floor, so importing the
+      // actual 10,937 rent payment against a 10,937 "paid" placeholder records
+      // 10,937 — not 21,874, which is what adding both used to produce.
+      row.s = Math.round((row.s + sums[row.c]) * 100) / 100;
+      row.cs = null;
     }
   }
   for (var i = 0; i < appliedTxns.length; i++) APP.transactions.push(appliedTxns[i]);
   if (!APP.imported) APP.imported = [];
-  for (var i = 0; i < appliedKeys.length; i++) if (APP.imported.indexOf(appliedKeys[i]) === -1) APP.imported.push(appliedKeys[i]);
+  var keysAdded = [];
+  for (var i = 0; i < appliedKeys.length; i++) {
+    if (APP.imported.indexOf(appliedKeys[i]) === -1) { APP.imported.push(appliedKeys[i]); keysAdded.push(appliedKeys[i]); }
+  }
   APP.lastImport = new Date().toLocaleDateString("en-GB");
   // Remember where this account's statement coverage ends so the next
   // import can start the day after (reduces overlapping ranges).
@@ -2741,20 +2817,28 @@ document.getElementById("btn-apply").addEventListener("click", function () {
     APP.accounts.debit.balanceDate = ymd(pendingBalance.date);
   }
   // Synced gist alerts were reviewed and applied; don't fetch them again
+  var processedAdded = [];
   if (pendingAlertFiles.length && APP.alertSync) {
     for (var i = 0; i < pendingAlertFiles.length; i++) {
-      if (APP.alertSync.processed.indexOf(pendingAlertFiles[i]) === -1) APP.alertSync.processed.push(pendingAlertFiles[i]);
+      if (APP.alertSync.processed.indexOf(pendingAlertFiles[i]) === -1) { APP.alertSync.processed.push(pendingAlertFiles[i]); processedAdded.push(pendingAlertFiles[i]); }
     }
     if (APP.alertSync.processed.length > 500) APP.alertSync.processed = APP.alertSync.processed.slice(-500);
     pendingAlertFiles = [];
   }
-  var prevCs = {};
-  for (var i = 0; i < APP.budget.length; i++) if (sums[APP.budget[i].c] !== undefined) prevCs[APP.budget[i].c] = APP.budget[i].cs !== undefined ? APP.budget[i].cs : null;
-  APP.lastImportDelta = { categories: JSON.parse(JSON.stringify(sums)), keys: appliedKeys.slice(), txnIds: appliedTxns.map(function (t) { return t.id; }), date: new Date().toISOString(), month: APP.currentMonth, prevCs: prevCs };
+  APP.lastImportDelta = {
+    categories: JSON.parse(JSON.stringify(sums)),
+    keys: appliedKeys.slice(),
+    keysAdded: keysAdded,
+    processedAdded: processedAdded,
+    txnIds: appliedTxns.map(function (t) { return t.id; }),
+    date: new Date().toISOString(),
+    month: APP.currentMonth,
+    before: before
+  };
   saveData();
 
   var sh = '<div class="preview-summary"><div class="preview-summary-title">Done</div>', tot = 0, cs = Object.keys(sums);
-  for (var i = 0; i < cs.length; i++) { sh += '<div class="preview-row"><span class="preview-row-cat">' + cs[i] + '</span><span>+' + fd(sums[cs[i]]) + '</span></div>'; tot += sums[cs[i]]; }
+  for (var i = 0; i < cs.length; i++) { sh += '<div class="preview-row"><span class="preview-row-cat">' + escHtml(cs[i]) + '</span><span>+' + fd(sums[cs[i]]) + '</span></div>'; tot += sums[cs[i]]; }
   sh += '<div class="preview-row tot"><span class="preview-row-cat">Total</span><span>' + fd(tot) + '</span></div></div>';
   sh += '<p style="color:var(--green);font-size:13px;text-align:center;margin-top:10px">✓ Applied ' + appliedKeys.length + ' transactions</p>';
   document.getElementById("import-summary").innerHTML = sh;
@@ -2781,24 +2865,56 @@ function undoLastImport() {
   var delta = APP.lastImportDelta;
   if (!delta) { toast("Nothing to undo", "warn"); return; }
   var d = new Date(delta.date).toLocaleDateString("en-GB");
+  if (delta.month && delta.month !== APP.currentMonth) {
+    toast("That import belongs to " + delta.month + " — cannot undo it now", "warn");
+    return;
+  }
   if (!confirm("Undo import from " + d + "?")) return;
-  for (var i = 0; i < APP.budget.length; i++) {
-    if (delta.categories[APP.budget[i].c] !== undefined) {
-      var sub = delta.categories[APP.budget[i].c];
-      APP.budget[i].s = Math.max(0, Math.round((APP.budget[i].s - sub) * 100) / 100);
-      APP.budget[i].cs = (delta.prevCs && delta.prevCs[APP.budget[i].c] !== undefined) ? delta.prevCs[APP.budget[i].c] : null;
+
+  var before = delta.before;
+  if (before && before.rows) {
+    // Restore the exact spent/override/paid state each row had beforehand
+    // rather than subtracting and hoping nothing else moved in between.
+    for (var i = 0; i < APP.budget.length; i++) {
+      var snap = before.rows[APP.budget[i].c];
+      if (!snap) continue;
+      APP.budget[i].s = snap.s;
+      APP.budget[i].cs = snap.cs;
+      APP.budget[i].p = !!snap.p;
+    }
+  } else {
+    // Pre-snapshot imports: fall back to subtracting the recorded delta.
+    for (var i = 0; i < APP.budget.length; i++) {
+      if (delta.categories[APP.budget[i].c] !== undefined) {
+        APP.budget[i].s = Math.max(0, Math.round((APP.budget[i].s - delta.categories[APP.budget[i].c]) * 100) / 100);
+        APP.budget[i].cs = (delta.prevCs && delta.prevCs[APP.budget[i].c] !== undefined) ? delta.prevCs[APP.budget[i].c] : null;
+      }
     }
   }
-  for (var i = 0; i < delta.keys.length; i++) {
-    var ki = APP.imported.indexOf(delta.keys[i]);
+
+  // Only the keys THIS import added come back out; a key that was already
+  // there belongs to an earlier import and must survive.
+  var keysOut = delta.keysAdded || delta.keys || [];
+  for (var i = 0; i < keysOut.length; i++) {
+    var ki = APP.imported.indexOf(keysOut[i]);
     if (ki > -1) APP.imported.splice(ki, 1);
+  }
+  if (delta.processedAdded && APP.alertSync && APP.alertSync.processed) {
+    for (var i = 0; i < delta.processedAdded.length; i++) {
+      var pi = APP.alertSync.processed.indexOf(delta.processedAdded[i]);
+      if (pi > -1) APP.alertSync.processed.splice(pi, 1);
+    }
   }
   if (delta.txnIds) {
     APP.transactions = APP.transactions.filter(function (t) { return delta.txnIds.indexOf(t.id) === -1; });
   }
-  APP.lastImportDelta = null;
+  if (before) {
+    if (before.accounts) APP.accounts = JSON.parse(JSON.stringify(before.accounts));
+    APP.lastImport = before.lastImport;
+  }
+  APP.lastImportDelta = (before && before.prevDelta) ? before.prevDelta : null;
   saveData(); drawBudget(); drawSettings();
-  toast("Import undone · " + delta.keys.length + " transactions removed");
+  toast("Import undone · " + (delta.txnIds ? delta.txnIds.length : keysOut.length) + " transactions removed");
 }
 
 function openShareModal() { openModal("share-modal"); }
@@ -3007,6 +3123,45 @@ function openCategoryPicker() {
 }
 
 var modalStack = [];
+// The settings rows are divs with onclick handlers: fine with a finger, but
+// invisible to the keyboard and to assistive tech. Promote them to real
+// buttons at runtime rather than hand-editing every row's markup.
+function makeRowsAccessible(root) {
+  var rows = (root || document).querySelectorAll('.s-item[onclick]:not([data-a11y])');
+  for (var i = 0; i < rows.length; i++) {
+    var el = rows[i];
+    el.setAttribute('data-a11y', '1');
+    el.setAttribute('role', 'button');
+    el.setAttribute('tabindex', '0');
+    var label = el.querySelector('.s-label');
+    if (label) {
+      var sub = label.querySelector('.s-sub');
+      el.setAttribute('aria-label', (sub ? label.textContent.replace(sub.textContent, '').trim() : label.textContent.trim()));
+    }
+  }
+}
+document.addEventListener('keydown', function (e) {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  var el = e.target;
+  if (!el || !el.classList || !el.classList.contains('s-item')) return;
+  e.preventDefault();
+  el.click();
+});
+
+// Modals moved focus in but did not hold it, so Tab walked straight out into
+// the page behind the overlay.
+function trapFocus(e) {
+  if (e.key !== 'Tab' || !modalStack.length) return;
+  var el = document.getElementById(modalStack[modalStack.length - 1].id);
+  if (!el) return;
+  var f = el.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])');
+  if (!f.length) return;
+  var first = f[0], last = f[f.length - 1];
+  if (e.shiftKey && (document.activeElement === first || !el.contains(document.activeElement))) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+}
+document.addEventListener('keydown', trapFocus);
+
 function openModal(id) {
   var el = document.getElementById(id);
   el.style.display = "flex";
@@ -3041,8 +3196,17 @@ for (var i = 0; i < overlays.length; i++) {
 }
 
 function drawSettings() {
+  makeRowsAccessible();
   drawMappings();
   drawBudgetSettings();
+  drawBackupStatus();
+  var dcRow = document.getElementById("repair-row");
+  if (dcRow) {
+    var dc = findDoubleCountedRows();
+    dcRow.style.display = dc.length ? "" : "none";
+    if (dc.length) document.getElementById("repair-sub").textContent =
+      dc.length + " categor" + (dc.length === 1 ? "y counts its" : "ies count their") + " budget and the matching payment";
+  }
   document.getElementById("inflow-input").value = APP.inflow || DEFAULT_INFLOW;
   drawTargetSetting();
   var acc = APP.accounts || {};
@@ -3159,7 +3323,66 @@ function exportData() {
   var a = document.createElement("a");
   a.href = u; a.download = "budget_" + new Date().toISOString().slice(0, 10) + ".json"; a.click();
   URL.revokeObjectURL(u);
+  APP.lastExportAt = new Date().toISOString();
+  saveData(); drawBackupStatus();
   toast("Exported");
+}
+
+// Export was presented as a backup but nothing could read one back, so losing
+// localStorage meant hand-editing JSON into devtools. This is the other half.
+function openRestorePicker() { document.getElementById("restore-input").click(); }
+
+document.getElementById("restore-input").addEventListener("change", function (e) {
+  var f = e.target.files[0];
+  this.value = "";
+  if (!f) return;
+  var r = new FileReader();
+  r.onerror = function () { toast("Could not read that file", "err"); };
+  r.onload = function (ev) {
+    var parsed;
+    try { parsed = JSON.parse(ev.target.result); }
+    catch (ex) { toast("That file is not valid JSON", "err"); return; }
+    var checked = BC.validateAppData(parsed);
+    if (!checked.ok) { toast(checked.error, "err"); return; }
+    var d = checked.data;
+    var msg = "Restore this backup?\n\n" +
+      "Month: " + d.currentMonth + "\n" +
+      d.budget.length + " categories · " + d.transactions.length + " transactions · " + d.history.length + " month(s) of history\n\n" +
+      "This REPLACES everything currently in the app.";
+    if (!confirm(msg)) return;
+    APP = d;
+    fixApp();
+    if (saveData()) toast("Backup restored");
+    drawBudget(); drawSettings(); drawHistory(); setupDateDefaults(true);
+  };
+  r.readAsText(f);
+});
+
+// Nudges toward a fresh export. A browser can drop localStorage without
+// warning, so "you last backed up 4 months ago" is worth saying out loud.
+var BACKUP_STALE_DAYS = 30;
+function backupAgeDays() {
+  if (!APP.lastExportAt) return null;
+  var then = new Date(APP.lastExportAt);
+  if (isNaN(then.getTime())) return null;
+  return Math.floor((Date.now() - then.getTime()) / 86400000);
+}
+function backupIsStale() {
+  if (!APP.transactions.length && !APP.history.length) return false;
+  var age = backupAgeDays();
+  return age === null || age >= BACKUP_STALE_DAYS;
+}
+function drawBackupStatus() {
+  var el = document.getElementById("backup-status");
+  if (!el) return;
+  var age = backupAgeDays();
+  var stale = backupIsStale();
+  el.textContent = age === null
+    ? "Never exported — this app's only copy of your data is in this browser"
+    : (age === 0 ? "Last backup: today" : "Last backup: " + age + " day" + (age === 1 ? "" : "s") + " ago");
+  el.style.color = stale ? "var(--orange)" : "var(--text-2)";
+  var row = document.getElementById("export-row");
+  if (row) row.classList.toggle("nudge", stale);
 }
 
 function resetData() {
@@ -3220,6 +3443,22 @@ function confirmAdj() {
 
 drawBudget();
 setupDateDefaults();
+makeRowsAccessible();
+
+// localStorage is the app's only copy of the data and browsers drop it without
+// warning, so say something when the last export is old — at most weekly.
+(function () {
+  if (!backupIsStale()) return;
+  var last = APP.lastBackupNudgeAt ? new Date(APP.lastBackupNudgeAt).getTime() : 0;
+  if (Date.now() - last < 7 * 86400000) return;
+  APP.lastBackupNudgeAt = new Date().toISOString();
+  saveData();
+  var age = backupAgeDays();
+  setTimeout(function () {
+    toast(age === null ? "No backup yet — export from Settings" : "Last backup was " + age + " days ago", "warn");
+  }, 1400);
+})();
+
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", function () {
     navigator.serviceWorker.register("sw.js").catch(function () {});

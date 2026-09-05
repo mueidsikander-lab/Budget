@@ -54,6 +54,107 @@ To regenerate/update this file, run `/improve-scan` (or `/loop 60m
 
 ---
 
+## Resolved — 2026-09-05 (data-integrity pass)
+
+Acting on the app review that flagged data integrity, recovery and imports as
+the reasons not to trust this as the sole record of several years of finances.
+
+### Financial logic correctness
+
+- **[Critical]** Paid placeholders double-counted every later matching
+  transaction. Marking rent (10,937) paid and then importing the actual
+  10,937 payment recorded 21,874, because all three write paths
+  (`addManualTxn`, `recategorizeTxn`, the statement-apply handler) cleared
+  `p` and set `s = budget + amount`. `p` is now a **floor**, not an addend:
+  `getSpent(r)` returns `max(budget, transaction sum)` for a paid row, so the
+  recorded payment replaces the placeholder, a larger real bill shows through
+  as overspend, and an unrelated small charge cannot deflate the row. `s` is
+  now strictly the sum of the row's own transactions; `fixApp()` re-derives it
+  for paid rows (display-neutral), the seed Tuition row no longer ships
+  `s = budget`, and Settings offers a reviewable **Repair Double-Counted
+  Spend** action for data already written by the old rule.
+- **[Critical]** Deleting a custom category hid its spending. Transactions and
+  merchant mappings survived the deletion, but every total walks `APP.budget`,
+  so the money vanished from the app entirely. Deletion now goes through a
+  modal that reassigns transactions *and* mappings to a category you pick (or
+  discards them explicitly), carrying the spend over so totals are unchanged
+  by the reorganisation. `fixApp()` also recovers transactions already
+  orphaned by an earlier deletion into a visible zero-budget
+  "Unfiled (recovered)" row rather than leaving them uncounted, and drops
+  mappings pointing at categories that no longer exist.
+- **[High]** Duplicate detection rejected legitimate transactions. Identity was
+  date + merchant + amount, so two identical purchases at the same merchant on
+  the same day collapsed into one — and `parseAlertMessages()` squashed
+  identical pasted alerts before they ever reached the preview. Identity is now
+  occurrence-aware (`BC.assignImportKeys`): the first occurrence keeps the bare
+  legacy key so existing `APP.imported` entries still match, later occurrences
+  get a `#n` suffix and a `#2` badge in the preview. Re-importing the same
+  statement still flags every row as a duplicate.
+
+### Data integrity & recovery
+
+- **[High]** "Undo Import" was not an undo. It captured spent-overrides *after*
+  clearing them (so `prevCs` was always null), and never restored paid flags,
+  statement coverage dates, the debit balance, `alertSync.processed` or the
+  previous import's metadata. Imports are now transactional: a complete
+  before-state is snapshotted *before* any mutation and restored wholesale,
+  only the keys that import actually added are removed, and one level of
+  chaining lets you step back import by import.
+- **[High]** Export was presented as a backup with no way back in. Added
+  **Restore from Backup** (file picker → validate → confirm → replace), an
+  export-freshness line on the Export row that turns amber past 30 days, and a
+  weekly-at-most nudge on launch when the last backup is stale.
+- **[High]** `saveCache()` swallowed every storage failure, so a full or blocked
+  localStorage looked exactly like a successful save. Failures now raise a
+  persistent banner and a toast, distinguish "full" from "blocked (private
+  mode)", and clear themselves on the next successful write.
+
+### Security
+
+- **[Medium]** The service worker cached the response to *every* GET, including
+  Gist comment bodies (the user's bank alerts), and the cache-busting
+  `?t=<timestamp>` on each sync created a new entry every time it ran. Caching
+  is now restricted to the same-origin app shell; everything else goes straight
+  to the network and is never stored. Cache name bumped to `budget-shell-v2` so
+  the old contents are dropped on activate.
+- **[Medium]** Remaining unescaped interpolations closed: the history trend-bar
+  month label, and the category names in both the import preview summary and
+  the post-import "Done" summary (a custom category name is user-controlled and
+  reaches these paths unescaped). `escHtml()` also escapes `'` now.
+- **[Medium]** `#transfer=` payloads and restored backups are validated and
+  coerced by `BC.validateAppData()` before becoming `APP` — typed fields,
+  dropped unknown keys, a hex-shaped gist id, and a hard reject for anything
+  that isn't a budget file.
+
+### UI/UX & Accessibility
+
+- **[Medium]** Settings rows are `<div onclick>`; they are now promoted at
+  runtime to `role="button"` with `tabindex="0"`, an `aria-label` and
+  Enter/Space activation.
+- **[Medium]** Modals moved focus in but did not hold it — Tab walked out into
+  the page behind the overlay. Added a focus trap.
+- **[Medium]** `--text-3` was `rgba(235,235,245,0.3)` on black (~2.4:1, well
+  under WCAG AA) and `--text-2` sat on the line; both raised.
+- **[Medium]** `.page` had no max width, so on desktop the single column
+  stretched across the whole viewport. Capped at 720px and centred.
+- **[Low]** A paid row now explains the floor rule inline, so "paid ✓" plus a
+  list of real transactions reads as one figure.
+
+### Testing & CI
+
+- **[Medium]** There were no automated tests and no CI, against a history of
+  repeated savings-calculation regressions. Extracted the financial arithmetic
+  into `budget-core.js` — plain functions over an explicit state object, no
+  DOM, no globals, loaded by a bare `<script src>` (still no build step, no
+  bundler, no dependencies) — and added `tests/budget-core.test.js` running on
+  `node --test`, plus a GitHub Actions workflow. 24 cases pin the savings
+  basis, the auto target, per-row over/under budget, the full-consumption
+  forecast and its cycle-end horizon, the paid-placeholder rule, duplicate
+  identity, orphan detection, and restore validation. `index.html` keeps thin
+  wrappers, so every call site is unchanged.
+
+---
+
 ## Resolved — 2026-06-21
 
 ### SMS → Email migration (ADCB stopped sending SMS)

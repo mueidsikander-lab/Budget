@@ -7,9 +7,19 @@ pipeline, and localStorage persistence.
 
 ## Files
 
-- `index.html` — the entire app (HTML + CSS + JS inline, ~2900 lines). All
-  state lives in one `APP` object, persisted to `localStorage` (`bgt_v7`).
+- `index.html` — the app's markup, CSS and all DOM/rendering code, inline.
+  All state lives in one `APP` object, persisted to `localStorage` (`bgt_v7`).
   Rendering is whole-section `innerHTML` replacement, not a framework.
+- `budget-core.js` — the financial arithmetic, as pure functions over an
+  explicit state object. No DOM, no globals, no dependencies. `index.html`
+  loads it with a plain `<script src>` and keeps thin wrappers
+  (`getSpent(r)`, `computeBudgetTotals()`, …) that pass `APP` in, so call
+  sites read exactly as before.
+- `tests/budget-core.test.js` — runs with `node --test` from the repo root.
+  No install step. CI runs it on every push (`.github/workflows/tests.yml`).
+- `sw.js` — service worker. Network-first, and it caches **only** the
+  same-origin app shell; api.github.com and the CDN scripts must never be
+  written to the cache (the Gist comments are the user's bank alerts).
 - `setup.html` — one-time assistant that creates a secret GitHub Gist and
   walks the user through an iPhone Shortcut that forwards ADCB email alerts
   into it as comments.
@@ -17,8 +27,12 @@ pipeline, and localStorage persistence.
 
 ## Conventions worth preserving
 
-- No build step, no framework, no bundler. Keep it that way — fixes should
-  be plain JS/CSS edits to the existing files, not a rewrite.
+- No build step, no framework, no bundler, no dependencies. Keep it that way —
+  fixes should be plain JS/CSS edits to the existing files, not a rewrite.
+  `budget-core.js` is a plain script, not a module system.
+- New or changed financial arithmetic belongs in `budget-core.js` with a test
+  in `tests/budget-core.test.js`. This repo has shipped the same class of
+  savings-calculation regression several times; a test is how it stops.
 - All dynamic content interpolated into `innerHTML` must go through
   `escHtml()` (defined near the top of the script in `index.html`). This is
   the app's only XSS defense and it must stay consistent.
@@ -26,6 +40,26 @@ pipeline, and localStorage persistence.
   budget row (it resolves paid-override / custom-spent-override / raw sum).
   Any new code that needs spent-amount must call it rather than reading
   `r.s` directly.
+- `r.s` is **strictly the sum of that row's own transactions** — nothing else
+  may be written into it. `r.p` (marked paid) is a **floor**, not an addend:
+  `getSpent` returns `max(r.b, r.s)` for a paid row. Code that adds a
+  transaction must only add to `r.s`; the old rule (`p = false; s = b + amount`)
+  is what recorded 21,874 for a 10,937 rent bill marked paid and then imported.
+- Deleting a budget category must never leave its transactions or merchant
+  mappings behind. Every total walks `APP.budget`, so orphaned spend simply
+  stops being counted anywhere. Reassign both, or delete both, explicitly.
+- A transaction's import identity is date + merchant + amount + **which
+  occurrence** of that triple it is (`BC.assignImportKeys`). Two identical
+  purchases at the same merchant on the same day are two real transactions.
+  The first occurrence keeps the bare legacy key so existing `APP.imported`
+  entries still match.
+- Anything that mutates state during an import must be captured in the
+  before-snapshot the apply handler builds, or "Undo Import" silently stops
+  being an undo. Snapshot **before** mutating, never after.
+- `saveCache()` returns a boolean and surfaces failures. Never swallow a
+  storage error: localStorage is the only copy of this data.
+- Data arriving from outside — a restored backup, a `#transfer=` payload —
+  goes through `BC.validateAppData()` before it becomes `APP`.
 - `getSpent(r)` applies to forecasting too. Summing `APP.transactions` to work
   out spend silently drops every paid-override and custom-spent row (rent,
   tuition), which is what made the old savings forecast read ~34k. Derive
