@@ -246,20 +246,115 @@
     var stillToSpend = r2(fixedDue + variableDue);
     var cycleEndSpend = r2(spentToDate + stillToSpend);
 
-    // Cash position: what you'll actually have after paying the CC bill
+    // Imported card purchases are not a reconciled outstanding balance.
+    // A bank balance may already include reimbursements: never add them twice.
     var acc = (state && state.accounts) || {};
     var debitBal = (acc.debit && acc.debit.balance != null) ? acc.debit.balance : null;
     var reimb = reimbTotal(state);
     var sp = acctSpendTotals(state);
-    var cashPosition = debitBal != null ? r2(debitBal + reimb - sp.cc) : null;
+    var cashPosition = null;
 
     return {
       elapsed: getElapsedFraction(state, now), daysElapsed: cyc.elapsed, daysRemaining: cyc.remaining,
       spentToDate: spentToDate, fixedDue: fixedDue, variableDue: variableDue,
       stillToSpend: stillToSpend, overspend: t.overspend, overCount: t.overCount,
       cycleEndSpend: cycleEndSpend, cycleEndSavings: t.committed,
-      cashPosition: cashPosition, debitBal: debitBal, reimb: reimb, ccPayable: sp.cc
+      cashPosition: cashPosition, debitBal: debitBal, reimb: reimb, ccPayable: null,
+      cardSpending: sp.cc
     };
+  }
+
+  // A spending allowance, not a bank balance. Reserve unpaid fixed bills and
+  // the savings goal before making any remaining variable envelope available.
+  // Keep per-row remainders: overspend in one envelope cannot disappear into
+  // an underspent neighbour. Deficits are explicit; no negative chart slices.
+  function computeSpendingPlan(state, now) {
+    var t = computeBudgetTotals(state), f = computeForecast(state, t, now);
+    var goal = Math.max(0, t.target);
+    var afterBills = r2(t.INFLOW - t.spentTotal - f.fixedDue);
+    var savingsReserved = r2(Math.min(goal, Math.max(0, afterBills)));
+    var flexible = r2(Math.min(f.variableDue, Math.max(0, afterBills - goal)));
+    var unallocated = r2(Math.max(0, afterBills - savingsReserved - flexible));
+    var d = now || new Date(), cyc = getCycleDays(state, d);
+    var cycle = parseCycle(state.currentMonth);
+    var active = cycle && cycle.year === d.getFullYear() && cycle.month === d.getMonth();
+    var days = active ? cyc.remaining + 1 : (cyc.elapsed === 0 ? cyc.total : 0);
+    return {
+      totals: t, forecast: f, goal: goal, flexible: flexible,
+      savingsReserved: savingsReserved, unallocated: unallocated,
+      fundingGap: r2(Math.max(0, -afterBills)),
+      savingsGap: r2(Math.max(0, goal - savingsReserved)),
+      envelopeGap: r2(Math.max(0, f.variableDue - flexible)),
+      days: days, daily: days ? Math.floor(flexible / days) : null,
+      cycleState: active ? 'active' : (cyc.elapsed === 0 ? 'future' : 'past')
+    };
+  }
+
+  function parseCycle(value) {
+    var parts = String(value || '').split(' '), month = MONTHS.indexOf(parts[0]);
+    var year = Number(parts[1]);
+    return parts.length === 2 && month >= 0 && Number.isInteger(year) && year >= 2000 && year <= 2199
+      ? { year: year, month: month } : null;
+  }
+  function validDate(value) {
+    var match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || ''));
+    if (!match) return false;
+    var year = Number(match[1]), month = Number(match[2]), day = Number(match[3]);
+    return year >= 2000 && year <= 2199 && month >= 1 && month <= 12 && day >= 1 && day <= new Date(year, month, 0).getDate();
+  }
+  function scheduledDate(cycle, day) {
+    var c = parseCycle(cycle);
+    if (!c || !Number.isInteger(day) || day < 1 || day > 31) return null;
+    var clamped = Math.min(day, new Date(c.year, c.month + 1, 0).getDate());
+    return c.year + '-' + String(c.month + 1).padStart(2, '0') + '-' + String(clamped).padStart(2, '0');
+  }
+  function sanitizeSchedule(value) {
+    var out = { day: null, overrides: {} };
+    if (!isPlainObject(value)) return out;
+    if (Number.isInteger(value.day) && value.day >= 1 && value.day <= 31) out.day = value.day;
+    if (isPlainObject(value.overrides)) Object.keys(value.overrides).forEach(function (cycle) {
+      if (parseCycle(cycle) && validDate(value.overrides[cycle])) out.overrides[cycle] = value.overrides[cycle];
+    });
+    return out;
+  }
+  function paymentDate(row, cycle) {
+    var schedule = sanitizeSchedule(row && row.schedule);
+    return schedule.overrides[cycle] || scheduledDate(cycle, schedule.day);
+  }
+  // Return new schedule data so callers can save atomically and roll back if
+  // storage fails. A cross-month date belongs to the original budget cycle;
+  // rescheduling alone never releases money reserved for that bill.
+  function changePaymentDate(row, cycle, date, scope) {
+    if (!parseCycle(cycle) || !validDate(date) || ['once', 'monthly'].indexOf(scope) < 0) throw new Error('Choose a valid planning date');
+    var schedule = sanitizeSchedule(row.schedule);
+    if (scope === 'monthly') schedule.day = Number(date.slice(8, 10));
+    schedule.overrides[cycle] = date;
+    return schedule;
+  }
+  function upcomingPayments(state, now) {
+    var d = now || new Date(), today = Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+    var result = [];
+    (state.budget || []).forEach(function (row, index) {
+      var remaining = r2(Math.max(0, num(row.b) - getSpent(row)));
+      if (row.g !== 'fixed' || remaining <= 0) return;
+      var date = paymentDate(row, state.currentMonth), days = null;
+      if (date) {
+        var parts = date.split('-').map(Number);
+        days = Math.round((Date.UTC(parts[0], parts[1] - 1, parts[2]) - today) / 86400000);
+      }
+      result.push({ index: index, category: row.c, amount: remaining, date: date, days: days });
+    });
+    return result.sort(function (a, b) { return (a.date || '9999').localeCompare(b.date || '9999') || a.index - b.index; });
+  }
+
+  function previewSavingsBoost(state, index, amount, now) {
+    if (!Number.isFinite(amount) || amount <= 0) throw new Error('Enter a positive savings amount');
+    var row = state.budget[index], current = computeSpendingPlan(state, now);
+    if (!row || row.g === 'fixed' || r2(num(row.b) - getSpent(row)) < amount || current.flexible < amount || current.envelopeGap > 0 || current.savingsGap > 0 || current.goal !== current.totals.target) throw new Error('This plan has no room for that savings increase');
+    var next = Object.assign({}, state, { budget: state.budget.map(function (r) { return Object.assign({}, r); }) });
+    next.budget[index].b = r2(num(row.b) - amount);
+    if (state.savingsTargetMode === 'custom') next.savingsTarget = r2(current.goal + amount);
+    return { state: next, plan: computeSpendingPlan(next, now) };
   }
 
   // ---------------------------------------------------------------------------
@@ -332,6 +427,7 @@
       };
       if (r.cs !== undefined && r.cs !== null && !isNaN(r.cs)) row.cs = num(r.cs);
       if (r.custom) row.custom = true;
+      if (r.schedule) row.schedule = sanitizeSchedule(r.schedule);
       budget.push(row);
     }
     out.budget = budget;
@@ -454,6 +550,15 @@
     getCycleDays: getCycleDays,
     getElapsedFraction: getElapsedFraction,
     computeForecast: computeForecast,
+    computeSpendingPlan: computeSpendingPlan,
+    validDate: validDate,
+    parseCycle: parseCycle,
+    sanitizeSchedule: sanitizeSchedule,
+    scheduledDate: scheduledDate,
+    paymentDate: paymentDate,
+    changePaymentDate: changePaymentDate,
+    upcomingPayments: upcomingPayments,
+    previewSavingsBoost: previewSavingsBoost,
     cleanDesc: cleanDesc,
     normalizeDescKey: normalizeDescKey,
     txnKey: txnKey,

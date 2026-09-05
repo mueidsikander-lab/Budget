@@ -250,3 +250,124 @@ test("nextMonthYear rolls the year over", () => {
   assert.equal(BC.nextMonthYear("December 2026"), "January 2027");
   assert.equal(BC.nextMonthYear("May 2026"), "June 2026");
 });
+
+test("the spending plan reconciles income and protects the savings goal", () => {
+  const st = state({ currentMonth: "September 2026", inflow: 42150,
+    budget: [row("Bills", 21704, 18000, { g: "fixed" }), row("Household", 10000, 6200)] });
+  const m = BC.computeSpendingPlan(st, new Date(2026, 8, 18));
+  assert.equal(m.flexible, 3800);
+  assert.equal(m.savingsReserved, 10446);
+  assert.equal(m.days, 13, "today is still available for spending");
+  assert.equal(m.daily, 292, "round down rather than overallocate daily");
+  assert.equal(BC.r2(m.totals.spentTotal + m.forecast.fixedDue + m.flexible + m.savingsReserved + m.unallocated), m.totals.INFLOW);
+});
+
+test("custom savings goals, overspend and outflows reduce flexible allowance", () => {
+  const st = state({ savingsTargetMode: "custom", savingsTarget: 300,
+    budget: [row("Bills", 400, 100, { g: "fixed" }), row("Food", 200, 250), row("House", 200, 0)],
+    outflows: [{ amount: 25 }] });
+  const m = BC.computeSpendingPlan(st, new Date(2026, 4, 15));
+  assert.equal(m.flexible, 25);
+  assert.equal(m.envelopeGap, 175);
+  assert.equal(m.savingsReserved, 300);
+  assert.equal(m.forecast.fixedDue, 300);
+});
+
+test("unfunded bills and unattainable savings stay explicit instead of negative slices", () => {
+  const st = state({ inflow: 1000, savingsTargetMode: "custom", savingsTarget: 200,
+    budget: [row("Bills", 900, 0, { g: "fixed" }), row("Food", 100, 400)] });
+  const m = BC.computeSpendingPlan(st);
+  assert.equal(m.flexible, 0);
+  assert.equal(m.fundingGap, 300);
+  assert.equal(m.savingsReserved, 0);
+  assert.equal(m.savingsGap, 200);
+  assert.equal(m.totals.INFLOW + m.fundingGap, m.totals.spentTotal + m.forecast.fixedDue);
+});
+
+test("reimbursements can leave a surplus without silently increasing envelope budgets", () => {
+  const m = BC.computeSpendingPlan(state({ budget: [row("Food", 400, 100)], reimbursements: [{ amount: 200 }] }));
+  assert.equal(m.flexible, 300);
+  assert.equal(m.savingsReserved, 600);
+  assert.equal(m.unallocated, 200);
+});
+
+test("daily guide covers the final day but never an already closed cycle", () => {
+  const st = state({ currentMonth: "February 2028", budget: [row("Food", 100, 0)] });
+  assert.equal(BC.computeSpendingPlan(st, new Date(2028, 1, 29)).days, 1);
+  assert.equal(BC.computeSpendingPlan(st, new Date(2028, 1, 29)).daily, 100);
+  assert.equal(BC.computeSpendingPlan(st, new Date(2028, 2, 1)).daily, null);
+  assert.equal(BC.computeSpendingPlan(st, new Date(2028, 0, 1)).days, 29);
+});
+
+test("recorded card purchases never become a guessed card balance or net cash", () => {
+  const f = BC.computeForecast(state({ accounts: { debit: { balance: 500 } },
+    transactions: [{ amount: 100, acct: "cc" }], reimbursements: [{ amount: 50 }] }));
+  assert.equal(f.debitBal, 500);
+  assert.equal(f.cardSpending, 100);
+  assert.equal(f.cashPosition, null);
+  assert.equal(f.ccPayable, null);
+});
+
+test("saving more previews a balanced plan without mutating the saved state", () => {
+  for (const mode of ["auto", "custom"]) {
+    const st = state({ inflow: 2000, savingsTargetMode: mode, savingsTarget: 1000, budget: [row("House", 1000, 100)] });
+    const before = JSON.stringify(st);
+    const next = BC.previewSavingsBoost(st, 0, 500, new Date(2026, 4, 15));
+    assert.equal(JSON.stringify(st), before);
+    assert.equal(next.plan.flexible, 400);
+    assert.equal(next.plan.goal, 1500);
+    assert.equal(next.state.budget[0].b, 500);
+  }
+  assert.throws(() => BC.previewSavingsBoost(state({budget:[row("Food",100,50)]}),0,500));
+});
+
+test("unknown planning dates stay unknown; a one-off override preserves recurrence", () => {
+  const bill = row("Car", 200, 0, { g: "fixed" });
+  assert.equal(BC.paymentDate(bill, "September 2026"), null);
+  bill.schedule = BC.changePaymentDate(bill, "September 2026", "2026-09-22", "monthly");
+  bill.schedule = BC.changePaymentDate(bill, "September 2026", "2026-09-28", "once");
+  assert.equal(BC.paymentDate(bill, "September 2026"), "2026-09-28");
+  assert.equal(BC.paymentDate(bill, "October 2026"), "2026-10-22");
+});
+
+test("monthly rules clamp short months and recover the original day afterwards", () => {
+  const bill = row("Car", 200, 0, { g: "fixed" });
+  bill.schedule = BC.changePaymentDate(bill, "January 2028", "2028-01-31", "monthly");
+  assert.equal(BC.paymentDate(bill, "February 2028"), "2028-02-29");
+  assert.equal(BC.paymentDate(bill, "March 2028"), "2028-03-31");
+  assert.equal(BC.paymentDate(bill, "February 2029"), "2029-02-28");
+});
+
+test("rescheduling across months retains the budget reservation and survives restore", () => {
+  const st = state({ currentMonth: "September 2026", budget: [row("Car", 200, 0, { g: "fixed" })] });
+  const before = BC.computeSpendingPlan(st);
+  st.budget[0].schedule = BC.changePaymentDate(st.budget[0], st.currentMonth, "2026-10-03", "once");
+  const restored = BC.validateAppData(JSON.parse(JSON.stringify(st))).data;
+  assert.equal(BC.paymentDate(restored.budget[0], st.currentMonth), "2026-10-03");
+  assert.equal(BC.computeSpendingPlan(restored).flexible, before.flexible);
+  assert.equal(BC.computeSpendingPlan(restored).forecast.fixedDue, 200);
+});
+
+test("upcoming payments sort chronologically, retain unset dates, and omit settled bills", () => {
+  const st = state({ currentMonth: "September 2026", budget: [
+    row("Unset",100,0,{g:"fixed"}),
+    row("Later",100,0,{g:"fixed",schedule:{day:25}}),
+    row("Overdue",100,20,{g:"fixed",schedule:{day:17}}),
+    row("Paid",100,0,{g:"fixed",p:true,schedule:{day:19}})
+  ] });
+  const bills = BC.upcomingPayments(st, new Date(2026,8,18));
+  assert.deepEqual(bills.map(b=>b.category),["Overdue","Later","Unset"]);
+  assert.equal(bills[0].days,-1);
+  assert.equal(bills[0].amount,80);
+  assert.equal(bills[2].date,null);
+});
+
+test("invalid dates and restored schedule payloads cannot corrupt recurrence", () => {
+  for (const date of ["2026-02-30","2026-13-01","not-a-date", "2026-01-00"]) {
+    assert.equal(BC.validDate(date), false);
+    assert.throws(()=>BC.changePaymentDate({},"January 2026",date,"monthly"));
+  }
+  const schedule=BC.sanitizeSchedule({day:99,overrides:{"September 2026":"<img>","October 2026":"2026-10-03","__proto__":"x"}});
+  assert.equal(schedule.day,null);
+  assert.deepEqual(schedule.overrides,{"October 2026":"2026-10-03"});
+});

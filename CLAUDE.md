@@ -38,12 +38,11 @@ pipeline, and localStorage persistence.
   for buttons, and the `--lift` elevation ramp) and `setup.html` mirrors it.
   Change the tokens there — never bolt a second `:root` or an override block
   onto the end of the sheet.
-- Colour carries meaning about money and nothing else: `--green` is saved /
-  income, `--red` is over budget, `--blue` is fixed commitments, `--orange`
-  is variable spending, `--purple` is the forecast, `--teal`/`--pink` are
-  debit / credit card. Chrome (buttons, nav, hairlines) stays monochrome —
-  the primary button is `--accent` (off-white on ink), not a data colour.
-  Category identity comes from `CAT_COLORS` via `catColor()`/`catAvatar()`.
+- The approved palette is ivory, olive, sage and terracotta. `--accent`
+  controls olive actions; `--spent`, `--bills`, `--flexible`, and `--savings`
+  identify allocation segments. `--red` means an actual deficit. Keep the
+  main balance area open, without a solid coloured hero box. Category icons
+  come from the existing sprite through `catAvatar()`.
 - Icons are the inline SVG sprite at the top of `<body>`, used as
   `<svg class="ic"><use href="#i-name"/></svg>`. Don't reintroduce emoji as
   UI icons; they render differently on every OS. (The WhatsApp text share
@@ -56,6 +55,16 @@ pipeline, and localStorage persistence.
 - All dynamic content interpolated into `innerHTML` must go through
   `escHtml()` (defined near the top of the script in `index.html`). This is
   the app's only XSS defense and it must stay consistent.
+- `computeSpendingPlan()` reserves unpaid fixed bills and the savings goal
+  before exposing a flexible allowance. The daily guide includes today, while
+  `getCycleDays()` keeps its existing elapsed-day semantics for forecasts.
+- Payment schedules live on their budget row as `{day, overrides}`. Overrides
+  are keyed by budget cycle, even for a date outside that month. Moving a
+  planning date never releases the bill's reservation. Restore validation must
+  preserve schedules; closing a month must keep the recurring day.
+- Imported card purchases are spending, not a reconciled outstanding balance.
+  Never subtract them from bank cash or add reimbursements to an entered bank
+  balance. Unknown card debt and net cash remain unknown.
 - `getSpent(r)` is the single source of truth for "how much was spent" on a
   budget row (it resolves paid-override / custom-spent-override / raw sum).
   Any new code that needs spent-amount must call it rather than reading
